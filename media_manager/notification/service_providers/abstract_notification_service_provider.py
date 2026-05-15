@@ -5,7 +5,7 @@ from media_manager.notification.schemas import MessageNotification
 
 class AbstractNotificationServiceProvider(ABC):
     @abstractmethod
-    def send_notification(self, message: MessageNotification) -> bool:
+    async def send_notification(self, message: MessageNotification) -> bool:
         """
         Sends a notification with the given message.
 

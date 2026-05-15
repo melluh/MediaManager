@@ -1,3 +1,4 @@
+import asyncio
 import shutil
 from pathlib import Path
 
@@ -54,23 +55,23 @@ class TvService(BaseMediaService[Show, Show]):
         self.tv_import_service = tv_import_service
         self.tv_metadata_service = tv_metadata_service
 
-    def get_total_downloaded_episodes_count(self) -> int:
+    async def get_total_downloaded_episodes_count(self) -> int:
         """
         Get total number of downloaded episodes.
         """
 
-        return self.tv_repository.get_total_downloaded_episodes_count()
+        return await self.tv_repository.get_total_downloaded_episodes_count()
 
-    def set_show_library(self, show: Show, library: str) -> None:
-        self.tv_repository.set_show_library(show.id, library)
+    async def set_show_library(self, show: Show, library: str) -> None:
+        await self.tv_repository.set_show_library(show.id, library)
 
-    def get_all_shows(self) -> list[Show]:
+    async def get_all_shows(self) -> list[Show]:
         """
         Get all shows in the library.
         """
-        return self.get_all_media()
+        return await self.get_all_media()
 
-    def delete_show(
+    async def delete_show(
         self,
         show: Show,
         delete_files_on_disk: bool = False,
@@ -91,24 +92,24 @@ class TvService(BaseMediaService[Show, Show]):
 
                 log.debug(f"Attempt to delete show directory: {show_dir}")
                 if show_dir.exists() and show_dir.is_dir():
-                    shutil.rmtree(show_dir)
+                    await asyncio.to_thread(shutil.rmtree, show_dir)
                     log.info(f"Deleted show directory: {show_dir}")
 
             if delete_torrents:
-                torrents = self.tv_repository.get_torrents_by_show_id(show_id=show.id)
+                torrents = await self.tv_repository.get_torrents_by_show_id(show_id=show.id)
                 for torrent in torrents:
                     try:
-                        self.torrent_service.cancel_download(torrent, delete_files=True)
-                        self.torrent_service.delete_torrent(torrent_id=torrent.id)
+                        await self.torrent_service.cancel_download(torrent, delete_files=True)
+                        await self.torrent_service.delete_torrent(torrent_id=torrent.id)
                         log.info(f"Deleted torrent: {torrent.hash}")
                     except Exception:
                         log.warning(
                             f"Failed to delete torrent {torrent.hash}", exc_info=True
                         )
 
-        self.tv_repository.delete_show(show.id)
+        await self.tv_repository.delete_show(show.id)
 
-    def get_public_episode_files_by_season_id(
+    async def get_public_episode_files_by_season_id(
         self, season: Season
     ) -> list[PublicEpisodeFile]:
         """
@@ -117,7 +118,7 @@ class TvService(BaseMediaService[Show, Show]):
         :param season: The season object.
         :return: A list of public episode files.
         """
-        episode_files = self.tv_repository.get_episode_files_by_season_id(
+        episode_files = await self.tv_repository.get_episode_files_by_season_id(
             season_id=season.id
         )
         public_episode_files = [
@@ -125,12 +126,12 @@ class TvService(BaseMediaService[Show, Show]):
         ]
         result = []
         for episode_file in public_episode_files:
-            if self.episode_file_exists_on_file(episode_file=episode_file):
+            if await self.episode_file_exists_on_file(episode_file=episode_file):
                 episode_file.downloaded = True
             result.append(episode_file)
         return result
 
-    def get_all_available_torrents_for_a_season(
+    async def get_all_available_torrents_for_a_season(
         self,
         season_number: int,
         show_id: ShowId,
@@ -146,11 +147,11 @@ class TvService(BaseMediaService[Show, Show]):
         """
 
         if search_query_override:
-            return self.indexer_service.search(query=search_query_override, is_tv=True)
+            return await self.indexer_service.search(query=search_query_override, is_tv=True)
 
-        show = self.tv_repository.get_show_by_id(show_id=show_id)
+        show = await self.tv_repository.get_show_by_id(show_id=show_id)
 
-        torrents = self.indexer_service.search_season(
+        torrents = await self.indexer_service.search_season(
             show=show, season_number=season_number
         )
 
@@ -160,7 +161,7 @@ class TvService(BaseMediaService[Show, Show]):
             is_tv=True, query_results=results, media=show
         )
 
-    def get_public_show_by_id(self, show: Show) -> PublicShow:
+    async def get_public_show_by_id(self, show: Show) -> PublicShow:
         """
         Get a public show from a Show object.
 
@@ -174,7 +175,7 @@ class TvService(BaseMediaService[Show, Show]):
             public_season = PublicSeason.model_validate(season)
 
             for episode in public_season.episodes:
-                episode.downloaded = self.is_episode_downloaded(
+                episode.downloaded = await self.is_episode_downloaded(
                     episode=episode,
                     season=season,
                     show=show,
@@ -190,16 +191,16 @@ class TvService(BaseMediaService[Show, Show]):
         public_show.seasons = public_seasons
         return public_show
 
-    def get_show_by_id(self, show_id: ShowId) -> Show:
+    async def get_show_by_id(self, show_id: ShowId) -> Show:
         """
         Get a show by its ID.
 
         :param show_id: The ID of the show.
         :return: The show.
         """
-        return self.tv_repository.get_show_by_id(show_id=show_id)
+        return await self.tv_repository.get_show_by_id(show_id=show_id)
 
-    def is_season_downloaded(self, season: Season, show: Show) -> bool:
+    async def is_season_downloaded(self, season: Season, show: Show) -> bool:
         """
         Check if a season is downloaded.
 
@@ -213,13 +214,13 @@ class TvService(BaseMediaService[Show, Show]):
             return False
 
         for episode in episodes:
-            if not self.is_episode_downloaded(
+            if not await self.is_episode_downloaded(
                 episode=episode, season=season, show=show
             ):
                 return False
         return True
 
-    def is_episode_downloaded(
+    async def is_episode_downloaded(
         self, episode: Episode, season: Season, show: Show
     ) -> bool:
         """
@@ -234,7 +235,7 @@ class TvService(BaseMediaService[Show, Show]):
         :param show: The show object.
         :return: True if the episode is downloaded and imported, False otherwise.
         """
-        episode_files = self.tv_repository.get_episode_files_by_episode_id(
+        episode_files = await self.tv_repository.get_episode_files_by_episode_id(
             episode_id=episode.id
         )
 
@@ -266,7 +267,7 @@ class TvService(BaseMediaService[Show, Show]):
 
         return False
 
-    def episode_file_exists_on_file(self, episode_file: EpisodeFile) -> bool:
+    async def episode_file_exists_on_file(self, episode_file: EpisodeFile) -> bool:
         """
         Check if an episode file exists on the filesystem.
 
@@ -276,7 +277,7 @@ class TvService(BaseMediaService[Show, Show]):
         if episode_file.torrent_id is None:
             return True
         try:
-            torrent_file = self.torrent_service.get_torrent_by_id(
+            torrent_file = await self.torrent_service.get_torrent_by_id(
                 torrent_id=episode_file.torrent_id
             )
 
@@ -287,7 +288,7 @@ class TvService(BaseMediaService[Show, Show]):
 
         return False
 
-    def get_show_by_external_id(
+    async def get_show_by_external_id(
         self, external_id: int, metadata_provider: str
     ) -> Show | None:
         """
@@ -297,54 +298,54 @@ class TvService(BaseMediaService[Show, Show]):
         :param metadata_provider: The metadata provider.
         :return: The show or None if not found.
         """
-        return self.tv_repository.get_show_by_external_id(
+        return await self.tv_repository.get_show_by_external_id(
             external_id=external_id, metadata_provider=metadata_provider
         )
 
-    def get_season(self, season_id: SeasonId) -> Season:
+    async def get_season(self, season_id: SeasonId) -> Season:
         """
         Get a season by its ID.
 
         :param season_id: The ID of the season.
         :return: The season.
         """
-        return self.tv_repository.get_season(season_id=season_id)
+        return await self.tv_repository.get_season(season_id=season_id)
 
-    def get_episode(self, episode_id: EpisodeId) -> Episode:
+    async def get_episode(self, episode_id: EpisodeId) -> Episode:
         """
         Get an episode by its ID.
 
         :param episode_id: The ID of the episode.
         :return: The episode.
         """
-        return self.tv_repository.get_episode(episode_id=episode_id)
+        return await self.tv_repository.get_episode(episode_id=episode_id)
 
-    def get_season_by_episode(self, episode_id: EpisodeId) -> Season:
+    async def get_season_by_episode(self, episode_id: EpisodeId) -> Season:
         """
         Get a season by the episode ID.
 
         :param episode_id: The ID of the episode.
         :return: The season.
         """
-        return self.tv_repository.get_season_by_episode(episode_id=episode_id)
+        return await self.tv_repository.get_season_by_episode(episode_id=episode_id)
 
-    def get_torrents_for_show(self, show: Show) -> RichShowTorrent:
+    async def get_torrents_for_show(self, show: Show) -> RichShowTorrent:
         """
         Get torrents for a given show.
 
         :param show: The show.
         :return: A rich show torrent.
         """
-        show_torrents = self.tv_repository.get_torrents_by_show_id(show_id=show.id)
+        show_torrents = await self.tv_repository.get_torrents_by_show_id(show_id=show.id)
         rich_season_torrents = []
         for show_torrent in show_torrents:
-            seasons = self.tv_repository.get_seasons_by_torrent_id(
+            seasons = await self.tv_repository.get_seasons_by_torrent_id(
                 torrent_id=show_torrent.id
             )
-            episodes = self.tv_repository.get_episodes_by_torrent_id(
+            episodes = await self.tv_repository.get_episodes_by_torrent_id(
                 torrent_id=show_torrent.id
             )
-            episode_files = self.torrent_service.get_episode_files_of_torrent(
+            episode_files = await self.torrent_service.get_episode_files_of_torrent(
                 torrent=show_torrent
             )
 
@@ -372,16 +373,16 @@ class TvService(BaseMediaService[Show, Show]):
             torrents=rich_season_torrents,
         )
 
-    def get_all_shows_with_torrents(self) -> list[RichShowTorrent]:
+    async def get_all_shows_with_torrents(self) -> list[RichShowTorrent]:
         """
         Get all shows with torrents.
 
         :return: A list of rich show torrents.
         """
-        shows = self.tv_repository.get_all_shows_with_torrents()
-        return [self.get_torrents_for_show(show=show) for show in shows]
+        shows = await self.tv_repository.get_all_shows_with_torrents()
+        return [await self.get_torrents_for_show(show=show) for show in shows]
 
-    def download_torrent(
+    async def download_torrent(
         self,
         public_indexer_result_id: IndexerQueryResultId,
         show_id: ShowId,
@@ -395,15 +396,15 @@ class TvService(BaseMediaService[Show, Show]):
         :param override_show_file_path_suffix: Optional override for the file path suffix.
         :return: The downloaded torrent.
         """
-        indexer_result = self.indexer_service.get_result(
+        indexer_result = await self.indexer_service.get_result(
             result_id=public_indexer_result_id
         )
-        show_torrent = self.torrent_service.download(indexer_result=indexer_result)
-        self.torrent_service.pause_download(torrent=show_torrent)
+        show_torrent = await self.torrent_service.download(indexer_result=indexer_result)
+        await self.torrent_service.pause_download(torrent=show_torrent)
 
         try:
             for season_number in indexer_result.season:
-                season = self.tv_repository.get_season_by_number(
+                season = await self.tv_repository.get_season_by_number(
                     season_number=season_number, show_id=show_id
                 )
                 episodes = {episode.number: episode.id for episode in season.episodes}
@@ -435,14 +436,14 @@ class TvService(BaseMediaService[Show, Show]):
                         torrent_id=show_torrent.id,
                         file_path_suffix=override_show_file_path_suffix,
                     )
-                    self.tv_repository.add_episode_file(episode_file=episode_file)
+                    await self.tv_repository.add_episode_file(episode_file=episode_file)
 
         except IntegrityError:
             log.error(
                 f"Episode file for episode {episode_id} of season {season.id} and quality {indexer_result.quality} already exists, skipping."
             )
-            self.tv_repository.remove_episode_files_by_torrent_id(show_torrent.id)
-            self.torrent_service.cancel_download(
+            await self.tv_repository.remove_episode_files_by_torrent_id(show_torrent.id)
+            await self.torrent_service.cancel_download(
                 torrent=show_torrent, delete_files=True
             )
             raise
@@ -450,7 +451,7 @@ class TvService(BaseMediaService[Show, Show]):
             log.info(
                 f"Successfully added episode files for torrent {show_torrent.title} and show ID {show_id}"
             )
-            self.torrent_service.resume_download(torrent=show_torrent)
+            await self.torrent_service.resume_download(torrent=show_torrent)
 
         return show_torrent
 
@@ -465,7 +466,7 @@ class TvService(BaseMediaService[Show, Show]):
     def get_root_season_directory(self, show: Show, season_number: int) -> Path:
         return self.get_root_show_directory(show) / Path(f"Season {season_number}")
 
-    def set_show_continuous_download(
+    async def set_show_continuous_download(
         self, show: Show, continuous_download: bool
     ) -> Show:
         """
@@ -475,18 +476,18 @@ class TvService(BaseMediaService[Show, Show]):
         :param continuous_download: True to enable continuous download, False to disable.
         :return: The updated Show object.
         """
-        return self.tv_repository.update_show_attributes(
+        return await self.tv_repository.update_show_attributes(
             show_id=show.id, continuous_download=continuous_download
         )
 
-    def import_all_torrents(self) -> None:
+    async def import_all_torrents(self) -> None:
         """
         Delegate to TvImportService.
         """
-        self.tv_import_service.import_all_torrents()
+        await self.tv_import_service.import_all_torrents()
 
-    def update_all_non_ended_shows_metadata(self) -> None:
+    async def update_all_non_ended_shows_metadata(self) -> None:
         """
         Delegate to TvMetadataService.
         """
-        self.tv_metadata_service.update_all_non_ended_shows_metadata()
+        await self.tv_metadata_service.update_all_non_ended_shows_metadata()

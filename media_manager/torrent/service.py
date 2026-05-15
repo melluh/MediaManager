@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from media_manager.indexer.schemas import IndexerQueryResult
@@ -19,44 +20,50 @@ class TorrentService:
         self.torrent_repository = torrent_repository
         self.download_manager = download_manager or DownloadManager()
 
-    def get_episode_files_of_torrent(self, torrent: Torrent) -> list[EpisodeFile]:
+    async def get_episode_files_of_torrent(
+        self, torrent: Torrent
+    ) -> list[EpisodeFile]:
         """
         Returns all episode files of a torrent
         :param torrent: the torrent to get the episode files of
         :return: list of episode files
         """
-        return self.torrent_repository.get_episode_files_of_torrent(
+        return await self.torrent_repository.get_episode_files_of_torrent(
             torrent_id=torrent.id
         )
 
-    def get_show_of_torrent(self, torrent: Torrent) -> Show | None:
+    async def get_show_of_torrent(self, torrent: Torrent) -> Show | None:
         """
         Returns the show of a torrent
         :param torrent: the torrent to get the show of
         :return: the show of the torrent
         """
-        return self.torrent_repository.get_show_of_torrent(torrent_id=torrent.id)
+        return await self.torrent_repository.get_show_of_torrent(torrent_id=torrent.id)
 
-    def get_movie_of_torrent(self, torrent: Torrent) -> Movie | None:
+    async def get_movie_of_torrent(self, torrent: Torrent) -> Movie | None:
         """
         Returns the movie of a torrent
         :param torrent: the torrent to get the movie of
         :return: the movie of the torrent
         """
-        return self.torrent_repository.get_movie_of_torrent(torrent_id=torrent.id)
+        return await self.torrent_repository.get_movie_of_torrent(torrent_id=torrent.id)
 
-    def download(self, indexer_result: IndexerQueryResult) -> Torrent:
+    async def download(self, indexer_result: IndexerQueryResult) -> Torrent:
         log.info(f"Starting download for torrent: {indexer_result.title}")
-        torrent = self.download_manager.download(indexer_result)
+        torrent = await asyncio.to_thread(self.download_manager.download, indexer_result)
 
-        return self.torrent_repository.save_torrent(torrent=torrent)
+        return await self.torrent_repository.save_torrent(torrent=torrent)
 
-    def get_torrent_status(self, torrent: Torrent) -> Torrent:
-        torrent.status = self.download_manager.get_torrent_status(torrent)
-        self.torrent_repository.save_torrent(torrent=torrent)
+    async def get_torrent_status(self, torrent: Torrent) -> Torrent:
+        torrent.status = await asyncio.to_thread(
+            self.download_manager.get_torrent_status, torrent
+        )
+        await self.torrent_repository.save_torrent(torrent=torrent)
         return torrent
 
-    def cancel_download(self, torrent: Torrent, delete_files: bool = False) -> Torrent:
+    async def cancel_download(
+        self, torrent: Torrent, delete_files: bool = False
+    ) -> Torrent:
         """
         cancels download of a torrent
 
@@ -64,57 +71,70 @@ class TorrentService:
         :param torrent: the torrent to cancel
         """
         log.info(f"Cancelling download for torrent: {torrent.title}")
-        self.download_manager.remove_torrent(torrent, delete_data=delete_files)
-        return self.get_torrent_status(torrent=torrent)
+        await asyncio.to_thread(
+            self.download_manager.remove_torrent, torrent, delete_data=delete_files
+        )
+        return await self.get_torrent_status(torrent=torrent)
 
-    def pause_download(self, torrent: Torrent) -> Torrent:
+    async def pause_download(self, torrent: Torrent) -> Torrent:
         """
         pauses download of a torrent
 
         :param torrent: the torrent to pause
         """
         log.info(f"Pausing download for torrent: {torrent.title}")
-        self.download_manager.pause_torrent(torrent)
-        return self.get_torrent_status(torrent=torrent)
+        await asyncio.to_thread(self.download_manager.pause_torrent, torrent)
+        return await self.get_torrent_status(torrent=torrent)
 
-    def resume_download(self, torrent: Torrent) -> Torrent:
+    async def resume_download(self, torrent: Torrent) -> Torrent:
         """
         resumes download of a torrent
 
         :param torrent: the torrent to resume
         """
         log.info(f"Resuming download for torrent: {torrent.title}")
-        self.download_manager.resume_torrent(torrent)
-        return self.get_torrent_status(torrent=torrent)
+        await asyncio.to_thread(self.download_manager.resume_torrent, torrent)
+        return await self.get_torrent_status(torrent=torrent)
 
-    def get_all_torrents(self) -> list[Torrent]:
-        torrents = []
-        for x in self.torrent_repository.get_all_torrents():
-            try:
-                torrents.append(self.get_torrent_status(x))
-            except RuntimeError:
-                log.exception(f"Error fetching status for torrent {x.title}")
+    async def get_all_torrents(self) -> list[Torrent]:
+        all_torrents = await self.torrent_repository.get_all_torrents()
+        # Fan out per-torrent status calls; each hits a sync client lib in a thread.
+        results = await asyncio.gather(
+            *(self.get_torrent_status(t) for t in all_torrents),
+            return_exceptions=True,
+        )
+        torrents: list[Torrent] = []
+        for source, result in zip(all_torrents, results, strict=True):
+            if isinstance(result, Exception):
+                log.exception(
+                    f"Error fetching status for torrent {source.title}",
+                    exc_info=result,
+                )
+            else:
+                torrents.append(result)
         return torrents
 
-    def get_completed_torrents(self) -> list[Torrent]:
+    async def get_completed_torrents(self) -> list[Torrent]:
         return [
             t
-            for t in self.get_all_torrents()
+            for t in await self.get_all_torrents()
             if t.status == TorrentStatus.finished and not t.imported
         ]
 
-    def get_torrent_by_id(self, torrent_id: TorrentId) -> Torrent:
-        return self.get_torrent_status(
-            self.torrent_repository.get_torrent_by_id(torrent_id=torrent_id)
+    async def get_torrent_by_id(self, torrent_id: TorrentId) -> Torrent:
+        return await self.get_torrent_status(
+            await self.torrent_repository.get_torrent_by_id(torrent_id=torrent_id)
         )
 
-    def delete_torrent(self, torrent_id: TorrentId) -> None:
+    async def delete_torrent(self, torrent_id: TorrentId) -> None:
         log.info(f"Deleting torrent with ID: {torrent_id}")
-        t = self.torrent_repository.get_torrent_by_id(torrent_id=torrent_id)
+        t = await self.torrent_repository.get_torrent_by_id(torrent_id=torrent_id)
         delete_media_files = not t.imported
-        self.torrent_repository.delete_torrent(
+        await self.torrent_repository.delete_torrent(
             torrent_id=torrent_id, delete_associated_media_files=delete_media_files
         )
 
-    def get_movie_files_of_torrent(self, torrent: Torrent) -> list[MovieFile]:
-        return self.torrent_repository.get_movie_files_of_torrent(torrent_id=torrent.id)
+    async def get_movie_files_of_torrent(self, torrent: Torrent) -> list[MovieFile]:
+        return await self.torrent_repository.get_movie_files_of_torrent(
+            torrent_id=torrent.id
+        )

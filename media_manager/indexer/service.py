@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from media_manager.config import MediaManagerConfig
@@ -24,10 +25,10 @@ class IndexerService:
         if config.indexers.jackett.enabled:
             self.indexers.append(Jackett())
 
-    def get_result(self, result_id: IndexerQueryResultId) -> IndexerQueryResult:
-        return self.repository.get_result(result_id=result_id)
+    async def get_result(self, result_id: IndexerQueryResultId) -> IndexerQueryResult:
+        return await self.repository.get_result(result_id=result_id)
 
-    def search(self, query: str, is_tv: bool) -> list[IndexerQueryResult]:
+    async def search(self, query: str, is_tv: bool) -> list[IndexerQueryResult]:
         """
         Search for results using the indexers based on a query.
 
@@ -40,7 +41,9 @@ class IndexerService:
 
         for indexer in self.indexers:
             try:
-                indexer_results = indexer.search(query, is_tv=is_tv)
+                indexer_results = await asyncio.to_thread(
+                    indexer.search, query, is_tv=is_tv
+                )
                 results.extend(indexer_results)
                 log.debug(
                     f"Indexer {indexer.__class__.__name__} returned {len(indexer_results)} results for query: {query}"
@@ -51,18 +54,20 @@ class IndexerService:
                 )
 
         for result in results:
-            self.repository.save_result(result=result)
+            await self.repository.save_result(result=result)
 
         return results
 
-    def search_movie(self, movie: Movie) -> list[IndexerQueryResult]:
+    async def search_movie(self, movie: Movie) -> list[IndexerQueryResult]:
         query = f"{movie.name} {movie.year}"
         query = remove_special_chars_and_parentheses(query)
 
         results = []
         for indexer in self.indexers:
             try:
-                indexer_results = indexer.search_movie(query=query, movie=movie)
+                indexer_results = await asyncio.to_thread(
+                    indexer.search_movie, query=query, movie=movie
+                )
                 if indexer_results:
                     results.extend(indexer_results)
             except Exception:
@@ -71,19 +76,24 @@ class IndexerService:
                 )
 
         for result in results:
-            self.repository.save_result(result=result)
+            await self.repository.save_result(result=result)
 
         return results
 
-    def search_season(self, show: Show, season_number: int) -> list[IndexerQueryResult]:
+    async def search_season(
+        self, show: Show, season_number: int
+    ) -> list[IndexerQueryResult]:
         query = f"{show.name} {show.year} S{season_number:02d}"
         query = remove_special_chars_and_parentheses(query)
 
         results = []
         for indexer in self.indexers:
             try:
-                indexer_results = indexer.search_season(
-                    query=query, show=show, season_number=season_number
+                indexer_results = await asyncio.to_thread(
+                    indexer.search_season,
+                    query=query,
+                    show=show,
+                    season_number=season_number,
                 )
                 if indexer_results:
                     results.extend(indexer_results)
@@ -93,6 +103,6 @@ class IndexerService:
                 )
 
         for result in results:
-            self.repository.save_result(result=result)
+            await self.repository.save_result(result=result)
 
         return results

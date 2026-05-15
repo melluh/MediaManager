@@ -18,13 +18,13 @@ class MovieMetadataService(BaseMetadataService[Movie, Movie]):
         super().__init__(repository=movie_repository)
         self.movie_repository = movie_repository
 
-    def add_movie(
+    async def add_movie(
         self,
         external_id: int,
         metadata_provider: AbstractMetadataProvider,
         language: str | None = None,
     ) -> Movie:
-        return self.add_media_base(
+        return await self.add_media_base(
             external_id=external_id,
             metadata_provider=metadata_provider,
             get_metadata_func=metadata_provider.get_movie_metadata,
@@ -33,51 +33,52 @@ class MovieMetadataService(BaseMetadataService[Movie, Movie]):
             language=language,
         )
 
-    def search_for_movie(
+    async def search_for_movie(
         self, query: str, metadata_provider: AbstractMetadataProvider
     ) -> list[MetaDataProviderSearchResult]:
-        return self.search_for_media_base(
+        return await self.search_for_media_base(
             query=query,
             metadata_provider=metadata_provider,
             search_func=metadata_provider.search_movie,
             get_by_external_id_func=self.movie_repository.get_movie_by_external_id,
         )
 
-    def get_popular_movies(
+    async def get_popular_movies(
         self, metadata_provider: AbstractMetadataProvider
     ) -> list[MetaDataProviderSearchResult]:
-        return self.get_popular_media_base(
+        return await self.get_popular_media_base(
             metadata_provider=metadata_provider,
             search_func=metadata_provider.search_movie,
         )
 
-    def update_movie_metadata(
+    async def update_movie_metadata(
         self, db_movie: Movie, metadata_provider: AbstractMetadataProvider
     ) -> Movie | None:
         """
         Updates the metadata of a movie.
         """
         log.debug(f"Found movie: {db_movie.name} for metadata update.")
-        fresh_movie_data = metadata_provider.get_movie_metadata(
-            movie_id=db_movie.external_id, language=db_movie.original_language
+        fresh_movie_data = await metadata_provider.get_movie_metadata(
+            movie_id=db_movie.external_id,
+            language=db_movie.original_language,
         )
         if not fresh_movie_data:
             log.warning(f"Could not fetch fresh metadata for movie: {db_movie.name}")
             return None
 
-        self.movie_repository.update_movie_attributes(
+        await self.movie_repository.update_movie_attributes(
             movie_id=db_movie.id,
             name=fresh_movie_data.name,
             overview=fresh_movie_data.overview,
             year=fresh_movie_data.year,
             imdb_id=fresh_movie_data.imdb_id,
         )
-        updated_movie = self.movie_repository.get_movie_by_id(db_movie.id)
-        metadata_provider.download_movie_poster_image(movie=updated_movie)
+        updated_movie = await self.movie_repository.get_movie_by_id(db_movie.id)
+        await metadata_provider.download_movie_poster_image(movie=updated_movie)
         return updated_movie
 
-    def update_all_metadata(self) -> None:
-        self.update_all_metadata_base(
+    async def update_all_metadata(self) -> None:
+        await self.update_all_metadata_base(
             get_all_to_update_func=self.movie_repository.get_movies,
             update_single_func=self.update_movie_metadata,
             tmdb_provider_class=TmdbMetadataProvider,

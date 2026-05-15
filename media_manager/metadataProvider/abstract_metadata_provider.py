@@ -18,27 +18,31 @@ class AbstractMetadataProvider(ABC):
         pass
 
     @abstractmethod
-    def get_show_metadata(self, show_id: int, language: str | None = None) -> Show:
+    async def get_show_metadata(
+        self, show_id: int, language: str | None = None
+    ) -> Show:
         raise NotImplementedError()
 
     @abstractmethod
-    def get_movie_metadata(self, movie_id: int, language: str | None = None) -> Movie:
+    async def get_movie_metadata(
+        self, movie_id: int, language: str | None = None
+    ) -> Movie:
         raise NotImplementedError()
 
     @abstractmethod
-    def search_show(
+    async def search_show(
         self, query: str | None = None
     ) -> list[MetaDataProviderSearchResult]:
         raise NotImplementedError()
 
     @abstractmethod
-    def search_movie(
+    async def search_movie(
         self, query: str | None = None
     ) -> list[MetaDataProviderSearchResult]:
         raise NotImplementedError()
 
     @abstractmethod
-    def download_show_poster_image(self, show: Show) -> bool:
+    async def download_show_poster_image(self, show: Show) -> bool:
         """
         Downloads the poster image for a show.
         :param show: The show to download the poster image for.
@@ -47,7 +51,7 @@ class AbstractMetadataProvider(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def download_movie_poster_image(self, movie: Movie) -> bool:
+    async def download_movie_poster_image(self, movie: Movie) -> bool:
         """
         Downloads the poster image for a show.
         :param movie: The show to download the poster image for.

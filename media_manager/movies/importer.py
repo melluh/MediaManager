@@ -1,6 +1,7 @@
+import asyncio
 import logging
 import re
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from media_manager.common.service import BaseMediaService
@@ -49,7 +50,7 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             libraries=misc_config.movie_libraries,
         )
 
-    def import_movie(
+    async def import_movie(
         self,
         movie: Movie,
         video_files: list[Path],
@@ -72,7 +73,9 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
                 target_video_file = (
                     movie_root_path / f"{movie_file_name}{video_files[0].suffix}"
                 )
-                import_file(target_file=target_video_file, source_file=video_files[0])
+                await asyncio.to_thread(
+                    import_file, target_file=target_video_file, source_file=video_files[0]
+                )
                 imported_any = True
 
             for subtitle_file in subtitle_files:
@@ -82,7 +85,9 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
                 if match:
                     lang = match.group(1)
                     target = movie_root_path / f"{movie_file_name}.{lang}.srt"
-                    import_file(target_file=target, source_file=subtitle_file)
+                    await asyncio.to_thread(
+                        import_file, target_file=target, source_file=subtitle_file
+                    )
                     imported_any = True
         except Exception:
             log.exception(f"Failed to import movie {movie.name}")
@@ -90,50 +95,52 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         else:
             return imported_any
 
-    def import_torrent_files(self, torrent: Torrent, movie: Movie) -> None:
+    async def import_torrent_files(self, torrent: Torrent, movie: Movie) -> None:
         video_files, subtitle_files, _ = get_files_for_import(torrent=torrent)
         if len(video_files) != 1:
-            self.notify_import_failure(
+            await self.notify_import_failure(
                 movie.name,
                 "movie",
                 "Multiple video files found. Manual import required.",
             )
             return
 
-        movie_files = self.torrent_service.get_movie_files_of_torrent(torrent=torrent)
+        movie_files = await self.torrent_service.get_movie_files_of_torrent(torrent=torrent)
         if not movie_files:
             torrent.imported = False
-            self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
-            self.notify_import_failure(movie.name, "movie")
+            await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
+            await self.notify_import_failure(movie.name, "movie")
             return
 
         success = [
-            self.import_movie(movie, video_files, subtitle_files, mf.file_path_suffix)
+            await self.import_movie(movie, video_files, subtitle_files, mf.file_path_suffix)
             for mf in movie_files
         ]
 
         if all(success):
             torrent.imported = True
-            self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
-            self.notify_import_success(movie.name, "movie")
+            await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
+            await self.notify_import_success(movie.name, "movie")
         else:
-            self.notify_import_failure(movie.name, "movie")
+            await self.notify_import_failure(movie.name, "movie")
 
-    def get_import_candidates(
+    async def get_import_candidates(
         self, movie_path: Path, metadata_provider: AbstractMetadataProvider
     ) -> MediaImportSuggestion:
-        return super().get_import_candidates(
+        return await super().get_import_candidates(
             directory=movie_path,
             metadata_provider=metadata_provider,
             search_func=self.movie_metadata_service.search_for_movie,
         )
 
-    def import_existing_movie(self, movie: Movie, source_directory: Path) -> bool:
-        def _logic(m: Movie, path: Path, add_cb: Callable[[MovieFile], None]) -> bool:
+    async def import_existing_movie(self, movie: Movie, source_directory: Path) -> bool:
+        async def _logic(
+            m: Movie, path: Path, add_cb: Callable[[MovieFile], Awaitable[None]]
+        ) -> bool:
             v, s, _ = get_files_for_import(directory=path)
-            res = self.import_movie(m, v, s, "IMPORTED")
+            res = await self.import_movie(m, v, s, "IMPORTED")
             if res:
-                add_cb(
+                await add_cb(
                     MovieFile(
                         movie_id=m.id,
                         file_path_suffix="IMPORTED",
@@ -143,24 +150,24 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
                 )
             return res
 
-        return self.import_existing_media(
+        return await self.import_existing_media(
             media=movie,
             source_directory=source_directory,
             import_func=_logic,
             add_file_record_func=self.movie_repository.add_movie_file,
         )
 
-    def get_importable_movies(
+    async def get_importable_movies(
         self, metadata_provider: AbstractMetadataProvider
     ) -> list[MediaImportSuggestion]:
-        return self.get_importable_media(
+        return await self.get_importable_media(
             root_path=MediaManagerConfig().misc.movie_directory,
             metadata_provider=metadata_provider,
             get_candidates_func=self.get_import_candidates,
         )
 
-    def import_all_torrents(self) -> None:
-        self.import_all_torrents_base(
+    async def import_all_torrents(self) -> None:
+        await self.import_all_torrents_base(
             get_media_func=self.torrent_service.get_movie_of_torrent,
             import_torrent_func=self.import_torrent_files,
             media_type_name="movie",

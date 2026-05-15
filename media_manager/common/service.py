@@ -1,5 +1,6 @@
+import asyncio
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -41,8 +42,8 @@ class BaseMediaService[T, S]:
         self.indexer_service = indexer_service
         self.notification_service = notification_service
 
-    def get_all_media(self) -> list[S]:
-        return self.repository.get_all()
+    async def get_all_media(self) -> list[S]:
+        return await self.repository.get_all()
 
     def get_root_directory(
         self, media: S, default_dir: Path, libraries: list[Any]
@@ -64,36 +65,36 @@ class BaseMediaService[T, S]:
         """
         raise NotImplementedError
 
-    def notify_import_success(self, media_name: str, media_type: str) -> None:
+    async def notify_import_success(self, media_name: str, media_type: str) -> None:
         if self.notification_service:
-            self.notification_service.send_notification_to_all_providers(
+            await self.notification_service.send_notification_to_all_providers(
                 title=f"{media_type.capitalize()} Downloaded",
                 message=f"{media_type.capitalize()} {media_name} has been successfully downloaded and imported.",
             )
 
-    def notify_import_failure(
+    async def notify_import_failure(
         self, media_name: str, media_type: str, error_msg: str = ""
     ) -> None:
         if self.notification_service:
             msg = f"Failed to import files for {media_type} {media_name}."
             if error_msg:
                 msg += f" Error: {error_msg}"
-            self.notification_service.send_notification_to_all_providers(
+            await self.notification_service.send_notification_to_all_providers(
                 title="Import Failed",
                 message=msg,
             )
 
-    def get_import_candidates(
+    async def get_import_candidates(
         self,
         directory: Path,
         metadata_provider: AbstractMetadataProvider,
         search_func: Callable[
-            [str, AbstractMetadataProvider], list[MetaDataProviderSearchResult]
+            [str, AbstractMetadataProvider],
+            Awaitable[list[MetaDataProviderSearchResult]],
         ],
     ) -> MediaImportSuggestion:
-        # Implementation from previous turn
         name, _ = self._extract_name_and_year(directory.name)
-        candidates = search_func(name, metadata_provider)
+        candidates = await search_func(name, metadata_provider)
         return MediaImportSuggestion(
             directory=str(directory),
             candidates=candidates,
@@ -107,47 +108,47 @@ class BaseMediaService[T, S]:
             return match.group(1), int(match.group(2))
         return directory_name, None
 
-    def get_importable_media(
+    async def get_importable_media(
         self,
         root_path: Path,
         metadata_provider: AbstractMetadataProvider,
         get_candidates_func: Callable[
-            [Path, AbstractMetadataProvider], MediaImportSuggestion
+            [Path, AbstractMetadataProvider], Awaitable[MediaImportSuggestion]
         ],
     ) -> list[MediaImportSuggestion]:
         importable_dirs = get_importable_media_directories(root_path)
         return [
-            get_candidates_func(directory, metadata_provider)
+            await get_candidates_func(directory, metadata_provider)
             for directory in importable_dirs
         ]
 
-    def import_existing_media(
+    async def import_existing_media(
         self,
         media: S,
         source_directory: Path,
-        import_func: Callable[[S, Path, Callable[[Any], None]], bool],
-        add_file_record_func: Callable[[Any], Any],
+        import_func: Callable[[S, Path, Callable[[Any], Any]], Awaitable[bool]],
+        add_file_record_func: Callable[[Any], Awaitable[Any]],
     ) -> bool:
-        success = import_func(media, source_directory, add_file_record_func)
+        success = await import_func(media, source_directory, add_file_record_func)
         if success:
             log.info(f"Successfully imported {media.name} from {source_directory}")
         return success
 
-    def import_all_torrents_base(
+    async def import_all_torrents_base(
         self,
-        get_media_func: Callable[[Any], S],
-        import_torrent_func: Callable[[Any, S], None],
+        get_media_func: Callable[[Any], Awaitable[S | None]],
+        import_torrent_func: Callable[[Any, S], Awaitable[None]],
         media_type_name: str,
     ) -> None:
         log.info(f"Importing all torrents for {media_type_name}")
-        torrents = self.torrent_service.get_completed_torrents()
+        torrents = await self.torrent_service.get_completed_torrents()
         for t in torrents:
             if t.imported:
                 continue
             try:
-                media = get_media_func(t)
+                media = await get_media_func(t)
                 if media:
-                    import_torrent_func(t, media)
+                    await import_torrent_func(t, media)
             except Exception:
                 log.exception(f"Error importing torrent {t.title}")
         log.info(f"Finished importing all torrents for {media_type_name}")
@@ -161,9 +162,9 @@ class BaseMetadataService[T, S]:
     def __init__(self, repository: BaseRepository[T, S]) -> None:
         self.repository = repository
 
-    def check_if_exists(self, external_id: int, metadata_provider: str) -> bool:
+    async def check_if_exists(self, external_id: int, metadata_provider: str) -> bool:
         try:
-            self.repository.get_by_external_id(
+            await self.repository.get_by_external_id(
                 external_id=external_id, metadata_provider=metadata_provider
             )
         except NotFoundError:
@@ -171,38 +172,40 @@ class BaseMetadataService[T, S]:
         else:
             return True
 
-    def add_media_base(
+    async def add_media_base(
         self,
         external_id: int,
         metadata_provider: AbstractMetadataProvider,  # noqa: ARG002
-        get_metadata_func: Callable[..., S],
-        save_func: Callable[[S], S],
-        download_poster_func: Callable[[S], bool],
+        get_metadata_func: Callable[..., Awaitable[S]],
+        save_func: Callable[[S], Awaitable[S]],
+        download_poster_func: Callable[[S], Awaitable[bool]],
         language: str | None = None,
     ) -> S:
-        media_with_metadata = get_metadata_func(external_id, language=language)
+        media_with_metadata = await get_metadata_func(external_id, language=language)
         if not media_with_metadata:
             raise NotFoundError
 
-        saved_media = save_func(media_with_metadata)
-        download_poster_func(saved_media)
+        saved_media = await save_func(media_with_metadata)
+        await download_poster_func(saved_media)
         return saved_media
 
-    def search_for_media_base(
+    async def search_for_media_base(
         self,
         query: str,
         metadata_provider: AbstractMetadataProvider,
-        search_func: Callable[[str | None], list[MetaDataProviderSearchResult]],
-        get_by_external_id_func: Callable[..., S],
+        search_func: Callable[
+            [str | None], Awaitable[list[MetaDataProviderSearchResult]]
+        ],
+        get_by_external_id_func: Callable[..., Awaitable[S]],
     ) -> list[MetaDataProviderSearchResult]:
-        results = search_func(query)
+        results = await search_func(query)
         for result in results:
-            if self.check_if_exists(
+            if await self.check_if_exists(
                 external_id=result.external_id, metadata_provider=metadata_provider.name
             ):
                 result.added = True
                 try:
-                    media = get_by_external_id_func(
+                    media = await get_by_external_id_func(
                         external_id=result.external_id,
                         metadata_provider=metadata_provider.name,
                     )
@@ -213,30 +216,38 @@ class BaseMetadataService[T, S]:
                     )
         return results
 
-    def get_popular_media_base(
+    async def get_popular_media_base(
         self,
         metadata_provider: AbstractMetadataProvider,
-        search_func: Callable[[str | None], list[MetaDataProviderSearchResult]],
+        search_func: Callable[
+            [str | None], Awaitable[list[MetaDataProviderSearchResult]]
+        ],
     ) -> list[MetaDataProviderSearchResult]:
-        results = search_func(None)
-        return [
-            result
-            for result in results
-            if not self.check_if_exists(
-                external_id=result.external_id, metadata_provider=metadata_provider.name
+        results = await search_func(None)
+        # Existence checks are one DB round-trip each; run them concurrently.
+        existence = await asyncio.gather(
+            *(
+                self.check_if_exists(
+                    external_id=r.external_id,
+                    metadata_provider=metadata_provider.name,
+                )
+                for r in results
             )
-        ]
+        )
+        return [r for r, exists in zip(results, existence, strict=True) if not exists]
 
-    def update_all_metadata_base(
+    async def update_all_metadata_base(
         self,
-        get_all_to_update_func: Callable[[], list[S]],
-        update_single_func: Callable[[S, AbstractMetadataProvider], S | None],
+        get_all_to_update_func: Callable[[], Awaitable[list[S]]],
+        update_single_func: Callable[
+            [S, AbstractMetadataProvider], Awaitable[S | None]
+        ],
         tmdb_provider_class: Callable[[], AbstractMetadataProvider],
         tvdb_provider_class: Callable[[], AbstractMetadataProvider],
         media_type_name: str,
     ) -> None:
         log.info(f"Updating metadata for all {media_type_name}")
-        media_list = get_all_to_update_func()
+        media_list = await get_all_to_update_func()
         log.info(f"Found {len(media_list)} {media_type_name} to update")
         for item in media_list:
             try:
@@ -249,7 +260,7 @@ class BaseMetadataService[T, S]:
                         f"Unsupported provider {item.metadata_provider} for {item.name}"
                     )
                     continue
-                update_single_func(item, provider)
+                await update_single_func(item, provider)
             except InvalidConfigError:
                 log.exception(f"Config error for {item.name}")
             except Exception:

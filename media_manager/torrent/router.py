@@ -18,13 +18,13 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(current_active_user)],
 )
-def get_all_torrents(service: torrent_service_dep) -> list[Torrent]:
-    return service.get_all_torrents()
+async def get_all_torrents(service: torrent_service_dep) -> list[Torrent]:
+    return await service.get_all_torrents()
 
 
 @router.get("/{torrent_id}", status_code=status.HTTP_200_OK)
-def get_torrent(service: torrent_service_dep, torrent: torrent_dep) -> Torrent:
-    return service.get_torrent_by_id(torrent_id=torrent.id)
+async def get_torrent(service: torrent_service_dep, torrent: torrent_dep) -> Torrent:
+    return await service.get_torrent_by_id(torrent_id=torrent.id)
 
 
 @router.delete(
@@ -32,18 +32,18 @@ def get_torrent(service: torrent_service_dep, torrent: torrent_dep) -> Torrent:
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(current_superuser)],
 )
-def delete_torrent(
+async def delete_torrent(
     service: torrent_service_dep,
     torrent: torrent_dep,
     delete_files: bool = False,
 ) -> None:
     if delete_files:
         try:
-            service.cancel_download(torrent=torrent, delete_files=False)
+            await service.cancel_download(torrent=torrent, delete_files=False)
         except RuntimeError:
             pass
 
-    service.delete_torrent(torrent_id=torrent.id)
+    await service.delete_torrent(torrent_id=torrent.id)
 
 
 @router.post(
@@ -51,12 +51,12 @@ def delete_torrent(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(current_superuser)],
 )
-def retry_torrent_download(
+async def retry_torrent_download(
     service: torrent_service_dep,
     torrent: torrent_dep,
 ) -> None:
-    service.pause_download(torrent=torrent)
-    service.resume_download(torrent=torrent)
+    await service.pause_download(torrent=torrent)
+    await service.resume_download(torrent=torrent)
 
 
 @router.patch(
@@ -64,7 +64,7 @@ def retry_torrent_download(
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(current_superuser)],
 )
-def update_torrent_status(
+async def update_torrent_status(
     rep: torrent_repository_dep,
     torrent: torrent_dep,
     state: TorrentStatus | None = None,
@@ -80,5 +80,5 @@ def update_torrent_status(
             detail="No status or imported value provided",
         )
 
-    rep.save_torrent(torrent=torrent)
+    await rep.save_torrent(torrent=torrent)
     return torrent

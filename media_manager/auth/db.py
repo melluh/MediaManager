@@ -7,11 +7,10 @@ from fastapi_users.db import (
     SQLAlchemyUserDatabase,
 )
 from sqlalchemy import String
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from media_manager.config import MediaManagerConfig
-from media_manager.database import Base, build_db_url
+from media_manager.database import Base, get_session
 
 
 class OAuthAccount(SQLAlchemyBaseOAuthAccountTableUUID, Base):
@@ -27,15 +26,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     )
 
 
-engine = create_async_engine(
-    build_db_url(**MediaManagerConfig().database.model_dump()), echo=False
-)
-async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
-
-
-async def get_async_session() -> AsyncGenerator[AsyncSession]:
-    async with async_session_maker() as session:
-        yield session
+get_async_session = get_session
 
 
 async def get_user_db(

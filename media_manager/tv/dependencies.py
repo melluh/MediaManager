@@ -68,12 +68,12 @@ def get_tv_service(
 tv_service_dep = Annotated[TvService, Depends(get_tv_service)]
 
 
-def get_show_by_id(
+async def get_show_by_id(
     tv_service: tv_service_dep,
     show_id: ShowId = Path(..., description="The ID of the show"),
 ) -> Show:
     try:
-        show = tv_service.get_show_by_id(show_id)
+        show = await tv_service.get_show_by_id(show_id)
     except NotFoundError:
         raise HTTPException(
             status_code=404,
@@ -85,12 +85,12 @@ def get_show_by_id(
 show_dep = Annotated[Show, Depends(get_show_by_id)]
 
 
-def get_season_by_id(
+async def get_season_by_id(
     tv_service: tv_service_dep,
     season_id: SeasonId = Path(..., description="The ID of the season"),
 ) -> Season:
     try:
-        season = tv_service.get_season(season_id=season_id)
+        season = await tv_service.get_season(season_id=season_id)
     except NotFoundError:
         raise HTTPException(
             status_code=404,
