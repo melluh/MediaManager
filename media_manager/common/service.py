@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -224,17 +223,14 @@ class BaseMetadataService[T, S]:
         ],
     ) -> list[MetaDataProviderSearchResult]:
         results = await search_func(None)
-        # Existence checks are one DB round-trip each; run them concurrently.
-        existence = await asyncio.gather(
-            *(
-                self.check_if_exists(
-                    external_id=r.external_id,
-                    metadata_provider=metadata_provider.name,
-                )
-                for r in results
+        return [
+            r
+            for r in results
+            if not await self.check_if_exists(
+                external_id=r.external_id,
+                metadata_provider=metadata_provider.name,
             )
-        )
-        return [r for r, exists in zip(results, existence, strict=True) if not exists]
+        ]
 
     async def update_all_metadata_base(
         self,

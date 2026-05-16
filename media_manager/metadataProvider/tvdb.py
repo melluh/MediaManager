@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import override
 
@@ -95,10 +94,7 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
                 if remote_id.get("type") == 2:
                     imdb_id = remote_id.get("id")
 
-        # Fetch all seasons in parallel; serial loop is N RTTs for a long-running show.
-        season_payloads = await asyncio.gather(
-            *(self.__get_season(show_id=sid) for sid in seasons_ids)
-        )
+        season_payloads = [await self.__get_season(show_id=sid) for sid in seasons_ids]
         for s in season_payloads:
             # Filter to "aired order" only; mixing aired/dvd orders duplicates
             # (show_id, season_number) and violates the seasons unique constraint.
@@ -204,10 +200,7 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
             results = await self.__search_movie(query=query)
             results = [r for r in results[0:20] if r["type"] == "movie"]
             log.debug(f"got {len(results)} results from TVDB search")
-            # TVDB search returns thin records; gather full payloads in parallel.
-            movie_payloads = await asyncio.gather(
-                *(self.__get_movie(r["tvdb_id"]) for r in results)
-            )
+            movie_payloads = [await self.__get_movie(r["tvdb_id"]) for r in results]
             formatted_results = []
             for result in movie_payloads:
                 try:
@@ -234,10 +227,7 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
         results = await self.__get_trending_movies()
         results = results[0:20]
         log.debug(f"got {len(results)} results from TVDB search")
-        # Trending listing also returns thin records; gather full payloads in parallel.
-        movie_payloads = await asyncio.gather(
-            *(self.__get_movie(r["id"]) for r in results)
-        )
+        movie_payloads = [await self.__get_movie(r["id"]) for r in results]
         formatted_results = []
         for result in movie_payloads:
             try:

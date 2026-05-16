@@ -98,20 +98,12 @@ class TorrentService:
 
     async def get_all_torrents(self) -> list[Torrent]:
         all_torrents = await self.torrent_repository.get_all_torrents()
-        # Fan out per-torrent status calls; each hits a sync client lib in a thread.
-        results = await asyncio.gather(
-            *(self.get_torrent_status(t) for t in all_torrents),
-            return_exceptions=True,
-        )
         torrents: list[Torrent] = []
-        for source, result in zip(all_torrents, results, strict=True):
-            if isinstance(result, Exception):
-                log.exception(
-                    f"Error fetching status for torrent {source.title}",
-                    exc_info=result,
-                )
-            else:
-                torrents.append(result)
+        for t in all_torrents:
+            try:
+                torrents.append(await self.get_torrent_status(t))
+            except Exception:
+                log.exception(f"Error fetching status for torrent {t.title}")
         return torrents
 
     async def get_completed_torrents(self) -> list[Torrent]:

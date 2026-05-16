@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import override
 
@@ -279,17 +278,14 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         external_ids = await self.__get_show_external_ids(show_id=show_id)
         imdb_id = external_ids.get("imdb_id")
 
-        # Fetch all seasons in parallel; serial loop is N RTTs for a long-running show.
-        season_metadata_list = await asyncio.gather(
-            *(
-                self.__get_season_metadata(
-                    show_id=show_metadata["id"],
-                    season_number=season["season_number"],
-                    language=language,
-                )
-                for season in show_metadata["seasons"]
+        season_metadata_list = [
+            await self.__get_season_metadata(
+                show_id=show_metadata["id"],
+                season_number=season["season_number"],
+                language=language,
             )
-        )
+            for season in show_metadata["seasons"]
+        ]
         season_list = [
             Season(
                 external_id=int(season_metadata["id"]),

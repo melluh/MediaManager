@@ -69,7 +69,9 @@ class TvService(BaseMediaService[Show, Show]):
         """
         Get all shows in the library.
         """
-        return await self.get_all_media()
+        # Use the TV-specific eager-loaded query so ShowSchema validation
+        # doesn't trigger lazy loads on seasons/episodes under AsyncSession.
+        return await self.tv_repository.get_shows()
 
     async def delete_show(
         self,

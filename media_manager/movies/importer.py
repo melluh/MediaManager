@@ -96,7 +96,10 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             return imported_any
 
     async def import_torrent_files(self, torrent: Torrent, movie: Movie) -> None:
-        video_files, subtitle_files, _ = get_files_for_import(torrent=torrent)
+        # Filesystem scan + archive extraction; offload off the event loop.
+        video_files, subtitle_files, _ = await asyncio.to_thread(
+            get_files_for_import, torrent=torrent
+        )
         if len(video_files) != 1:
             await self.notify_import_failure(
                 movie.name,
@@ -137,7 +140,7 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         async def _logic(
             m: Movie, path: Path, add_cb: Callable[[MovieFile], Awaitable[None]]
         ) -> bool:
-            v, s, _ = get_files_for_import(directory=path)
+            v, s, _ = await asyncio.to_thread(get_files_for_import, directory=path)
             res = await self.import_movie(m, v, s, "IMPORTED")
             if res:
                 await add_cb(

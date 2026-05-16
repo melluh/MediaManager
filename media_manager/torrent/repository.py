@@ -1,4 +1,5 @@
 from sqlalchemy import delete, select
+from sqlalchemy.orm import selectinload
 
 from media_manager.database import DbSessionDependency
 from media_manager.exceptions import NotFoundError
@@ -27,12 +28,15 @@ class TorrentRepository:
         ]
 
     async def get_show_of_torrent(self, torrent_id: TorrentId) -> ShowSchema | None:
+        # Eager-load the show tree; ShowSchema requires seasons -> episodes and
+        # AsyncSession can't satisfy implicit lazy loads during validation.
         stmt = (
             select(Show)
             .join(Show.seasons)
             .join(Season.episodes)
             .join(Episode.episode_files)
             .where(EpisodeFile.torrent_id == torrent_id)
+            .options(selectinload(Show.seasons).selectinload(Season.episodes))
         )
         result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
         if result is None:

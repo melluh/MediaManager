@@ -60,7 +60,10 @@ class TvImportService(BaseMediaService[Show, Show]):
         torrent_id: str | None = None,
         file_path_suffix: str = "",
     ) -> bool:
-        video_files, _, _ = get_files_for_import(directory=source_directory)
+        # Filesystem scan + archive extraction; offload off the event loop.
+        video_files, _, _ = await asyncio.to_thread(
+            get_files_for_import, directory=source_directory
+        )
         if not video_files:
             return False
 

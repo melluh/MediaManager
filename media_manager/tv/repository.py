@@ -391,7 +391,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         continuous_download: bool | None = None,
         imdb_id: str | None = None,
     ) -> ShowSchema:
-        return await self.update_media_attributes_base(
+        await self.update_media_attributes_base(
             media_id=show_id,
             model_class=Show,
             name=name,
@@ -401,11 +401,18 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             continuous_download=continuous_download,
             imdb_id=imdb_id,
         )
+        # Reload with seasons/episodes eagerly; the base returns a schema built
+        # from a non-eager db.get() which can't lazy-load under AsyncSession.
+        return await self.get_show_by_id(show_id)
 
     async def update_season_attributes(
         self, season_id: SeasonId, name: str | None = None, overview: str | None = None
     ) -> SeasonSchema:
-        db_season = await self.db.get(Season, season_id)
+        # selectinload episodes so SeasonSchema.model_validate doesn't trip
+        # an implicit lazy load under AsyncSession.
+        db_season = await self.db.get(
+            Season, season_id, options=[selectinload(Season.episodes)]
+        )
         if not db_season:
             msg = f"Season {season_id} not found"
             raise NotFoundError(msg)
@@ -419,7 +426,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         if updated:
             try:
                 await self.db.commit()
-                await self.db.refresh(db_season)
+                await self.db.refresh(db_season, ["episodes"])
             except SQLAlchemyError:
                 await self.db.rollback()
                 raise
