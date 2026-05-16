@@ -251,10 +251,10 @@ async def set_continuous_download(
     """
     Toggle whether future seasons of a show will be automatically downloaded.
     """
-    await tv_service.set_show_continuous_download(
+    updated_show = await tv_service.set_show_continuous_download(
         show=show, continuous_download=continuous_download
     )
-    return await tv_service.get_public_show_by_id(show=show)
+    return await tv_service.get_public_show_by_id(show=updated_show)
 
 
 @router.post(

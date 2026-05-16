@@ -10,7 +10,7 @@ from sqlalchemy import String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from media_manager.database import Base, get_session
+from media_manager.database import Base, get_async_session
 
 
 class OAuthAccount(SQLAlchemyBaseOAuthAccountTableUUID, Base):
@@ -24,9 +24,6 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     oauth_accounts: Mapped[list[OAuthAccount]] = relationship(
         "OAuthAccount", lazy="joined"
     )
-
-
-get_async_session = get_session
 
 
 async def get_user_db(

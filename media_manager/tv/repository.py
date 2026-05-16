@@ -109,9 +109,12 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         db_show = await self.db.get(Show, show.id) if show.id else None
 
         if db_show:  # Use base for update
-            return await self.save_media_base(
+            await self.save_media_base(
                 media_schema=show, model_class=Show, exclude={"seasons", "episodes"}
             )
+            # save_media_base returns a non-eager-loaded schema; reload with
+            # selectinload so ShowSchema.seasons/episodes don't lazy-load.
+            return await self.get_show_by_id(db_show.id)
 
         # Custom insertion for nested seasons/episodes
         db_show = Show(

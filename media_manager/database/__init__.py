@@ -80,7 +80,7 @@ def init_engine(
     return engine
 
 
-async def get_session() -> AsyncIterator[AsyncSession]:
+async def get_async_session() -> AsyncIterator[AsyncSession]:
     if SessionLocal is None:
         msg = "Session factory not initialized. Call init_engine(...) first."
         raise RuntimeError(msg)
@@ -94,4 +94,4 @@ async def get_session() -> AsyncIterator[AsyncSession]:
             raise
 
 
-DbSessionDependency = Annotated[AsyncSession, Depends(get_session)]
+DbSessionDependency = Annotated[AsyncSession, Depends(get_async_session)]

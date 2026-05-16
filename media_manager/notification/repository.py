@@ -73,6 +73,9 @@ class NotificationRepository:
             )
             await self.db.commit()
         except IntegrityError:
+            # AsyncSession leaves the txn in invalid state on IntegrityError;
+            # without rollback the request-end commit raises PendingRollbackError.
+            await self.db.rollback()
             log.exception("Could not save notification")
             msg = f"Notification with id {notification.id} already exists."
             raise ConflictError(msg) from None
