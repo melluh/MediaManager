@@ -16,26 +16,26 @@ router = APIRouter()
     "",
     dependencies=[Depends(current_active_user)],
 )
-def get_all_notifications(
+async def get_all_notifications(
     notification_service: notification_service_dep,
 ) -> list[Notification]:
     """
     Get all notifications.
     """
-    return notification_service.get_all_notifications()
+    return await notification_service.get_all_notifications()
 
 
 @router.get(
     "/unread",
     dependencies=[Depends(current_active_user)],
 )
-def get_unread_notifications(
+async def get_unread_notifications(
     notification_service: notification_service_dep,
 ) -> list[Notification]:
     """
     Get all unread notifications.
     """
-    return notification_service.get_unread_notifications()
+    return await notification_service.get_unread_notifications()
 
 
 @router.get(
@@ -45,13 +45,13 @@ def get_unread_notifications(
         status.HTTP_404_NOT_FOUND: {"description": "Notification not found"},
     },
 )
-def get_notification(
+async def get_notification(
     notification_id: NotificationId, notification_service: notification_service_dep
 ) -> Notification:
     """
     Get a specific notification by ID.
     """
-    return notification_service.get_notification(nid=notification_id)
+    return await notification_service.get_notification(nid=notification_id)
 
 
 # --------------------------------
@@ -67,13 +67,13 @@ def get_notification(
         status.HTTP_404_NOT_FOUND: {"description": "Notification not found"},
     },
 )
-def mark_notification_as_read(
+async def mark_notification_as_read(
     notification_id: NotificationId, notification_service: notification_service_dep
 ) -> None:
     """
     Mark a notification as read.
     """
-    notification_service.mark_notification_as_read(nid=notification_id)
+    await notification_service.mark_notification_as_read(nid=notification_id)
 
 
 @router.patch(
@@ -84,13 +84,13 @@ def mark_notification_as_read(
         status.HTTP_404_NOT_FOUND: {"description": "Notification not found"},
     },
 )
-def mark_notification_as_unread(
+async def mark_notification_as_unread(
     notification_id: NotificationId, notification_service: notification_service_dep
 ) -> None:
     """
     Mark a notification as unread.
     """
-    notification_service.mark_notification_as_unread(nid=notification_id)
+    await notification_service.mark_notification_as_unread(nid=notification_id)
 
 
 @router.delete(
@@ -101,10 +101,10 @@ def mark_notification_as_unread(
         status.HTTP_404_NOT_FOUND: {"description": "Notification not found"},
     },
 )
-def delete_notification(
+async def delete_notification(
     notification_id: NotificationId, notification_service: notification_service_dep
 ) -> None:
     """
     Delete a notification.
     """
-    notification_service.delete_notification(nid=notification_id)
+    await notification_service.delete_notification(nid=notification_id)

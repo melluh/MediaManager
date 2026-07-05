@@ -24,7 +24,7 @@ def get_torrent_service(torrent_repository: torrent_repository_dep) -> TorrentSe
 torrent_service_dep = Annotated[TorrentService, Depends(get_torrent_service)]
 
 
-def get_torrent_by_id(
+async def get_torrent_by_id(
     torrent_service: torrent_service_dep, torrent_id: TorrentId
 ) -> Torrent:
     """
@@ -35,7 +35,7 @@ def get_torrent_by_id(
     :return: The TorrentService instance with the specified torrent.
     """
     try:
-        torrent = torrent_service.get_torrent_by_id(torrent_id=torrent_id)
+        torrent = await torrent_service.get_torrent_by_id(torrent_id=torrent_id)
     except NotFoundError:
         raise HTTPException(
             status_code=404, detail=f"Torrent with ID {torrent_id} not found"

@@ -1,7 +1,7 @@
 import logging
 from typing import override
 
-import requests
+import httpx
 
 import media_manager.metadataProvider.utils
 from media_manager.config import MediaManagerConfig
@@ -16,6 +16,8 @@ from media_manager.tv.schemas import Episode, EpisodeNumber, Season, SeasonNumbe
 ENDED_STATUS = {"Ended", "Canceled"}
 
 log = logging.getLogger(__name__)
+
+_client = httpx.AsyncClient(timeout=30.0)
 
 
 class TmdbMetadataProvider(AbstractMetadataProvider):
@@ -39,70 +41,72 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             return original_language
         return self.default_language
 
-    def __get_show_metadata(self, show_id: int, language: str | None = None) -> dict:
+    async def __get_show_metadata(
+        self, show_id: int, language: str | None = None
+    ) -> dict:
         if language is None:
             language = self.default_language
         try:
-            response = requests.get(
+            response = await _client.get(
                 url=f"{self.url}/tv/shows/{show_id}",
                 params={"language": language},
                 timeout=60,
             )
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             log.exception(f"TMDB API error getting show metadata for ID {show_id}")
             if notification_manager.is_configured():
-                notification_manager.send_notification(
+                await notification_manager.send_notification(
                     title="TMDB API Error",
                     message=f"Failed to fetch show metadata for ID {show_id} from TMDB. Error: {e}",
                 )
             raise
 
-    def __get_show_external_ids(self, show_id: int) -> dict:
+    async def __get_show_external_ids(self, show_id: int) -> dict:
         try:
-            response = requests.get(
+            response = await _client.get(
                 url=f"{self.url}/tv/shows/{show_id}/external_ids",
                 timeout=60,
             )
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             log.exception(f"TMDB API error getting show external IDs for ID {show_id}")
             if notification_manager.is_configured():
-                notification_manager.send_notification(
+                await notification_manager.send_notification(
                     title="TMDB API Error",
                     message=f"Failed to fetch show external IDs for ID {show_id} from TMDB. Error: {e}",
                 )
             raise
 
-    def __get_season_metadata(
+    async def __get_season_metadata(
         self, show_id: int, season_number: int, language: str | None = None
     ) -> dict:
         if language is None:
             language = self.default_language
         try:
-            response = requests.get(
+            response = await _client.get(
                 url=f"{self.url}/tv/shows/{show_id}/{season_number}",
                 params={"language": language},
                 timeout=60,
             )
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             log.exception(
                 f"TMDB API error getting season {season_number} metadata for show ID {show_id}"
             )
             if notification_manager.is_configured():
-                notification_manager.send_notification(
+                await notification_manager.send_notification(
                     title="TMDB API Error",
                     message=f"Failed to fetch season {season_number} metadata for show ID {show_id} from TMDB. Error: {e}",
                 )
             raise
 
-    def __search_tv(self, query: str, page: int) -> dict:
+    async def __search_tv(self, query: str, page: int) -> dict:
         try:
-            response = requests.get(
+            response = await _client.get(
                 url=f"{self.url}/tv/search",
                 params={
                     "query": query,
@@ -112,74 +116,76 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             )
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             log.exception(f"TMDB API error searching TV shows with query '{query}'")
             if notification_manager.is_configured():
-                notification_manager.send_notification(
+                await notification_manager.send_notification(
                     title="TMDB API Error",
                     message=f"Failed to search TV shows with query '{query}' on TMDB. Error: {e}",
                 )
             raise
 
-    def __get_trending_tv(self) -> dict:
+    async def __get_trending_tv(self) -> dict:
         try:
-            response = requests.get(
+            response = await _client.get(
                 url=f"{self.url}/tv/trending",
                 params={"language": self.default_language},
                 timeout=60,
             )
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             log.exception("TMDB API error getting trending TV")
             if notification_manager.is_configured():
-                notification_manager.send_notification(
+                await notification_manager.send_notification(
                     title="TMDB API Error",
                     message=f"Failed to fetch trending TV shows from TMDB. Error: {e}",
                 )
             raise
 
-    def __get_movie_metadata(self, movie_id: int, language: str | None = None) -> dict:
+    async def __get_movie_metadata(
+        self, movie_id: int, language: str | None = None
+    ) -> dict:
         if language is None:
             language = self.default_language
         try:
-            response = requests.get(
+            response = await _client.get(
                 url=f"{self.url}/movies/{movie_id}",
                 params={"language": language},
                 timeout=60,
             )
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             log.exception(f"TMDB API error getting movie metadata for ID {movie_id}")
             if notification_manager.is_configured():
-                notification_manager.send_notification(
+                await notification_manager.send_notification(
                     title="TMDB API Error",
                     message=f"Failed to fetch movie metadata for ID {movie_id} from TMDB. Error: {e}",
                 )
             raise
 
-    def __get_movie_external_ids(self, movie_id: int) -> dict:
+    async def __get_movie_external_ids(self, movie_id: int) -> dict:
         try:
-            response = requests.get(
+            response = await _client.get(
                 url=f"{self.url}/movies/{movie_id}/external_ids", timeout=60
             )
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             log.exception(
                 f"TMDB API error getting movie external IDs for ID {movie_id}"
             )
             if notification_manager.is_configured():
-                notification_manager.send_notification(
+                await notification_manager.send_notification(
                     title="TMDB API Error",
                     message=f"Failed to fetch movie external IDs for ID {movie_id} from TMDB. Error: {e}",
                 )
             raise
 
-    def __search_movie(self, query: str, page: int) -> dict:
+    async def __search_movie(self, query: str, page: int) -> dict:
         try:
-            response = requests.get(
+            response = await _client.get(
                 url=f"{self.url}/movies/search",
                 params={
                     "query": query,
@@ -189,40 +195,42 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             )
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             log.exception(f"TMDB API error searching movies with query '{query}'")
             if notification_manager.is_configured():
-                notification_manager.send_notification(
+                await notification_manager.send_notification(
                     title="TMDB API Error",
                     message=f"Failed to search movies with query '{query}' on TMDB. Error: {e}",
                 )
             raise
 
-    def __get_trending_movies(self) -> dict:
+    async def __get_trending_movies(self) -> dict:
         try:
-            response = requests.get(
+            response = await _client.get(
                 url=f"{self.url}/movies/trending",
                 params={"language": self.default_language},
                 timeout=60,
             )
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             log.exception("TMDB API error getting trending movies")
             if notification_manager.is_configured():
-                notification_manager.send_notification(
+                await notification_manager.send_notification(
                     title="TMDB API Error",
                     message=f"Failed to fetch trending movies from TMDB. Error: {e}",
                 )
             raise
 
     @override
-    def download_show_poster_image(self, show: Show) -> bool:
+    async def download_show_poster_image(self, show: Show) -> bool:
         # Determine which language to use based on show's original_language
         language = self.__get_language_param(show.original_language)
 
         # Fetch metadata in the appropriate language to get localized poster
-        show_metadata = self.__get_show_metadata(show.external_id, language=language)
+        show_metadata = await self.__get_show_metadata(
+            show.external_id, language=language
+        )
 
         # downloading the poster
         # all pictures from TMDB should already be jpeg, so no need to convert
@@ -230,7 +238,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             poster_url = (
                 "https://image.tmdb.org/t/p/original" + show_metadata["poster_path"]
             )
-            if media_manager.metadataProvider.utils.download_poster_image(
+            if await media_manager.metadataProvider.utils.download_poster_image(
                 storage_path=self.storage_path, poster_url=poster_url, uuid=show.id
             ):
                 log.info("Successfully downloaded poster image for show " + show.name)
@@ -243,7 +251,9 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         return True
 
     @override
-    def get_show_metadata(self, show_id: int, language: str | None = None) -> Show:
+    async def get_show_metadata(
+        self, show_id: int, language: str | None = None
+    ) -> Show:
         """
 
         :param show_id: the external id of the show
@@ -255,45 +265,44 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         """
         # If language not provided, fetch once to determine original language
         if language is None:
-            show_metadata = self.__get_show_metadata(show_id)
+            show_metadata = await self.__get_show_metadata(show_id)
             language = show_metadata.get("original_language")
 
         # Determine which language to use for metadata
         language = self.__get_language_param(language)
 
         # Fetch show metadata in the appropriate language
-        show_metadata = self.__get_show_metadata(show_id, language=language)
+        show_metadata = await self.__get_show_metadata(show_id, language=language)
 
         # get imdb id
-        external_ids = self.__get_show_external_ids(show_id=show_id)
+        external_ids = await self.__get_show_external_ids(show_id=show_id)
         imdb_id = external_ids.get("imdb_id")
 
-        season_list = []
-        # inserting all the metadata into the objects
-        for season in show_metadata["seasons"]:
-            season_metadata = self.__get_season_metadata(
+        season_metadata_list = [
+            await self.__get_season_metadata(
                 show_id=show_metadata["id"],
                 season_number=season["season_number"],
                 language=language,
             )
-            episode_list = [
-                Episode(
-                    external_id=int(episode["id"]),
-                    title=episode["name"],
-                    number=EpisodeNumber(episode["episode_number"]),
-                )
-                for episode in season_metadata["episodes"]
-            ]
-
-            season_list.append(
-                Season(
-                    external_id=int(season_metadata["id"]),
-                    name=season_metadata["name"],
-                    overview=season_metadata["overview"],
-                    number=SeasonNumber(season_metadata["season_number"]),
-                    episodes=episode_list,
-                )
+            for season in show_metadata["seasons"]
+        ]
+        season_list = [
+            Season(
+                external_id=int(season_metadata["id"]),
+                name=season_metadata["name"],
+                overview=season_metadata["overview"],
+                number=SeasonNumber(season_metadata["season_number"]),
+                episodes=[
+                    Episode(
+                        external_id=int(episode["id"]),
+                        title=episode["name"],
+                        number=EpisodeNumber(episode["episode_number"]),
+                    )
+                    for episode in season_metadata["episodes"]
+                ],
             )
+            for season_metadata in season_metadata_list
+        ]
 
         year = media_manager.metadataProvider.utils.get_year_from_date(
             show_metadata["first_air_date"]
@@ -312,7 +321,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         )
 
     @override
-    def search_show(
+    async def search_show(
         self, query: str | None = None, max_pages: int = 5
     ) -> list[MetaDataProviderSearchResult]:
         """
@@ -321,10 +330,10 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         """
         results = []
         if query is None:
-            results = self.__get_trending_tv()["results"]
+            results = (await self.__get_trending_tv())["results"]
         else:
             for page_number in range(1, max_pages + 1):
-                result_page = self.__search_tv(query=query, page=page_number)
+                result_page = await self.__search_tv(query=query, page=page_number)
 
                 if not result_page["results"]:
                     break
@@ -371,7 +380,9 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         return formatted_results
 
     @override
-    def get_movie_metadata(self, movie_id: int, language: str | None = None) -> Movie:
+    async def get_movie_metadata(
+        self, movie_id: int, language: str | None = None
+    ) -> Movie:
         """
         Get movie metadata with language-aware fetching.
 
@@ -384,17 +395,19 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         """
         # If language not provided, fetch once to determine original language
         if language is None:
-            movie_metadata = self.__get_movie_metadata(movie_id=movie_id)
+            movie_metadata = await self.__get_movie_metadata(movie_id=movie_id)
             language = movie_metadata.get("original_language")
 
         # Determine which language to use for metadata
         language = self.__get_language_param(language)
 
         # Fetch movie metadata in the appropriate language
-        movie_metadata = self.__get_movie_metadata(movie_id=movie_id, language=language)
+        movie_metadata = await self.__get_movie_metadata(
+            movie_id=movie_id, language=language
+        )
 
         # get imdb id
-        external_ids = self.__get_movie_external_ids(movie_id=movie_id)
+        external_ids = await self.__get_movie_external_ids(movie_id=movie_id)
         imdb_id = external_ids.get("imdb_id")
 
         year = media_manager.metadataProvider.utils.get_year_from_date(
@@ -412,7 +425,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         )
 
     @override
-    def search_movie(
+    async def search_movie(
         self, query: str | None = None, max_pages: int = 5
     ) -> list[MetaDataProviderSearchResult]:
         """
@@ -421,10 +434,10 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         """
         results = []
         if query is None:
-            results = self.__get_trending_movies()["results"]
+            results = (await self.__get_trending_movies())["results"]
         else:
             for page_number in range(1, max_pages + 1):
-                result_page = self.__search_movie(query=query, page=page_number)
+                result_page = await self.__search_movie(query=query, page=page_number)
 
                 if not result_page["results"]:
                     break
@@ -471,12 +484,12 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         return formatted_results
 
     @override
-    def download_movie_poster_image(self, movie: Movie) -> bool:
+    async def download_movie_poster_image(self, movie: Movie) -> bool:
         # Determine which language to use based on movie's original_language
         language = self.__get_language_param(movie.original_language)
 
         # Fetch metadata in the appropriate language to get localized poster
-        movie_metadata = self.__get_movie_metadata(
+        movie_metadata = await self.__get_movie_metadata(
             movie_id=movie.external_id, language=language
         )
 
@@ -486,7 +499,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             poster_url = (
                 "https://image.tmdb.org/t/p/original" + movie_metadata["poster_path"]
             )
-            if media_manager.metadataProvider.utils.download_poster_image(
+            if await media_manager.metadataProvider.utils.download_poster_image(
                 storage_path=self.storage_path, poster_url=poster_url, uuid=movie.id
             ):
                 log.info("Successfully downloaded poster image for movie " + movie.name)

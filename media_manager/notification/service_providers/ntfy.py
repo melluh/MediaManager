@@ -1,4 +1,4 @@
-import requests
+import httpx
 
 from media_manager.config import MediaManagerConfig
 from media_manager.notification.schemas import MessageNotification
@@ -15,15 +15,15 @@ class NtfyNotificationServiceProvider(AbstractNotificationServiceProvider):
     def __init__(self) -> None:
         self.config = MediaManagerConfig().notifications.ntfy
 
-    def send_notification(self, message: MessageNotification) -> bool:
-        response = requests.post(
-            url=self.config.url,
-            data=message.message.encode(encoding="utf-8"),
-            headers={
-                "Title": "MediaManager - " + message.title,
-            },
-            timeout=60,
-        )
+    async def send_notification(self, message: MessageNotification) -> bool:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                url=self.config.url,
+                content=message.message.encode(encoding="utf-8"),
+                headers={
+                    "Title": "MediaManager - " + message.title,
+                },
+            )
         if response.status_code not in range(200, 300):
             return False
         return True

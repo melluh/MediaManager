@@ -18,13 +18,13 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
         super().__init__(repository=tv_repository)
         self.tv_repository = tv_repository
 
-    def add_show(
+    async def add_show(
         self,
         external_id: int,
         metadata_provider: AbstractMetadataProvider,
         language: str | None = None,
     ) -> Show:
-        return self.add_media_base(
+        return await self.add_media_base(
             external_id=external_id,
             metadata_provider=metadata_provider,
             get_metadata_func=metadata_provider.get_show_metadata,
@@ -33,39 +33,39 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
             language=language,
         )
 
-    def search_for_show(
+    async def search_for_show(
         self, query: str, metadata_provider: AbstractMetadataProvider
     ) -> list[MetaDataProviderSearchResult]:
-        return self.search_for_media_base(
+        return await self.search_for_media_base(
             query=query,
             metadata_provider=metadata_provider,
             search_func=metadata_provider.search_show,
             get_by_external_id_func=self.tv_repository.get_show_by_external_id,
         )
 
-    def get_popular_shows(
+    async def get_popular_shows(
         self, metadata_provider: AbstractMetadataProvider
     ) -> list[MetaDataProviderSearchResult]:
-        return self.get_popular_media_base(
+        return await self.get_popular_media_base(
             metadata_provider=metadata_provider,
             search_func=metadata_provider.search_show,
         )
 
-    def update_show_metadata(
+    async def update_show_metadata(
         self, db_show: Show, metadata_provider: AbstractMetadataProvider
     ) -> Show | None:
         """
         Updates the metadata of a show.
         """
         log.debug(f"Found show: {db_show.name} for metadata update.")
-        fresh_show_data = metadata_provider.get_show_metadata(
+        fresh_show_data = await metadata_provider.get_show_metadata(
             show_id=db_show.external_id, language=db_show.original_language
         )
         if not fresh_show_data:
             log.warning(f"Could not fetch fresh metadata for show {db_show.name}")
             return db_show
 
-        self.tv_repository.update_show_attributes(
+        await self.tv_repository.update_show_attributes(
             show_id=db_show.id,
             name=fresh_show_data.name,
             overview=fresh_show_data.overview,
@@ -83,7 +83,7 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
                 existing_season = existing_season_external_ids[
                     fresh_season_data.external_id
                 ]
-                self.tv_repository.update_season_attributes(
+                await self.tv_repository.update_season_attributes(
                     season_id=existing_season.id,
                     name=fresh_season_data.name,
                     overview=fresh_season_data.overview,
@@ -96,7 +96,7 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
                         existing_episode = existing_episode_external_ids[
                             fresh_episode_data.external_id
                         ]
-                        self.tv_repository.update_episode_attributes(
+                        await self.tv_repository.update_episode_attributes(
                             episode_id=existing_episode.id,
                             title=fresh_episode_data.title,
                             overview=fresh_episode_data.overview,
@@ -109,7 +109,7 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
                             title=fresh_episode_data.title,
                             overview=fresh_episode_data.overview,
                         )
-                        self.tv_repository.add_episode_to_season(
+                        await self.tv_repository.add_episode_to_season(
                             season_id=existing_season.id, episode_data=episode_schema
                         )
             else:
@@ -130,19 +130,19 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
                         for ep_data in fresh_season_data.episodes
                     ],
                 )
-                self.tv_repository.add_season_to_show(
+                await self.tv_repository.add_season_to_show(
                     show_id=db_show.id, season_data=season_schema
                 )
 
-        updated_show = self.tv_repository.get_show_by_id(show_id=db_show.id)
-        metadata_provider.download_show_poster_image(show=updated_show)
+        updated_show = await self.tv_repository.get_show_by_id(show_id=db_show.id)
+        await metadata_provider.download_show_poster_image(show=updated_show)
         return updated_show
 
-    def update_all_non_ended_shows_metadata(self) -> None:
-        def get_non_ended_shows() -> list[Show]:
-            return [show for show in self.tv_repository.get_shows() if not show.ended]
+    async def update_all_non_ended_shows_metadata(self) -> None:
+        async def get_non_ended_shows() -> list[Show]:
+            return [show for show in await self.tv_repository.get_shows() if not show.ended]
 
-        self.update_all_metadata_base(
+        await self.update_all_metadata_base(
             get_all_to_update_func=get_non_ended_shows,
             update_single_func=self.update_show_metadata,
             tmdb_provider_class=TmdbMetadataProvider,

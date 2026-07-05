@@ -1,8 +1,9 @@
 from sqlalchemy import distinct, func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
 
-from media_manager.common.repository import BaseRepository
+from media_manager.common.repository import BaseRepository, EntityId
 from media_manager.exceptions import ConflictError, NotFoundError
 from media_manager.torrent.models import Torrent as TorrentModel
 from media_manager.torrent.schemas import Torrent as TorrentSchema
@@ -22,23 +23,27 @@ from media_manager.tv.schemas import Season as SeasonSchema
 from media_manager.tv.schemas import Show as ShowSchema
 
 
+def _load_show_tree():  # noqa: ANN202
+    return selectinload(Show.seasons).selectinload(Season.episodes)
+
+
 class TvRepository(BaseRepository[Show, ShowSchema]):
     """
     Repository for managing TV shows, seasons, and episodes in the database.
     Provides methods to retrieve, save, and delete shows and seasons.
     """
 
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         super().__init__(db, Show, ShowSchema)
 
-    def get_show_by_id(self, show_id: ShowId) -> ShowSchema:
+    async def get_show_by_id(self, show_id: ShowId) -> ShowSchema:
         try:
             stmt = (
                 select(Show)
                 .where(Show.id == show_id)
-                .options(joinedload(Show.seasons).joinedload(Season.episodes))
+                .options(_load_show_tree())
             )
-            result = self.db.execute(stmt).unique().scalar_one_or_none()
+            result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
             if not result:
                 msg = f"Show with id {show_id} not found."
                 raise NotFoundError(msg)
@@ -48,7 +53,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         else:
             return ShowSchema.model_validate(result)
 
-    def get_show_by_external_id(
+    async def get_show_by_external_id(
         self, external_id: int, metadata_provider: str
     ) -> ShowSchema:
         try:
@@ -56,9 +61,9 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
                 select(Show)
                 .where(Show.external_id == external_id)
                 .where(Show.metadata_provider == metadata_provider)
-                .options(joinedload(Show.seasons).joinedload(Season.episodes))
+                .options(_load_show_tree())
             )
-            result = self.db.execute(stmt).unique().scalar_one_or_none()
+            result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
             if not result:
                 msg = f"Show with external_id {external_id} and provider {metadata_provider} not found."
                 raise NotFoundError(msg)
@@ -70,42 +75,46 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         else:
             return ShowSchema.model_validate(result)
 
-    def get_shows(self) -> list[ShowSchema]:
+    async def get_shows(self) -> list[ShowSchema]:
         try:
-            stmt = select(Show).options(
-                joinedload(Show.seasons).joinedload(Season.episodes)
-            )
-            results = self.db.execute(stmt).scalars().unique().all()
+            stmt = select(Show).options(_load_show_tree())
+            results = (await self.db.execute(stmt)).scalars().unique().all()
         except SQLAlchemyError:
             log.exception("Database error while retrieving all shows")
             raise
         else:
             return [ShowSchema.model_validate(show) for show in results]
 
-    delete_show = BaseRepository.delete
-    set_show_library = BaseRepository.set_library
+    async def delete_show(self, entity_id: EntityId) -> None:
+        await self.delete(entity_id)
 
-    def get_total_downloaded_episodes_count(self) -> int:
+    async def set_show_library(self, entity_id: EntityId, library: str) -> None:
+        await self.set_library(entity_id, library)
+
+    async def get_total_downloaded_episodes_count(self) -> int:
         try:
             stmt = (
                 select(func.count(distinct(Episode.id)))
                 .select_from(Episode)
                 .join(EpisodeFile)
             )
-            result = self.db.execute(stmt).scalar_one_or_none()
+            result = (await self.db.execute(stmt)).scalar_one_or_none()
         except SQLAlchemyError:
             log.exception("Database error while calculating downloaded episodes count")
             raise
         else:
             return result or 0
 
-    def save_show(self, show: ShowSchema) -> ShowSchema:
-        db_show = self.db.get(Show, show.id) if show.id else None
+    async def save_show(self, show: ShowSchema) -> ShowSchema:
+        db_show = await self.db.get(Show, show.id) if show.id else None
 
         if db_show:  # Use base for update
-            return self.save_media_base(
+            await self.save_media_base(
                 media_schema=show, model_class=Show, exclude={"seasons", "episodes"}
             )
+            # save_media_base returns a non-eager-loaded schema; reload with
+            # selectinload so ShowSchema.seasons/episodes don't lazy-load.
+            return await self.get_show_by_id(db_show.id)
 
         # Custom insertion for nested seasons/episodes
         db_show = Show(
@@ -145,80 +154,92 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         )
         self.db.add(db_show)
         try:
-            self.db.commit()
-            self.db.refresh(db_show)
+            await self.db.commit()
+            await self.db.refresh(db_show, ["seasons"])
         except IntegrityError as e:
-            self.db.rollback()
+            await self.db.rollback()
             msg = f"Integrity error: {e.orig}"
             raise ConflictError(msg) from e
         except SQLAlchemyError:
-            self.db.rollback()
+            await self.db.rollback()
             raise
         else:
-            return ShowSchema.model_validate(db_show)
+            # AsyncSession forbids implicit lazy loads after commit; reload eagerly.
+            return await self.get_show_by_id(db_show.id)
 
-    def get_season(self, season_id: SeasonId) -> SeasonSchema:
-        season = self.db.get(Season, season_id)
+    async def get_season(self, season_id: SeasonId) -> SeasonSchema:
+        season = await self.db.get(
+            Season, season_id, options=[selectinload(Season.episodes)]
+        )
         if not season:
             msg = f"Season {season_id} not found"
             raise NotFoundError(msg)
         return SeasonSchema.model_validate(season)
 
-    def get_episode(self, episode_id: EpisodeId) -> EpisodeSchema:
-        episode = self.db.get(Episode, episode_id)
+    async def get_episode(self, episode_id: EpisodeId) -> EpisodeSchema:
+        episode = await self.db.get(Episode, episode_id)
         if not episode:
             msg = f"Episode {episode_id} not found"
             raise NotFoundError(msg)
         return EpisodeSchema.model_validate(episode)
 
-    def get_season_by_episode(self, episode_id: EpisodeId) -> SeasonSchema:
-        stmt = select(Season).join(Season.episodes).where(Episode.id == episode_id)
-        season = self.db.scalar(stmt)
+    async def get_season_by_episode(self, episode_id: EpisodeId) -> SeasonSchema:
+        stmt = (
+            select(Season)
+            .join(Season.episodes)
+            .where(Episode.id == episode_id)
+            .options(selectinload(Season.episodes))
+        )
+        season = (await self.db.execute(stmt)).unique().scalar_one_or_none()
         if not season:
             msg = f"Season for episode {episode_id} not found"
             raise NotFoundError(msg)
         return SeasonSchema.model_validate(season)
 
-    def get_season_by_number(self, season_number: int, show_id: ShowId) -> SeasonSchema:
+    async def get_season_by_number(
+        self, season_number: int, show_id: ShowId
+    ) -> SeasonSchema:
         stmt = (
             select(Season)
             .where(Season.show_id == show_id)
             .where(Season.number == season_number)
-            .options(joinedload(Season.episodes), joinedload(Season.show))
+            .options(selectinload(Season.episodes), joinedload(Season.show))
         )
-        result = self.db.execute(stmt).unique().scalar_one_or_none()
+        result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
         if not result:
             msg = f"Season {season_number} for show {show_id} not found"
             raise NotFoundError(msg)
         return SeasonSchema.model_validate(result)
 
-    def add_episode_file(self, episode_file: EpisodeFileSchema) -> EpisodeFileSchema:
-        return self.add_media_file_base(
+    async def add_episode_file(
+        self, episode_file: EpisodeFileSchema
+    ) -> EpisodeFileSchema:
+        return await self.add_media_file_base(
             file_schema=episode_file,
             model_class=EpisodeFile,
             schema_class=EpisodeFileSchema,
         )
 
-    def remove_episode_files_by_torrent_id(self, torrent_id: TorrentId) -> int:
-        return self.remove_files_by_torrent_id_base(
+    async def remove_episode_files_by_torrent_id(self, torrent_id: TorrentId) -> int:
+        return await self.remove_files_by_torrent_id_base(
             torrent_id=torrent_id, model_class=EpisodeFile
         )
 
-    def get_episode_files_by_season_id(
+    async def get_episode_files_by_season_id(
         self, season_id: SeasonId
     ) -> list[EpisodeFileSchema]:
         stmt = select(EpisodeFile).join(Episode).where(Episode.season_id == season_id)
-        results = self.db.execute(stmt).scalars().all()
+        results = (await self.db.execute(stmt)).scalars().all()
         return [EpisodeFileSchema.model_validate(ef) for ef in results]
 
-    def get_episode_files_by_episode_id(
+    async def get_episode_files_by_episode_id(
         self, episode_id: EpisodeId
     ) -> list[EpisodeFileSchema]:
         stmt = select(EpisodeFile).where(EpisodeFile.episode_id == episode_id)
-        results = self.db.execute(stmt).scalars().all()
+        results = (await self.db.execute(stmt)).scalars().all()
         return [EpisodeFileSchema.model_validate(sf) for sf in results]
 
-    def get_torrents_by_show_id(self, show_id: ShowId) -> list[TorrentSchema]:
+    async def get_torrents_by_show_id(self, show_id: ShowId) -> list[TorrentSchema]:
         stmt = (
             select(TorrentModel)
             .distinct()
@@ -227,10 +248,10 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             .join(Season, Season.id == Episode.season_id)
             .where(Season.show_id == show_id)
         )
-        results = self.db.execute(stmt).scalars().unique().all()
+        results = (await self.db.execute(stmt)).scalars().unique().all()
         return [TorrentSchema.model_validate(t) for t in results]
 
-    def get_all_shows_with_torrents(self) -> list[ShowSchema]:
+    async def get_all_shows_with_torrents(self) -> list[ShowSchema]:
         stmt = (
             select(Show)
             .distinct()
@@ -238,13 +259,15 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             .join(Episode, Season.id == Episode.season_id)
             .join(EpisodeFile, Episode.id == EpisodeFile.episode_id)
             .join(TorrentModel, EpisodeFile.torrent_id == TorrentModel.id)
-            .options(joinedload(Show.seasons).joinedload(Season.episodes))
+            .options(_load_show_tree())
             .order_by(Show.name)
         )
-        results = self.db.execute(stmt).scalars().unique().all()
+        results = (await self.db.execute(stmt)).scalars().unique().all()
         return [ShowSchema.model_validate(show) for show in results]
 
-    def get_seasons_by_torrent_id(self, torrent_id: TorrentId) -> list[SeasonNumber]:
+    async def get_seasons_by_torrent_id(
+        self, torrent_id: TorrentId
+    ) -> list[SeasonNumber]:
         stmt = (
             select(Season.number)
             .distinct()
@@ -252,10 +275,12 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             .join(EpisodeFile, EpisodeFile.episode_id == Episode.id)
             .where(EpisodeFile.torrent_id == torrent_id)
         )
-        results = self.db.execute(stmt).scalars().unique().all()
+        results = (await self.db.execute(stmt)).scalars().unique().all()
         return [SeasonNumber(x) for x in results]
 
-    def get_episodes_by_torrent_id(self, torrent_id: TorrentId) -> list[EpisodeNumber]:
+    async def get_episodes_by_torrent_id(
+        self, torrent_id: TorrentId
+    ) -> list[EpisodeNumber]:
         stmt = (
             select(Episode.number)
             .distinct()
@@ -263,33 +288,35 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             .where(EpisodeFile.torrent_id == torrent_id)
             .order_by(Episode.number)
         )
-        episode_numbers = self.db.execute(stmt).scalars().all()
+        episode_numbers = (await self.db.execute(stmt)).scalars().all()
         return [EpisodeNumber(n) for n in episode_numbers]
 
-    def get_show_by_season_id(self, season_id: SeasonId) -> ShowSchema:
+    async def get_show_by_season_id(self, season_id: SeasonId) -> ShowSchema:
         stmt = (
             select(Show)
             .join(Season, Show.id == Season.show_id)
             .where(Season.id == season_id)
-            .options(joinedload(Show.seasons).joinedload(Season.episodes))
+            .options(_load_show_tree())
         )
-        result = self.db.execute(stmt).unique().scalar_one_or_none()
+        result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
         if not result:
             msg = f"Show for season {season_id} not found"
             raise NotFoundError(msg)
         return ShowSchema.model_validate(result)
 
-    def add_season_to_show(
+    async def add_season_to_show(
         self, show_id: ShowId, season_data: SeasonSchema
     ) -> SeasonSchema:
-        db_show = self.db.get(Show, show_id)
+        db_show = await self.db.get(Show, show_id)
         if not db_show:
             msg = f"Show {show_id} not found"
             raise NotFoundError(msg)
-        stmt = select(Season).where(
-            Season.show_id == show_id, Season.number == season_data.number
+        stmt = (
+            select(Season)
+            .where(Season.show_id == show_id, Season.number == season_data.number)
+            .options(selectinload(Season.episodes))
         )
-        existing = self.db.execute(stmt).scalar_one_or_none()
+        existing = (await self.db.execute(stmt)).unique().scalar_one_or_none()
         if existing:
             return SeasonSchema.model_validate(existing)
         db_season = Season(
@@ -312,28 +339,28 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         )
         self.db.add(db_season)
         try:
-            self.db.commit()
-            self.db.refresh(db_season)
+            await self.db.commit()
+            await self.db.refresh(db_season, ["episodes"])
         except IntegrityError as e:
-            self.db.rollback()
+            await self.db.rollback()
             msg = f"Integrity error: {e.orig}"
             raise ConflictError(msg) from e
         except SQLAlchemyError:
-            self.db.rollback()
+            await self.db.rollback()
             raise
         return SeasonSchema.model_validate(db_season)
 
-    def add_episode_to_season(
+    async def add_episode_to_season(
         self, season_id: SeasonId, episode_data: EpisodeSchema
     ) -> EpisodeSchema:
-        db_season = self.db.get(Season, season_id)
+        db_season = await self.db.get(Season, season_id)
         if not db_season:
             msg = f"Season {season_id} not found"
             raise NotFoundError(msg)
         stmt = select(Episode).where(
             Episode.season_id == season_id, Episode.number == episode_data.number
         )
-        existing = self.db.execute(stmt).scalar_one_or_none()
+        existing = (await self.db.execute(stmt)).scalar_one_or_none()
         if existing:
             return EpisodeSchema.model_validate(existing)
         db_episode = Episode(
@@ -346,18 +373,18 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         )
         self.db.add(db_episode)
         try:
-            self.db.commit()
-            self.db.refresh(db_episode)
+            await self.db.commit()
+            await self.db.refresh(db_episode)
         except IntegrityError as e:
-            self.db.rollback()
+            await self.db.rollback()
             msg = f"Integrity error: {e.orig}"
             raise ConflictError(msg) from e
         except SQLAlchemyError:
-            self.db.rollback()
+            await self.db.rollback()
             raise
         return EpisodeSchema.model_validate(db_episode)
 
-    def update_show_attributes(
+    async def update_show_attributes(
         self,
         show_id: ShowId,
         name: str | None = None,
@@ -367,7 +394,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         continuous_download: bool | None = None,
         imdb_id: str | None = None,
     ) -> ShowSchema:
-        return self.update_media_attributes_base(
+        await self.update_media_attributes_base(
             media_id=show_id,
             model_class=Show,
             name=name,
@@ -377,11 +404,18 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             continuous_download=continuous_download,
             imdb_id=imdb_id,
         )
+        # Reload with seasons/episodes eagerly; the base returns a schema built
+        # from a non-eager db.get() which can't lazy-load under AsyncSession.
+        return await self.get_show_by_id(show_id)
 
-    def update_season_attributes(
+    async def update_season_attributes(
         self, season_id: SeasonId, name: str | None = None, overview: str | None = None
     ) -> SeasonSchema:
-        db_season = self.db.get(Season, season_id)
+        # selectinload episodes so SeasonSchema.model_validate doesn't trip
+        # an implicit lazy load under AsyncSession.
+        db_season = await self.db.get(
+            Season, season_id, options=[selectinload(Season.episodes)]
+        )
         if not db_season:
             msg = f"Season {season_id} not found"
             raise NotFoundError(msg)
@@ -394,20 +428,20 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             updated = True
         if updated:
             try:
-                self.db.commit()
-                self.db.refresh(db_season)
+                await self.db.commit()
+                await self.db.refresh(db_season, ["episodes"])
             except SQLAlchemyError:
-                self.db.rollback()
+                await self.db.rollback()
                 raise
         return SeasonSchema.model_validate(db_season)
 
-    def update_episode_attributes(
+    async def update_episode_attributes(
         self,
         episode_id: EpisodeId,
         title: str | None = None,
         overview: str | None = None,
     ) -> EpisodeSchema:
-        db_episode = self.db.get(Episode, episode_id)
+        db_episode = await self.db.get(Episode, episode_id)
         if not db_episode:
             msg = f"Episode {episode_id} not found"
             raise NotFoundError(msg)
@@ -420,9 +454,9 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             updated = True
         if updated:
             try:
-                self.db.commit()
-                self.db.refresh(db_episode)
+                await self.db.commit()
+                await self.db.refresh(db_episode)
             except SQLAlchemyError:
-                self.db.rollback()
+                await self.db.rollback()
                 raise
         return EpisodeSchema.model_validate(db_episode)

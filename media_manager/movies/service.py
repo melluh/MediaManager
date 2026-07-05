@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import shutil
 from pathlib import Path
@@ -49,7 +50,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
         self.movie_import_service = movie_import_service
         self.movie_metadata_service = movie_metadata_service
 
-    def delete_movie(
+    async def delete_movie(
         self,
         movie: Movie,
         delete_files_on_disk: bool = False,
@@ -69,23 +70,23 @@ class MovieService(BaseMediaService[Movie, Movie]):
 
                 if movie_dir.exists() and movie_dir.is_dir():
                     try:
-                        shutil.rmtree(movie_dir)
+                        await asyncio.to_thread(shutil.rmtree, movie_dir)
                         log.info(f"Deleted movie directory: {movie_dir}")
                     except OSError:
                         log.exception(f"Deleting movie directory: {movie_dir}")
 
             if delete_torrents:
                 # Get all torrents associated with this movie
-                movie_torrents = self.movie_repository.get_torrents_by_movie_id(
+                movie_torrents = await self.movie_repository.get_torrents_by_movie_id(
                     movie_id=movie.id
                 )
 
                 for movie_torrent in movie_torrents:
-                    torrent = self.torrent_service.get_torrent_by_id(
+                    torrent = await self.torrent_service.get_torrent_by_id(
                         torrent_id=movie_torrent.torrent_id
                     )
                     try:
-                        self.torrent_service.cancel_download(
+                        await self.torrent_service.cancel_download(
                             torrent=torrent, delete_files=True
                         )
                         log.info(f"Deleted torrent: {torrent.torrent_title}")
@@ -93,26 +94,26 @@ class MovieService(BaseMediaService[Movie, Movie]):
                         log.exception(f"Failed to delete torrent {torrent.hash}")
 
         # Delete from database
-        self.movie_repository.delete_movie(movie.id)
+        await self.movie_repository.delete_movie(movie.id)
 
-    def get_public_movie_files(self, movie: Movie) -> list[PublicMovieFile]:
+    async def get_public_movie_files(self, movie: Movie) -> list[PublicMovieFile]:
         """
         Get all public movie files for a given movie.
 
         :param movie: The movie object.
         :return: A list of public movie files.
         """
-        movie_files = self.movie_repository.get_movie_files_by_movie_id(
+        movie_files = await self.movie_repository.get_movie_files_by_movie_id(
             movie_id=movie.id
         )
         public_movie_files = [PublicMovieFile.model_validate(x) for x in movie_files]
         result = []
         for movie_file in public_movie_files:
-            movie_file.imported = self.movie_file_exists_on_file(movie_file=movie_file)
+            movie_file.imported = await self.movie_file_exists_on_file(movie_file=movie_file)
             result.append(movie_file)
         return result
 
-    def get_all_available_torrents_for_movie(
+    async def get_all_available_torrents_for_movie(
         self, movie: Movie, search_query_override: str | None = None
     ) -> list[IndexerQueryResult]:
         """
@@ -123,52 +124,52 @@ class MovieService(BaseMediaService[Movie, Movie]):
         :return: A list of indexer query results.
         """
         if search_query_override:
-            return self.indexer_service.search(query=search_query_override, is_tv=False)
+            return await self.indexer_service.search(query=search_query_override, is_tv=False)
 
-        torrents = self.indexer_service.search_movie(movie=movie)
+        torrents = await self.indexer_service.search_movie(movie=movie)
 
         return evaluate_indexer_query_results(
             is_tv=False, query_results=torrents, media=movie
         )
 
-    def get_public_movie_by_id(self, movie: Movie) -> PublicMovie:
+    async def get_public_movie_by_id(self, movie: Movie) -> PublicMovie:
         """
         Get a public movie from a Movie object.
 
         :param movie: The movie object.
         :return: A public movie.
         """
-        torrents = self.get_torrents_for_movie(movie=movie).torrents
+        torrents = (await self.get_torrents_for_movie(movie=movie)).torrents
         public_movie = PublicMovie.model_validate(movie)
-        public_movie.downloaded = self.is_movie_downloaded(movie=movie)
+        public_movie.downloaded = await self.is_movie_downloaded(movie=movie)
         public_movie.torrents = torrents
         return public_movie
 
-    def get_movie_by_id(self, movie_id: MovieId) -> Movie:
+    async def get_movie_by_id(self, movie_id: MovieId) -> Movie:
         """
         Get a movie by its ID.
 
         :param movie_id: The ID of the movie.
         :return: The movie.
         """
-        return self.movie_repository.get_movie_by_id(movie_id)
+        return await self.movie_repository.get_movie_by_id(movie_id)
 
-    def is_movie_downloaded(self, movie: Movie) -> bool:
+    async def is_movie_downloaded(self, movie: Movie) -> bool:
         """
         Check if a movie is downloaded.
 
         :param movie: The movie object.
         :return: True if the movie is downloaded, False otherwise.
         """
-        movie_files = self.movie_repository.get_movie_files_by_movie_id(
+        movie_files = await self.movie_repository.get_movie_files_by_movie_id(
             movie_id=movie.id
         )
         for movie_file in movie_files:
-            if self.movie_file_exists_on_file(movie_file=movie_file):
+            if await self.movie_file_exists_on_file(movie_file=movie_file):
                 return True
         return False
 
-    def movie_file_exists_on_file(self, movie_file: MovieFile) -> bool:
+    async def movie_file_exists_on_file(self, movie_file: MovieFile) -> bool:
         """
         Check if a movie file exists on the filesystem.
 
@@ -177,12 +178,12 @@ class MovieService(BaseMediaService[Movie, Movie]):
         """
         if movie_file.torrent_id is None:
             return True
-        torrent_file = self.torrent_service.get_torrent_by_id(
+        torrent_file = await self.torrent_service.get_torrent_by_id(
             torrent_id=movie_file.torrent_id
         )
         return bool(torrent_file.imported)
 
-    def get_movie_by_external_id(
+    async def get_movie_by_external_id(
         self, external_id: int, metadata_provider: str
     ) -> Movie | None:
         """
@@ -192,27 +193,27 @@ class MovieService(BaseMediaService[Movie, Movie]):
         :param metadata_provider: The metadata provider.
         :return: The movie or None if not found.
         """
-        return self.movie_repository.get_movie_by_external_id(
+        return await self.movie_repository.get_movie_by_external_id(
             external_id=external_id, metadata_provider=metadata_provider
         )
 
-    def set_movie_library(self, movie: Movie, library: str) -> None:
-        self.movie_repository.set_movie_library(movie.id, library)
+    async def set_movie_library(self, movie: Movie, library: str) -> None:
+        await self.movie_repository.set_movie_library(movie.id, library)
 
-    def get_all_movies(self) -> list[Movie]:
+    async def get_all_movies(self) -> list[Movie]:
         """
         Get all movies in the library.
         """
-        return self.get_all_media()
+        return await self.get_all_media()
 
-    def get_torrents_for_movie(self, movie: Movie) -> RichMovieTorrent:
+    async def get_torrents_for_movie(self, movie: Movie) -> RichMovieTorrent:
         """
         Get torrents for a given movie.
 
         :param movie: The movie.
         :return: A rich movie torrent.
         """
-        movie_torrents = self.movie_repository.get_torrents_by_movie_id(
+        movie_torrents = await self.movie_repository.get_torrents_by_movie_id(
             movie_id=movie.id
         )
         return RichMovieTorrent(
@@ -223,16 +224,16 @@ class MovieService(BaseMediaService[Movie, Movie]):
             torrents=movie_torrents,
         )
 
-    def get_all_movies_with_torrents(self) -> list[RichMovieTorrent]:
+    async def get_all_movies_with_torrents(self) -> list[RichMovieTorrent]:
         """
         Get all movies with torrents.
 
         :return: A list of rich movie torrents.
         """
-        movies = self.movie_repository.get_all_movies_with_torrents()
-        return [self.get_torrents_for_movie(movie=movie) for movie in movies]
+        movies = await self.movie_repository.get_all_movies_with_torrents()
+        return [await self.get_torrents_for_movie(movie=movie) for movie in movies]
 
-    def download_torrent(
+    async def download_torrent(
         self,
         public_indexer_result_id: IndexerQueryResultId,
         movie: Movie,
@@ -246,11 +247,11 @@ class MovieService(BaseMediaService[Movie, Movie]):
         :param override_movie_file_path_suffix: Optional override for the file path suffix.
         :return: The downloaded torrent.
         """
-        indexer_result = self.indexer_service.get_result(
+        indexer_result = await self.indexer_service.get_result(
             result_id=public_indexer_result_id
         )
-        movie_torrent = self.torrent_service.download(indexer_result=indexer_result)
-        self.torrent_service.pause_download(torrent=movie_torrent)
+        movie_torrent = await self.torrent_service.download(indexer_result=indexer_result)
+        await self.torrent_service.pause_download(torrent=movie_torrent)
         movie_file = MovieFile(
             movie_id=movie.id,
             quality=indexer_result.quality,
@@ -258,12 +259,12 @@ class MovieService(BaseMediaService[Movie, Movie]):
             file_path_suffix=override_movie_file_path_suffix,
         )
         try:
-            self.movie_repository.add_movie_file(movie_file=movie_file)
+            await self.movie_repository.add_movie_file(movie_file=movie_file)
         except IntegrityError:
             log.warning(
                 f"Movie file for movie {movie.name} and torrent {movie_torrent.title} already exists"
             )
-            self.torrent_service.cancel_download(
+            await self.torrent_service.cancel_download(
                 torrent=movie_torrent, delete_files=True
             )
             raise
@@ -271,7 +272,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
             log.info(
                 f"Added movie file for movie {movie.name} and torrent {movie_torrent.title}"
             )
-            self.torrent_service.resume_download(torrent=movie_torrent)
+            await self.torrent_service.resume_download(torrent=movie_torrent)
         return movie_torrent
 
     def get_movie_root_path(self, movie: Movie) -> Path:
@@ -282,14 +283,14 @@ class MovieService(BaseMediaService[Movie, Movie]):
             libraries=misc_config.movie_libraries,
         )
 
-    def import_all_torrents(self) -> None:
+    async def import_all_torrents(self) -> None:
         """
         Delegate to MovieImportService.
         """
-        self.movie_import_service.import_all_torrents()
+        await self.movie_import_service.import_all_torrents()
 
-    def update_all_metadata(self) -> None:
+    async def update_all_metadata(self) -> None:
         """
         Delegate to MovieMetadataService.
         """
-        self.movie_metadata_service.update_all_metadata()
+        await self.movie_metadata_service.update_all_metadata()

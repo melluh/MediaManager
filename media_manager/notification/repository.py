@@ -5,7 +5,7 @@ from sqlalchemy.exc import (
     IntegrityError,
     SQLAlchemyError,
 )
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import false
 
 from media_manager.exceptions import ConflictError, NotFoundError
@@ -21,11 +21,11 @@ log = logging.getLogger(__name__)
 
 
 class NotificationRepository:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    def get_notification(self, nid: NotificationId) -> NotificationSchema:
-        result = self.db.get(Notification, nid)
+    async def get_notification(self, nid: NotificationId) -> NotificationSchema:
+        result = await self.db.get(Notification, nid)
 
         if not result:
             msg = f"Notification with id {nid} not found."
@@ -33,14 +33,14 @@ class NotificationRepository:
 
         return NotificationSchema.model_validate(result)
 
-    def get_unread_notifications(self) -> list[NotificationSchema]:
+    async def get_unread_notifications(self) -> list[NotificationSchema]:
         try:
             stmt = (
                 select(Notification)
                 .where(Notification.read == false())
                 .order_by(Notification.timestamp.desc())
             )
-            results = self.db.execute(stmt).scalars().all()
+            results = (await self.db.execute(stmt)).scalars().all()
             return [
                 NotificationSchema.model_validate(notification)
                 for notification in results
@@ -49,10 +49,10 @@ class NotificationRepository:
             log.exception("Database error while retrieving unread notifications")
             raise
 
-    def get_all_notifications(self) -> list[NotificationSchema]:
+    async def get_all_notifications(self) -> list[NotificationSchema]:
         try:
             stmt = select(Notification).order_by(Notification.timestamp.desc())
-            results = self.db.execute(stmt).scalars().all()
+            results = (await self.db.execute(stmt)).scalars().all()
             return [
                 NotificationSchema.model_validate(notification)
                 for notification in results
@@ -61,7 +61,7 @@ class NotificationRepository:
             log.exception("Database error while retrieving notifications")
             raise
 
-    def save_notification(self, notification: NotificationSchema) -> None:
+    async def save_notification(self, notification: NotificationSchema) -> None:
         try:
             self.db.add(
                 Notification(
@@ -71,28 +71,31 @@ class NotificationRepository:
                     message=notification.message,
                 )
             )
-            self.db.commit()
+            await self.db.commit()
         except IntegrityError:
+            # AsyncSession leaves the txn in invalid state on IntegrityError;
+            # without rollback the request-end commit raises PendingRollbackError.
+            await self.db.rollback()
             log.exception("Could not save notification")
             msg = f"Notification with id {notification.id} already exists."
             raise ConflictError(msg) from None
         return
 
-    def mark_notification_as_read(self, nid: NotificationId) -> None:
+    async def mark_notification_as_read(self, nid: NotificationId) -> None:
         stmt = update(Notification).where(Notification.id == nid).values(read=True)
-        self.db.execute(stmt)
+        await self.db.execute(stmt)
         return
 
-    def mark_notification_as_unread(self, nid: NotificationId) -> None:
+    async def mark_notification_as_unread(self, nid: NotificationId) -> None:
         stmt = update(Notification).where(Notification.id == nid).values(read=False)
-        self.db.execute(stmt)
+        await self.db.execute(stmt)
         return
 
-    def delete_notification(self, nid: NotificationId) -> None:
+    async def delete_notification(self, nid: NotificationId) -> None:
         stmt = delete(Notification).where(Notification.id == nid)
-        result = self.db.execute(stmt)
+        result = await self.db.execute(stmt)
         if result.rowcount == 0:
             msg = f"Notification with id {nid} not found."
             raise NotFoundError(msg)
-        self.db.commit()
+        await self.db.commit()
         return

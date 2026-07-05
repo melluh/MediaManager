@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 from collections.abc import Callable
@@ -51,7 +52,7 @@ class TvImportService(BaseMediaService[Show, Show]):
             libraries=misc_config.tv_libraries,
         )
 
-    def import_tv_show(
+    async def import_tv_show(
         self,
         show: Show,
         source_directory: Path,
@@ -59,7 +60,10 @@ class TvImportService(BaseMediaService[Show, Show]):
         torrent_id: str | None = None,
         file_path_suffix: str = "",
     ) -> bool:
-        video_files, _, _ = get_files_for_import(directory=source_directory)
+        # Filesystem scan + archive extraction; offload off the event loop.
+        video_files, _, _ = await asyncio.to_thread(
+            get_files_for_import, directory=source_directory
+        )
         if not video_files:
             return False
 
@@ -79,17 +83,19 @@ class TvImportService(BaseMediaService[Show, Show]):
                     target_name += f" - {file_path_suffix}"
                 target_file = season_dir / f"{target_name}{video_file.suffix}"
 
-                import_file(target_file=target_file, source_file=video_file)
+                await asyncio.to_thread(
+                    import_file, target_file=target_file, source_file=video_file
+                )
                 any_imported = True
 
                 # Update DB
                 try:
-                    season = self.tv_repository.get_season_by_number(s_num, show.id)
+                    season = await self.tv_repository.get_season_by_number(s_num, show.id)
                     episode = next(
                         (e for e in season.episodes if e.number == e_num), None
                     )
                     if episode:
-                        self.tv_repository.add_episode_file(
+                        await self.tv_repository.add_episode_file(
                             EpisodeFile(
                                 episode_id=episode.id,
                                 quality=quality,
@@ -101,8 +107,8 @@ class TvImportService(BaseMediaService[Show, Show]):
                     log.exception(f"Could not update DB for {video_file.name}")
         return any_imported
 
-    def import_torrent_files(self, torrent: Torrent, show: Show) -> None:
-        success = self.import_tv_show(
+    async def import_torrent_files(self, torrent: Torrent, show: Show) -> None:
+        success = await self.import_tv_show(
             show=show,
             source_directory=get_torrent_filepath(torrent),
             quality=torrent.quality,
@@ -110,44 +116,45 @@ class TvImportService(BaseMediaService[Show, Show]):
         )
         if success:
             torrent.imported = True
-            self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
-            self.notify_import_success(show.name, "TV show")
+            await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
+            await self.notify_import_success(show.name, "TV show")
         else:
-            self.notify_import_failure(show.name, "TV show")
+            await self.notify_import_failure(show.name, "TV show")
 
-    def get_import_candidates(
+    async def get_import_candidates(
         self, tv_path: Path, metadata_provider: AbstractMetadataProvider
     ) -> MediaImportSuggestion:
-        return super().get_import_candidates(
+        return await super().get_import_candidates(
             directory=tv_path,
             metadata_provider=metadata_provider,
             search_func=self.tv_metadata_service.search_for_show,
         )
 
-    def import_existing_tv_show(self, tv_show: Show, source_directory: Path) -> bool:
-        def _logic(s: Show, path: Path, _: Callable[[Any], Any]) -> bool:
-            return self.import_tv_show(s, path, file_path_suffix="IMPORTED")
+    async def import_existing_tv_show(self, tv_show: Show, source_directory: Path) -> bool:
+        async def _logic(s: Show, path: Path, _: Callable[[Any], Any]) -> bool:
+            return await self.import_tv_show(s, path, file_path_suffix="IMPORTED")
 
-        return self.import_existing_media(
+        async def _noop(_: object) -> None:
+            return None
+
+        return await self.import_existing_media(
             media=tv_show,
             source_directory=source_directory,
             import_func=_logic,
-            add_file_record_func=lambda _: (
-                None
-            ),  # Handled inside import_tv_show for now
+            add_file_record_func=_noop,
         )
 
-    def get_importable_tv_shows(
+    async def get_importable_tv_shows(
         self, metadata_provider: AbstractMetadataProvider
     ) -> list[MediaImportSuggestion]:
-        return self.get_importable_media(
+        return await self.get_importable_media(
             root_path=MediaManagerConfig().misc.tv_directory,
             metadata_provider=metadata_provider,
             get_candidates_func=self.get_import_candidates,
         )
 
-    def import_all_torrents(self) -> None:
-        self.import_all_torrents_base(
+    async def import_all_torrents(self) -> None:
+        await self.import_all_torrents_base(
             get_media_func=self.torrent_service.get_show_of_torrent,
             import_torrent_func=self.import_torrent_files,
             media_type_name="tv show",

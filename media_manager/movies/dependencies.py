@@ -72,12 +72,12 @@ def get_movie_service(
 movie_service_dep = Annotated[MovieService, Depends(get_movie_service)]
 
 
-def get_movie_by_id(
+async def get_movie_by_id(
     movie_service: movie_service_dep,
     movie_id: MovieId = Path(..., description="The ID of the movie"),
 ) -> Movie:
     try:
-        movie = movie_service.get_movie_by_id(movie_id)
+        movie = await movie_service.get_movie_by_id(movie_id)
     except NotFoundError:
         raise HTTPException(
             status_code=404,
