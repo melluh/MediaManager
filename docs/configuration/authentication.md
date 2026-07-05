@@ -19,9 +19,17 @@ All authentication settings are configured in the `[auth]` section of your `conf
   A list of email addresses for administrator accounts. This is required.
 * `email_password_resets`\
   Enables password resets via email. Default is `false`.
+* `registration_enabled`\
+  Allows new users to sign up for an account. Default is `false`.
 
 !!! info
     To use email password resets, you must also configure SMTP settings in the `[notifications.smtp_config]` section.
+
+!!! info
+    When `registration_enabled` is `false`, the sign-up page is hidden, `/auth/register` returns 403, and OIDC rejects unknown users (existing users keep working). The bootstrap admin (see `admin_emails`) is unaffected.
+
+!!! tip "Adding users when registration is disabled"
+    Administrators can add users at any time from the **Settings → Users** page via the "Add User" button. For OIDC-only users, leave the password field blank — a random password is generated and the user is matched to their OIDC account by email on first sign-in.
 
 !!! info
     When setting up MediaManager for the first time, you should add your email to `admin_emails` in the `[auth]` config section. MediaManager will then use this email instead of the default admin email. Your account will automatically be created as an admin account, allowing you to manage other users, media and settings.
@@ -70,6 +78,7 @@ token_secret = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
 session_lifetime = 604800  # 1 week
 admin_emails = ["admin@example.com", "manager@example.com"]
 email_password_resets = true
+registration_enabled = false
 
 [auth.openid_connect]
 enabled = true
