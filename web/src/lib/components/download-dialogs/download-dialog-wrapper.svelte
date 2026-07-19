@@ -6,12 +6,16 @@
 	let {
 		open = $bindable(),
 		triggerText,
+		triggerClass = buttonVariants({ variant: 'default' }),
+		triggerIcon,
 		title,
 		description,
 		children
 	}: {
 		open: boolean;
 		triggerText: string;
+		triggerClass?: string;
+		triggerIcon?: Snippet;
 		title: string;
 		description: string;
 		children: Snippet;
@@ -19,7 +23,10 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Trigger class={buttonVariants({ variant: 'default' })}>{triggerText}</Dialog.Trigger>
+	<Dialog.Trigger class={triggerClass}>
+		{#if triggerIcon}{@render triggerIcon()}{/if}
+		{triggerText}
+	</Dialog.Trigger>
 	<Dialog.Content class="max-h-[90vh] w-fit min-w-[80vw] overflow-y-auto">
 		<Dialog.Header>
 			<Dialog.Title>{title}</Dialog.Title>

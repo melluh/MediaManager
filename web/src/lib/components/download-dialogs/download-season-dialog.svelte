@@ -5,7 +5,8 @@
 	import { toast } from 'svelte-sonner';
 	import {
 		convertTorrentSeasonRangeToIntegerRange,
-		formatSecondsToOptimalUnit
+		formatSecondsToOptimalUnit,
+		getTorrentQualityString
 	} from '$lib/utils.ts';
 	import * as Table from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
@@ -32,6 +33,7 @@
 	let advancedMode: boolean = $derived(tabState === 'advanced');
 
 	const tableColumnHeadings = [
+		{ name: 'Quality', id: 'quality' },
 		{ name: 'Size', id: 'size' },
 		{ name: 'Usenet', id: 'usenet' },
 		{ name: 'Seeders', id: 'seeders' },
@@ -131,7 +133,19 @@
 	{/if}
 	<TorrentTable {torrentsPromise} columns={tableColumnHeadings}>
 		{#snippet rowSnippet(torrent)}
-			<Table.Cell class="font-medium">{torrent.title}</Table.Cell>
+			<Table.Cell class="font-medium">
+				{#if torrent.comments}
+					<a
+						href={torrent.comments}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="hover:underline">{torrent.title}</a
+					>
+				{:else}
+					{torrent.title}
+				{/if}
+			</Table.Cell>
+			<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
 			<Table.Cell>{(torrent.size / 1024 / 1024 / 1024).toFixed(2)}GB</Table.Cell>
 			<Table.Cell>{torrent.usenet}</Table.Cell>
 			<Table.Cell>{torrent.usenet ? 'N/A' : torrent.seeders}</Table.Cell>

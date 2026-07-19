@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { toast } from 'svelte-sonner';
 	import { Badge } from '$lib/components/ui/badge';
+	import { Download } from 'lucide-svelte';
+	import { cn } from '$lib/utils';
 
 	import * as Table from '$lib/components/ui/table';
 	import client from '$lib/api';
@@ -11,6 +13,7 @@
 	import TorrentTable from '$lib/components/download-dialogs/torrent-table.svelte';
 	import SearchTabs from '$lib/components/download-dialogs/search-tabs.svelte';
 	import DownloadDialogWrapper from '$lib/components/download-dialogs/download-dialog-wrapper.svelte';
+	import { getTorrentQualityString } from '$lib/utils';
 
 	let { movie }: { movie: Movie } = $props();
 	let dialogueState = $state(false);
@@ -26,6 +29,7 @@
 	let advancedMode: boolean = $derived(tabState === 'advanced');
 
 	const tableColumnHeadings = [
+		{ name: 'Quality', id: 'quality' },
 		{ name: 'Size', id: 'size' },
 		{ name: 'Seeders', id: 'seeders' },
 		{ name: 'Score', id: 'score' },
@@ -90,9 +94,16 @@
 <DownloadDialogWrapper
 	bind:open={dialogueState}
 	triggerText="Download Movie"
+	triggerClass={cn(
+		buttonVariants({ variant: 'default' }),
+		'bg-blue-600 text-white hover:bg-blue-700'
+	)}
 	title="Download a Movie"
 	description="Search and download torrents for a specific season or season packs."
 >
+	{#snippet triggerIcon()}
+		<Download />
+	{/snippet}
 	<SearchTabs
 		bind:tabState
 		{isLoading}
@@ -109,7 +120,19 @@
 	{/if}
 	<TorrentTable {torrentsPromise} columns={tableColumnHeadings}>
 		{#snippet rowSnippet(torrent)}
-			<Table.Cell class="font-medium">{torrent.title}</Table.Cell>
+			<Table.Cell class="font-medium">
+				{#if torrent.comments}
+					<a
+						href={torrent.comments}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="hover:underline">{torrent.title}</a
+					>
+				{:else}
+					{torrent.title}
+				{/if}
+			</Table.Cell>
+			<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
 			<Table.Cell>{(torrent.size / 1024 / 1024 / 1024).toFixed(2)}GB</Table.Cell>
 			<Table.Cell>{torrent.seeders}</Table.Cell>
 			<Table.Cell>{torrent.score}</Table.Cell>

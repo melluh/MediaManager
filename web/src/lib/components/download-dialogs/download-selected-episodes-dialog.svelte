@@ -1,9 +1,11 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { toast } from 'svelte-sonner';
-	import { formatSecondsToOptimalUnit } from '$lib/utils';
+	import { formatSecondsToOptimalUnit, getTorrentQualityString } from '$lib/utils';
+	import { cn } from '$lib/utils';
 	import * as Table from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
+	import { Download } from 'lucide-svelte';
 	import client from '$lib/api';
 	import type { Show } from '$lib/api/api';
 	import SelectFilePathSuffixDialog from '$lib/components/download-dialogs/select-file-path-suffix-dialog.svelte';
@@ -28,6 +30,7 @@
 	let filePathSuffix: string = $state('');
 
 	const tableColumnHeadings = [
+		{ name: 'Quality', id: 'quality' },
 		{ name: 'Size', id: 'size' },
 		{ name: 'Usenet', id: 'usenet' },
 		{ name: 'Seeders', id: 'seeders' },
@@ -123,9 +126,13 @@
 <DownloadDialogWrapper
 	bind:open={dialogueState}
 	{triggerText}
+	triggerClass={cn(buttonVariants({ variant: 'default' }), 'bg-blue-600 text-white hover:bg-blue-700')}
 	title="Download Selected Episodes"
 	description="Search and download torrents for selected episodes."
 >
+	{#snippet triggerIcon()}
+		<Download />
+	{/snippet}
 	<div class="flex flex-col gap-3">
 		<p class="text-sm text-muted-foreground">
 			Selected episodes:
@@ -158,7 +165,19 @@
 
 	<TorrentTable {torrentsPromise} columns={tableColumnHeadings}>
 		{#snippet rowSnippet(torrent)}
-			<Table.Cell>{torrent.title}</Table.Cell>
+			<Table.Cell>
+				{#if torrent.comments}
+					<a
+						href={torrent.comments}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="hover:underline">{torrent.title}</a
+					>
+				{:else}
+					{torrent.title}
+				{/if}
+			</Table.Cell>
+			<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
 			<Table.Cell>
 				{(torrent.size / 1024 / 1024 / 1024).toFixed(2)}GB
 			</Table.Cell>
