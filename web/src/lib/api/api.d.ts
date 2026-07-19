@@ -4,1859 +4,1962 @@
  */
 
 export interface paths {
-	'/api/v1/health': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Hello World */
-		get: operations['hello_world_api_v1_health_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/search': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Search Media
-		 * @description Search local media (movies, TV shows, ...) by name.
-		 *
-		 *     Only queries the local database; no external metadata providers are
-		 *     contacted.
-		 */
-		get: operations['search_media_api_v1_search_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/search/external': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Search External Media
-		 * @description Search the metadata provider for movies and TV shows together, ranked
-		 *     the way the provider itself ranks combined results.
-		 */
-		get: operations['search_external_media_api_v1_search_external_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/jwt/login': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth:Jwt.Login */
-		post: operations['auth_jwt_login_api_v1_auth_jwt_login_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/jwt/logout': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth:Jwt.Logout */
-		post: operations['auth_jwt_logout_api_v1_auth_jwt_logout_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/cookie/login': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth:Cookie.Login */
-		post: operations['auth_cookie_login_api_v1_auth_cookie_login_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/cookie/logout': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth:Cookie.Logout */
-		post: operations['auth_cookie_logout_api_v1_auth_cookie_logout_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/register': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Register:Register */
-		post: operations['register_register_api_v1_auth_register_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/forgot-password': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Reset:Forgot Password */
-		post: operations['reset_forgot_password_api_v1_auth_forgot_password_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/reset-password': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Reset:Reset Password */
-		post: operations['reset_reset_password_api_v1_auth_reset_password_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/request-verify-token': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Verify:Request-Token */
-		post: operations['verify_request_token_api_v1_auth_request_verify_token_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/verify': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Verify:Verify */
-		post: operations['verify_verify_api_v1_auth_verify_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/users/all': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Get All Users */
-		get: operations['get_all_users_api_v1_users_all_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/users/': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Admin Create User */
-		post: operations['admin_create_user_api_v1_users__post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/users/me': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Users:Current User */
-		get: operations['users_current_user_api_v1_users_me_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		/** Users:Patch Current User */
-		patch: operations['users_patch_current_user_api_v1_users_me_patch'];
-		trace?: never;
-	};
-	'/api/v1/users/{id}': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Users:User */
-		get: operations['users_user_api_v1_users__id__get'];
-		put?: never;
-		post?: never;
-		/** Users:Delete User */
-		delete: operations['users_delete_user_api_v1_users__id__delete'];
-		options?: never;
-		head?: never;
-		/** Users:Patch User */
-		patch: operations['users_patch_user_api_v1_users__id__patch'];
-		trace?: never;
-	};
-	'/api/v1/auth/metadata': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Get Auth Metadata */
-		get: operations['get_auth_metadata_api_v1_auth_metadata_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/oauth/authorize': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Oauth:Oauth2.Cookie.Authorize */
-		get: operations['oauth_oauth2_cookie_authorize_api_v1_auth_oauth_authorize_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/auth/oauth/callback': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Oauth:Oauth2.Cookie.Callback
-		 * @description The response varies based on the authentication backend used.
-		 */
-		get: operations['oauth_oauth2_cookie_callback_api_v1_auth_oauth_callback_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/search': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Search Metadata Providers For A Show
-		 * @description Search for a show on the configured metadata provider.
-		 */
-		get: operations['search_metadata_providers_for_a_show_api_v1_tv_search_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/recommended': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Recommended Shows
-		 * @description Get a list of recommended/popular shows from the metadata provider.
-		 */
-		get: operations['get_recommended_shows_api_v1_tv_recommended_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/importable': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get All Importable Shows
-		 * @description Get a list of unknown shows that were detected in the TV directory and are importable.
-		 */
-		get: operations['get_all_importable_shows_api_v1_tv_importable_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/importable/{show_id}': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Import Detected Show
-		 * @description Import a detected show from the specified directory into the library.
-		 */
-		post: operations['import_detected_show_api_v1_tv_importable__show_id__post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/shows': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get All Shows
-		 * @description Get all shows in the library.
-		 */
-		get: operations['get_all_shows_api_v1_tv_shows_get'];
-		put?: never;
-		/**
-		 * Add A Show
-		 * @description Add a new show to the library.
-		 */
-		post: operations['add_a_show_api_v1_tv_shows_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/shows/torrents': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Shows With Torrents
-		 * @description Get all shows that are associated with torrents.
-		 */
-		get: operations['get_shows_with_torrents_api_v1_tv_shows_torrents_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/shows/libraries': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Available Libraries
-		 * @description Get available TV libraries from configuration.
-		 */
-		get: operations['get_available_libraries_api_v1_tv_shows_libraries_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/shows/{show_id}': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get A Show
-		 * @description Get details for a specific show.
-		 */
-		get: operations['get_a_show_api_v1_tv_shows__show_id__get'];
-		put?: never;
-		post?: never;
-		/**
-		 * Delete A Show
-		 * @description Delete a show from the library.
-		 */
-		delete: operations['delete_a_show_api_v1_tv_shows__show_id__delete'];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/shows/{show_id}/metadata': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Update Shows Metadata
-		 * @description Update a show's metadata from the provider.
-		 */
-		post: operations['update_shows_metadata_api_v1_tv_shows__show_id__metadata_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/shows/{show_id}/continuousDownload': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Set Continuous Download
-		 * @description Toggle whether future seasons of a show will be automatically downloaded.
-		 */
-		post: operations['set_continuous_download_api_v1_tv_shows__show_id__continuousDownload_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/shows/{show_id}/library': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Set Library
-		 * @description Set the library path for a Show.
-		 */
-		post: operations['set_library_api_v1_tv_shows__show_id__library_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/shows/{show_id}/torrents': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get A Shows Torrents
-		 * @description Get torrents associated with a specific show.
-		 */
-		get: operations['get_a_shows_torrents_api_v1_tv_shows__show_id__torrents_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/seasons/{season_id}': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Season
-		 * @description Get details for a specific season.
-		 */
-		get: operations['get_season_api_v1_tv_seasons__season_id__get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/seasons/{season_id}/files': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Episode Files
-		 * @description Get episode files associated with a specific season.
-		 */
-		get: operations['get_episode_files_api_v1_tv_seasons__season_id__files_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/torrents': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Torrents For A Season
-		 * @description Search for torrents for a specific season of a show.
-		 *     Default season_number is 1 because it often returns multi-season torrents.
-		 */
-		get: operations['get_torrents_for_a_season_api_v1_tv_torrents_get'];
-		put?: never;
-		/**
-		 * Download A Torrent
-		 * @description Trigger a download for a specific torrent.
-		 */
-		post: operations['download_a_torrent_api_v1_tv_torrents_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tv/episodes/count': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Total Count Of Downloaded Episodes
-		 * @description Total number of episodes downloaded
-		 */
-		get: operations['get_total_count_of_downloaded_episodes_api_v1_tv_episodes_count_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/torrent': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Get All Torrents */
-		get: operations['get_all_torrents_api_v1_torrent_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/torrent/{torrent_id}': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Get Torrent */
-		get: operations['get_torrent_api_v1_torrent__torrent_id__get'];
-		put?: never;
-		post?: never;
-		/** Delete Torrent */
-		delete: operations['delete_torrent_api_v1_torrent__torrent_id__delete'];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/torrent/{torrent_id}/retry': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Retry Torrent Download */
-		post: operations['retry_torrent_download_api_v1_torrent__torrent_id__retry_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/torrent/{torrent_id}/status': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		/** Update Torrent Status */
-		patch: operations['update_torrent_status_api_v1_torrent__torrent_id__status_patch'];
-		trace?: never;
-	};
-	'/api/v1/movies/search': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Search For Movie
-		 * @description Search for a movie on the configured metadata provider.
-		 */
-		get: operations['search_for_movie_api_v1_movies_search_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies/recommended': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Popular Movies
-		 * @description Get a list of recommended/popular movies from the metadata provider.
-		 */
-		get: operations['get_popular_movies_api_v1_movies_recommended_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies/importable': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get All Importable Movies
-		 * @description Get a list of unknown movies that were detected in the movie directory and are importable.
-		 */
-		get: operations['get_all_importable_movies_api_v1_movies_importable_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies/importable/{movie_id}': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Import Detected Movie
-		 * @description Import a detected movie from the specified directory into the library.
-		 */
-		post: operations['import_detected_movie_api_v1_movies_importable__movie_id__post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get All Movies
-		 * @description Get all movies in the library.
-		 */
-		get: operations['get_all_movies_api_v1_movies_get'];
-		put?: never;
-		/**
-		 * Add A Movie
-		 * @description Add a new movie to the library.
-		 */
-		post: operations['add_a_movie_api_v1_movies_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies/torrents': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get All Movies With Torrents
-		 * @description Get all movies that are associated with torrents.
-		 */
-		get: operations['get_all_movies_with_torrents_api_v1_movies_torrents_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies/libraries': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Available Libraries
-		 * @description Get available Movie libraries from configuration.
-		 */
-		get: operations['get_available_libraries_api_v1_movies_libraries_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies/{movie_id}': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Movie By Id
-		 * @description Get details for a specific movie.
-		 */
-		get: operations['get_movie_by_id_api_v1_movies__movie_id__get'];
-		put?: never;
-		post?: never;
-		/**
-		 * Delete A Movie
-		 * @description Delete a movie from the library.
-		 */
-		delete: operations['delete_a_movie_api_v1_movies__movie_id__delete'];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies/{movie_id}/library': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Set Library
-		 * @description Set the library path for a Movie.
-		 */
-		post: operations['set_library_api_v1_movies__movie_id__library_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies/{movie_id}/files': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Movie Files By Movie Id
-		 * @description Get files associated with a specific movie.
-		 */
-		get: operations['get_movie_files_by_movie_id_api_v1_movies__movie_id__files_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies/{movie_id}/torrents': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Search For Torrents For Movie
-		 * @description Search for torrents for a specific movie.
-		 */
-		get: operations['search_for_torrents_for_movie_api_v1_movies__movie_id__torrents_get'];
-		put?: never;
-		/**
-		 * Download Torrent For Movie
-		 * @description Trigger a download for a specific torrent for a movie.
-		 */
-		post: operations['download_torrent_for_movie_api_v1_movies__movie_id__torrents_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/notification': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get All Notifications
-		 * @description Get all notifications.
-		 */
-		get: operations['get_all_notifications_api_v1_notification_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/notification/unread': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Unread Notifications
-		 * @description Get all unread notifications.
-		 */
-		get: operations['get_unread_notifications_api_v1_notification_unread_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/notification/{notification_id}': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Notification
-		 * @description Get a specific notification by ID.
-		 */
-		get: operations['get_notification_api_v1_notification__notification_id__get'];
-		put?: never;
-		post?: never;
-		/**
-		 * Delete Notification
-		 * @description Delete a notification.
-		 */
-		delete: operations['delete_notification_api_v1_notification__notification_id__delete'];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/notification/{notification_id}/read': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		/**
-		 * Mark Notification As Read
-		 * @description Mark a notification as read.
-		 */
-		patch: operations['mark_notification_as_read_api_v1_notification__notification_id__read_patch'];
-		trace?: never;
-	};
-	'/api/v1/notification/{notification_id}/unread': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		/**
-		 * Mark Notification As Unread
-		 * @description Mark a notification as unread.
-		 */
-		patch: operations['mark_notification_as_unread_api_v1_notification__notification_id__unread_patch'];
-		trace?: never;
-	};
-	'/': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Root */
-		get: operations['root__get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/dashboard': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Dashboard */
-		get: operations['dashboard_dashboard_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/login': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Login */
-		get: operations['login_login_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
+    "/api/v1/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hello World */
+        get: operations["hello_world_api_v1_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/jwt/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Auth:Jwt.Login */
+        post: operations["auth_jwt_login_api_v1_auth_jwt_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/jwt/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Auth:Jwt.Logout */
+        post: operations["auth_jwt_logout_api_v1_auth_jwt_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/cookie/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Auth:Cookie.Login */
+        post: operations["auth_cookie_login_api_v1_auth_cookie_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/cookie/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Auth:Cookie.Logout */
+        post: operations["auth_cookie_logout_api_v1_auth_cookie_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register:Register */
+        post: operations["register_register_api_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset:Forgot Password */
+        post: operations["reset_forgot_password_api_v1_auth_forgot_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset:Reset Password */
+        post: operations["reset_reset_password_api_v1_auth_reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/request-verify-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify:Request-Token */
+        post: operations["verify_request_token_api_v1_auth_request_verify_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify:Verify */
+        post: operations["verify_verify_api_v1_auth_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get All Users */
+        get: operations["get_all_users_api_v1_users_all_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Create User */
+        post: operations["admin_create_user_api_v1_users__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Users:Current User */
+        get: operations["users_current_user_api_v1_users_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Users:Patch Current User */
+        patch: operations["users_patch_current_user_api_v1_users_me_patch"];
+        trace?: never;
+    };
+    "/api/v1/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Users:User */
+        get: operations["users_user_api_v1_users__id__get"];
+        put?: never;
+        post?: never;
+        /** Users:Delete User */
+        delete: operations["users_delete_user_api_v1_users__id__delete"];
+        options?: never;
+        head?: never;
+        /** Users:Patch User */
+        patch: operations["users_patch_user_api_v1_users__id__patch"];
+        trace?: never;
+    };
+    "/api/v1/auth/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Auth Metadata */
+        get: operations["get_auth_metadata_api_v1_auth_metadata_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/oauth/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Oauth:Oauth2.Cookie.Authorize */
+        get: operations["oauth_oauth2_cookie_authorize_api_v1_auth_oauth_authorize_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/oauth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Oauth:Oauth2.Cookie.Callback
+         * @description The response varies based on the authentication backend used.
+         */
+        get: operations["oauth_oauth2_cookie_callback_api_v1_auth_oauth_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Metadata Providers For A Show
+         * @description Search for a show on the configured metadata provider.
+         */
+        get: operations["search_metadata_providers_for_a_show_api_v1_tv_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/recommended": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recommended Shows
+         * @description Get a list of recommended/popular shows from the metadata provider.
+         */
+        get: operations["get_recommended_shows_api_v1_tv_recommended_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/importable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Importable Shows
+         * @description Get a list of unknown shows that were detected in the TV directory and are importable.
+         */
+        get: operations["get_all_importable_shows_api_v1_tv_importable_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/importable/{show_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Detected Show
+         * @description Import a detected show from the specified directory into the library.
+         */
+        post: operations["import_detected_show_api_v1_tv_importable__show_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/shows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Shows
+         * @description Get all shows in the library.
+         */
+        get: operations["get_all_shows_api_v1_tv_shows_get"];
+        put?: never;
+        /**
+         * Add A Show
+         * @description Add a new show to the library.
+         */
+        post: operations["add_a_show_api_v1_tv_shows_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/shows/torrents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Shows With Torrents
+         * @description Get all shows that are associated with torrents.
+         */
+        get: operations["get_shows_with_torrents_api_v1_tv_shows_torrents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/shows/libraries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Available Libraries
+         * @description Get available TV libraries from configuration.
+         */
+        get: operations["get_available_libraries_api_v1_tv_shows_libraries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/shows/{show_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get A Show
+         * @description Get details for a specific show.
+         */
+        get: operations["get_a_show_api_v1_tv_shows__show_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete A Show
+         * @description Delete a show from the library.
+         */
+        delete: operations["delete_a_show_api_v1_tv_shows__show_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/shows/{show_id}/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update Shows Metadata
+         * @description Update a show's metadata from the provider.
+         */
+        post: operations["update_shows_metadata_api_v1_tv_shows__show_id__metadata_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/shows/{show_id}/continuousDownload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Continuous Download
+         * @description Toggle whether future seasons of a show will be automatically downloaded.
+         */
+        post: operations["set_continuous_download_api_v1_tv_shows__show_id__continuousDownload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/shows/{show_id}/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Library
+         * @description Set the library path for a Show.
+         */
+        post: operations["set_library_api_v1_tv_shows__show_id__library_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/shows/{show_id}/torrents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get A Shows Torrents
+         * @description Get torrents associated with a specific show.
+         */
+        get: operations["get_a_shows_torrents_api_v1_tv_shows__show_id__torrents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/seasons/{season_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Season
+         * @description Get details for a specific season.
+         */
+        get: operations["get_season_api_v1_tv_seasons__season_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/seasons/{season_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Episode Files
+         * @description Get episode files associated with a specific season.
+         */
+        get: operations["get_episode_files_api_v1_tv_seasons__season_id__files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/torrents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Torrents For A Season
+         * @description Search for torrents for a specific season of a show.
+         *     Default season_number is 1 because it often returns multi-season torrents.
+         */
+        get: operations["get_torrents_for_a_season_api_v1_tv_torrents_get"];
+        put?: never;
+        /**
+         * Download A Torrent
+         * @description Trigger a download for a specific torrent.
+         */
+        post: operations["download_a_torrent_api_v1_tv_torrents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tv/episodes/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Total Count Of Downloaded Episodes
+         * @description Total number of episodes downloaded
+         */
+        get: operations["get_total_count_of_downloaded_episodes_api_v1_tv_episodes_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/torrent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get All Torrents */
+        get: operations["get_all_torrents_api_v1_torrent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/torrent/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Own Torrents
+         * @description Get the torrents initiated by the current user that are still downloading,
+         *     along with their current status.
+         */
+        get: operations["get_own_torrents_api_v1_torrent_mine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/torrent/{torrent_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Torrent */
+        get: operations["get_torrent_api_v1_torrent__torrent_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Torrent */
+        delete: operations["delete_torrent_api_v1_torrent__torrent_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/torrent/{torrent_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Torrent Download */
+        post: operations["retry_torrent_download_api_v1_torrent__torrent_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/torrent/{torrent_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Torrent Status */
+        patch: operations["update_torrent_status_api_v1_torrent__torrent_id__status_patch"];
+        trace?: never;
+    };
+    "/api/v1/movies/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search For Movie
+         * @description Search for a movie on the configured metadata provider.
+         */
+        get: operations["search_for_movie_api_v1_movies_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/recommended": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Popular Movies
+         * @description Get a list of recommended/popular movies from the metadata provider.
+         */
+        get: operations["get_popular_movies_api_v1_movies_recommended_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/importable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Importable Movies
+         * @description Get a list of unknown movies that were detected in the movie directory and are importable.
+         */
+        get: operations["get_all_importable_movies_api_v1_movies_importable_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/importable/{movie_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Detected Movie
+         * @description Import a detected movie from the specified directory into the library.
+         */
+        post: operations["import_detected_movie_api_v1_movies_importable__movie_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Movies
+         * @description Get all movies in the library.
+         */
+        get: operations["get_all_movies_api_v1_movies_get"];
+        put?: never;
+        /**
+         * Add A Movie
+         * @description Add a new movie to the library.
+         */
+        post: operations["add_a_movie_api_v1_movies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/torrents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Movies With Torrents
+         * @description Get all movies that are associated with torrents.
+         */
+        get: operations["get_all_movies_with_torrents_api_v1_movies_torrents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/libraries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Available Libraries
+         * @description Get available Movie libraries from configuration.
+         */
+        get: operations["get_available_libraries_api_v1_movies_libraries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/{movie_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Movie By Id
+         * @description Get details for a specific movie.
+         */
+        get: operations["get_movie_by_id_api_v1_movies__movie_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete A Movie
+         * @description Delete a movie from the library.
+         */
+        delete: operations["delete_a_movie_api_v1_movies__movie_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/{movie_id}/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Library
+         * @description Set the library path for a Movie.
+         */
+        post: operations["set_library_api_v1_movies__movie_id__library_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/{movie_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Movie Files By Movie Id
+         * @description Get files associated with a specific movie.
+         */
+        get: operations["get_movie_files_by_movie_id_api_v1_movies__movie_id__files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/{movie_id}/torrents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search For Torrents For Movie
+         * @description Search for torrents for a specific movie.
+         */
+        get: operations["search_for_torrents_for_movie_api_v1_movies__movie_id__torrents_get"];
+        put?: never;
+        /**
+         * Download Torrent For Movie
+         * @description Trigger a download for a specific torrent for a movie.
+         */
+        post: operations["download_torrent_for_movie_api_v1_movies__movie_id__torrents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Notifications
+         * @description Get all notifications.
+         */
+        get: operations["get_all_notifications_api_v1_notification_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Unread Notifications
+         * @description Get all unread notifications.
+         */
+        get: operations["get_unread_notifications_api_v1_notification_unread_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification/{notification_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Notification
+         * @description Get a specific notification by ID.
+         */
+        get: operations["get_notification_api_v1_notification__notification_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Notification
+         * @description Delete a notification.
+         */
+        delete: operations["delete_notification_api_v1_notification__notification_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Mark Notification As Read
+         * @description Mark a notification as read.
+         */
+        patch: operations["mark_notification_as_read_api_v1_notification__notification_id__read_patch"];
+        trace?: never;
+    };
+    "/api/v1/notification/{notification_id}/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Mark Notification As Unread
+         * @description Mark a notification as unread.
+         */
+        patch: operations["mark_notification_as_unread_api_v1_notification__notification_id__unread_patch"];
+        trace?: never;
+    };
+    "/api/v1/health/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Service Health
+         * @description Health status of all configured external services
+         */
+        get: operations["get_service_health_api_v1_health_services_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Media
+         * @description Search local media (movies, TV shows, ...) by name.
+         *
+         *     Only queries the local database; no external metadata providers are
+         *     contacted.
+         */
+        get: operations["search_media_api_v1_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search/external": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search External Media
+         * @description Search the metadata provider for movies and TV shows together, ranked
+         *     the way the provider itself ranks combined results. Excludes results
+         *     already in the local library.
+         */
+        get: operations["search_external_media_api_v1_search_external_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Root */
+        get: operations["root__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dashboard */
+        get: operations["dashboard_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Login */
+        get: operations["login_login_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-	schemas: {
-		/** AdminUserCreate */
-		AdminUserCreate: {
-			/**
-			 * Email
-			 * Format: email
-			 */
-			email: string;
-			/** Password */
-			password?: string | null;
-			/**
-			 * Is Superuser
-			 * @default false
-			 */
-			is_superuser?: boolean;
-			/**
-			 * Is Verified
-			 * @default true
-			 */
-			is_verified?: boolean;
-		};
-		/** AuthMetadata */
-		AuthMetadata: {
-			/** Oauth Providers */
-			oauth_providers: string[];
-			/** Registration Enabled */
-			registration_enabled: boolean;
-		};
-		/** BearerResponse */
-		BearerResponse: {
-			/** Access Token */
-			access_token: string;
-			/** Token Type */
-			token_type: string;
-		};
-		/** Body_auth_cookie_login_api_v1_auth_cookie_login_post */
-		Body_auth_cookie_login_api_v1_auth_cookie_login_post: {
-			/** Grant Type */
-			grant_type?: string | null;
-			/** Username */
-			username: string;
-			/**
-			 * Password
-			 * Format: password
-			 */
-			password: string;
-			/**
-			 * Scope
-			 * @default
-			 */
-			scope: string;
-			/** Client Id */
-			client_id?: string | null;
-			/**
-			 * Client Secret
-			 * Format: password
-			 */
-			client_secret?: string | null;
-		};
-		/** Body_auth_jwt_login_api_v1_auth_jwt_login_post */
-		Body_auth_jwt_login_api_v1_auth_jwt_login_post: {
-			/** Grant Type */
-			grant_type?: string | null;
-			/** Username */
-			username: string;
-			/**
-			 * Password
-			 * Format: password
-			 */
-			password: string;
-			/**
-			 * Scope
-			 * @default
-			 */
-			scope: string;
-			/** Client Id */
-			client_id?: string | null;
-			/**
-			 * Client Secret
-			 * Format: password
-			 */
-			client_secret?: string | null;
-		};
-		/** Body_reset_forgot_password_api_v1_auth_forgot_password_post */
-		Body_reset_forgot_password_api_v1_auth_forgot_password_post: {
-			/**
-			 * Email
-			 * Format: email
-			 */
-			email: string;
-		};
-		/** Body_reset_reset_password_api_v1_auth_reset_password_post */
-		Body_reset_reset_password_api_v1_auth_reset_password_post: {
-			/** Token */
-			token: string;
-			/** Password */
-			password: string;
-		};
-		/** Body_verify_request_token_api_v1_auth_request_verify_token_post */
-		Body_verify_request_token_api_v1_auth_request_verify_token_post: {
-			/**
-			 * Email
-			 * Format: email
-			 */
-			email: string;
-		};
-		/** Body_verify_verify_api_v1_auth_verify_post */
-		Body_verify_verify_api_v1_auth_verify_post: {
-			/** Token */
-			token: string;
-		};
-		/** Episode */
-		Episode: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id?: string;
-			/** Number */
-			number: number;
-			/** External Id */
-			external_id: number;
-			/** Title */
-			title: string;
-			/** Overview */
-			overview?: string | null;
-		};
-		/** ErrorModel */
-		ErrorModel: {
-			/** Detail */
-			detail:
-				| string
-				| {
-						[key: string]: string;
-				  };
-		};
-		/** HealthResponse */
-		HealthResponse: {
-			/** Message */
-			message: string;
-			/** Version */
-			version: string;
-			/** Latest Version */
-			latest_version?: string | null;
-			/**
-			 * Update Available
-			 * @default false
-			 */
-			update_available?: boolean;
-		};
-		/** HTTPValidationError */
-		HTTPValidationError: {
-			/** Detail */
-			detail?: components['schemas']['ValidationError'][];
-		};
-		/** IndexerQueryResult */
-		IndexerQueryResult: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id?: string;
-			/** Title */
-			title: string;
-			/** Seeders */
-			seeders: number;
-			/** Flags */
-			flags: string[];
-			/** Size */
-			size: number;
-			/** Usenet */
-			usenet: boolean;
-			/** Age */
-			age: number;
-			/**
-			 * Score
-			 * @default 0
-			 */
-			score: number;
-			/** Indexer */
-			indexer: string | null;
-			readonly quality: components['schemas']['Quality'];
-			/** Season */
-			readonly season: number[];
-			/** Episode */
-			readonly episode: number[];
-		};
-		/** LibraryItem */
-		LibraryItem: {
-			/** Name */
-			name: string;
-			/** Path */
-			path: string;
-		};
-		/** MediaImportSuggestion */
-		MediaImportSuggestion: {
-			/**
-			 * Directory
-			 * Format: path
-			 */
-			directory: string;
-			/** Candidates */
-			candidates: components['schemas']['MetaDataProviderSearchResult'][];
-		};
-		/** MetaDataProviderSearchResult */
-		MetaDataProviderSearchResult: {
-			/** Poster Path */
-			poster_path: string | null;
-			/** Overview */
-			overview: string | null;
-			/** Name */
-			name: string;
-			/** External Id */
-			external_id: number;
-			/** Year */
-			year: number | null;
-			/** Metadata Provider */
-			metadata_provider: string;
-			media_type: components['schemas']['MediaType'];
-			/** Added */
-			added: boolean;
-			/** Vote Average */
-			vote_average?: number | null;
-			/** Original Language */
-			original_language?: string | null;
-			/** Id */
-			id?: string | null;
-		};
-		/** Movie */
-		Movie: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id?: string;
-			/** Name */
-			name: string;
-			/** Overview */
-			overview: string;
-			/** Year */
-			year: number | null;
-			/** External Id */
-			external_id: number;
-			/** Metadata Provider */
-			metadata_provider: string;
-			/**
-			 * Library
-			 * @default Default
-			 */
-			library: string;
-			/** Original Language */
-			original_language?: string | null;
-			/** Imdb Id */
-			imdb_id?: string | null;
-		};
-		/** MovieTorrent */
-		MovieTorrent: {
-			/**
-			 * Torrent Id
-			 * Format: uuid
-			 */
-			torrent_id: string;
-			/** Torrent Title */
-			torrent_title: string;
-			status: components['schemas']['TorrentStatus'];
-			quality: components['schemas']['Quality'];
-			/** Imported */
-			imported: boolean;
-			/** File Path Suffix */
-			file_path_suffix: string;
-			/** Usenet */
-			usenet: boolean;
-		};
-		/** Notification */
-		Notification: {
-			/**
-			 * Id
-			 * Format: uuid
-			 * @description Unique identifier for the notification
-			 */
-			id?: string;
-			/**
-			 * Read
-			 * @description Whether the notification has been read
-			 * @default false
-			 */
-			read: boolean;
-			/**
-			 * Message
-			 * @description The content of the notification
-			 */
-			message: string;
-			/**
-			 * Timestamp
-			 * Format: date-time
-			 * @description The timestamp of the notification
-			 */
-			timestamp?: string;
-		};
-		/** OAuth2AuthorizeResponse */
-		OAuth2AuthorizeResponse: {
-			/** Authorization Url */
-			authorization_url: string;
-		};
-		/** PublicEpisode */
-		PublicEpisode: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id: string;
-			/** Number */
-			number: number;
-			/**
-			 * Downloaded
-			 * @default false
-			 */
-			downloaded: boolean;
-			/** Title */
-			title: string;
-			/** Overview */
-			overview?: string | null;
-			/** External Id */
-			external_id: number;
-		};
-		/** PublicEpisodeFile */
-		PublicEpisodeFile: {
-			/**
-			 * Episode Id
-			 * Format: uuid
-			 */
-			episode_id: string;
-			quality: components['schemas']['Quality'];
-			/** Torrent Id */
-			torrent_id: string | null;
-			/** File Path Suffix */
-			file_path_suffix: string;
-			/**
-			 * Downloaded
-			 * @default false
-			 */
-			downloaded: boolean;
-		};
-		/** PublicMovie */
-		PublicMovie: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id?: string;
-			/** Name */
-			name: string;
-			/** Overview */
-			overview: string;
-			/** Year */
-			year: number | null;
-			/** External Id */
-			external_id: number;
-			/** Metadata Provider */
-			metadata_provider: string;
-			/**
-			 * Library
-			 * @default Default
-			 */
-			library: string;
-			/** Original Language */
-			original_language?: string | null;
-			/** Imdb Id */
-			imdb_id?: string | null;
-			/**
-			 * Downloaded
-			 * @default false
-			 */
-			downloaded: boolean;
-			/**
-			 * Torrents
-			 * @default []
-			 */
-			torrents: components['schemas']['MovieTorrent'][];
-		};
-		/** PublicMovieFile */
-		PublicMovieFile: {
-			/**
-			 * Movie Id
-			 * Format: uuid
-			 */
-			movie_id: string;
-			/** File Path Suffix */
-			file_path_suffix: string;
-			quality: components['schemas']['Quality'];
-			/** Torrent Id */
-			torrent_id?: string | null;
-			/**
-			 * Imported
-			 * @default false
-			 */
-			imported: boolean;
-		};
-		/** PublicSeason */
-		PublicSeason: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id: string;
-			/** Number */
-			number: number;
-			/**
-			 * Downloaded
-			 * @default false
-			 */
-			downloaded: boolean;
-			/** Name */
-			name: string;
-			/** Overview */
-			overview: string;
-			/** External Id */
-			external_id: number;
-			/** Episodes */
-			episodes: components['schemas']['PublicEpisode'][];
-		};
-		/** PublicShow */
-		PublicShow: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id: string;
-			/** Name */
-			name: string;
-			/** Overview */
-			overview: string;
-			/** Year */
-			year: number | null;
-			/** External Id */
-			external_id: number;
-			/** Metadata Provider */
-			metadata_provider: string;
-			/**
-			 * Ended
-			 * @default false
-			 */
-			ended: boolean;
-			/**
-			 * Continuous Download
-			 * @default false
-			 */
-			continuous_download: boolean;
-			/** Library */
-			library: string;
-			/** Seasons */
-			seasons: components['schemas']['PublicSeason'][];
-		};
-		/**
-		 * Quality
-		 * @enum {integer}
-		 */
-		Quality: 1 | 2 | 3 | 4 | 5;
-		/**
-		 * MediaType
-		 * @description The media types that can be returned by the local search endpoint.
-		 *
-		 *     Add new members here (and a matching repository in `SearchService`) to
-		 *     make another media type searchable.
-		 * @enum {string}
-		 */
-		MediaType: 'movie' | 'tv';
-		/** SearchResult */
-		SearchResult: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id: string;
-			media_type: components['schemas']['MediaType'];
-			/** Name */
-			name: string;
-			/** Overview */
-			overview: string;
-			/** Year */
-			year: number | null;
-		};
-		/** RichMovieTorrent */
-		RichMovieTorrent: {
-			/**
-			 * Movie Id
-			 * Format: uuid
-			 */
-			movie_id: string;
-			/** Name */
-			name: string;
-			/** Year */
-			year: number | null;
-			/** Metadata Provider */
-			metadata_provider: string;
-			/** Torrents */
-			torrents: components['schemas']['MovieTorrent'][];
-		};
-		/** RichSeasonTorrent */
-		RichSeasonTorrent: {
-			/**
-			 * Torrent Id
-			 * Format: uuid
-			 */
-			torrent_id: string;
-			/** Torrent Title */
-			torrent_title: string;
-			status: components['schemas']['TorrentStatus'];
-			quality: components['schemas']['Quality'];
-			/** Imported */
-			imported: boolean;
-			/** Usenet */
-			usenet: boolean;
-			/** File Path Suffix */
-			file_path_suffix: string;
-			/** Seasons */
-			seasons: number[];
-			/** Episodes */
-			episodes: number[];
-		};
-		/** RichShowTorrent */
-		RichShowTorrent: {
-			/**
-			 * Show Id
-			 * Format: uuid
-			 */
-			show_id: string;
-			/** Name */
-			name: string;
-			/** Year */
-			year: number | null;
-			/** Metadata Provider */
-			metadata_provider: string;
-			/** Torrents */
-			torrents: components['schemas']['RichSeasonTorrent'][];
-		};
-		/** Season */
-		Season: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id?: string;
-			/** Number */
-			number: number;
-			/** Name */
-			name: string;
-			/** Overview */
-			overview: string;
-			/** External Id */
-			external_id: number;
-			/** Episodes */
-			episodes: components['schemas']['Episode'][];
-		};
-		/** Show */
-		Show: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id?: string;
-			/** Name */
-			name: string;
-			/** Overview */
-			overview: string;
-			/** Year */
-			year: number | null;
-			/**
-			 * Ended
-			 * @default false
-			 */
-			ended: boolean;
-			/** External Id */
-			external_id: number;
-			/** Metadata Provider */
-			metadata_provider: string;
-			/**
-			 * Continuous Download
-			 * @default false
-			 */
-			continuous_download: boolean;
-			/**
-			 * Library
-			 * @default Default
-			 */
-			library: string;
-			/** Original Language */
-			original_language?: string | null;
-			/** Imdb Id */
-			imdb_id?: string | null;
-			/** Seasons */
-			seasons: components['schemas']['Season'][];
-		};
-		/** Torrent */
-		Torrent: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id?: string;
-			status: components['schemas']['TorrentStatus'];
-			/** Title */
-			title: string;
-			quality: components['schemas']['Quality'];
-			/** Imported */
-			imported: boolean;
-			/** Hash */
-			hash: string;
-			/**
-			 * Usenet
-			 * @default false
-			 */
-			usenet: boolean;
-		};
-		/**
-		 * TorrentStatus
-		 * @enum {integer}
-		 */
-		TorrentStatus: 1 | 2 | 3 | 4;
-		/** UserCreate */
-		UserCreate: {
-			/**
-			 * Email
-			 * Format: email
-			 */
-			email: string;
-			/** Password */
-			password: string;
-			/**
-			 * Is Active
-			 * @default true
-			 */
-			is_active: boolean | null;
-			/**
-			 * Is Superuser
-			 * @default false
-			 */
-			is_superuser: boolean | null;
-			/**
-			 * Is Verified
-			 * @default false
-			 */
-			is_verified: boolean | null;
-		};
-		/** UserRead */
-		UserRead: {
-			/**
-			 * Id
-			 * Format: uuid
-			 */
-			id: string;
-			/**
-			 * Email
-			 * Format: email
-			 */
-			email: string;
-			/**
-			 * Is Active
-			 * @default true
-			 */
-			is_active: boolean;
-			/**
-			 * Is Superuser
-			 * @default false
-			 */
-			is_superuser: boolean;
-			/**
-			 * Is Verified
-			 * @default false
-			 */
-			is_verified: boolean;
-		};
-		/** UserUpdate */
-		UserUpdate: {
-			/** Password */
-			password?: string | null;
-			/** Email */
-			email?: string | null;
-			/** Is Active */
-			is_active?: boolean | null;
-			/** Is Superuser */
-			is_superuser?: boolean | null;
-			/** Is Verified */
-			is_verified?: boolean | null;
-		};
-		/** ValidationError */
-		ValidationError: {
-			/** Location */
-			loc: (string | number)[];
-			/** Message */
-			msg: string;
-			/** Error Type */
-			type: string;
-			/** Input */
-			input?: unknown;
-			/** Context */
-			ctx?: Record<string, never>;
-		};
-	};
-	responses: never;
-	parameters: never;
-	requestBodies: never;
-	headers: never;
-	pathItems: never;
+    schemas: {
+        /** AdminUserCreate */
+        AdminUserCreate: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password?: string | null;
+            /**
+             * Is Superuser
+             * @default false
+             */
+            is_superuser: boolean;
+            /**
+             * Is Verified
+             * @default true
+             */
+            is_verified: boolean;
+        };
+        /** AuthMetadata */
+        AuthMetadata: {
+            /** Oauth Providers */
+            oauth_providers: string[];
+            /** Registration Enabled */
+            registration_enabled: boolean;
+        };
+        /** BearerResponse */
+        BearerResponse: {
+            /** Access Token */
+            access_token: string;
+            /** Token Type */
+            token_type: string;
+        };
+        /** Body_auth_cookie_login_api_v1_auth_cookie_login_post */
+        Body_auth_cookie_login_api_v1_auth_cookie_login_post: {
+            /** Grant Type */
+            grant_type?: string | null;
+            /** Username */
+            username: string;
+            /**
+             * Password
+             * Format: password
+             */
+            password: string;
+            /**
+             * Scope
+             * @default
+             */
+            scope: string;
+            /** Client Id */
+            client_id?: string | null;
+            /**
+             * Client Secret
+             * Format: password
+             */
+            client_secret?: string | null;
+        };
+        /** Body_auth_jwt_login_api_v1_auth_jwt_login_post */
+        Body_auth_jwt_login_api_v1_auth_jwt_login_post: {
+            /** Grant Type */
+            grant_type?: string | null;
+            /** Username */
+            username: string;
+            /**
+             * Password
+             * Format: password
+             */
+            password: string;
+            /**
+             * Scope
+             * @default
+             */
+            scope: string;
+            /** Client Id */
+            client_id?: string | null;
+            /**
+             * Client Secret
+             * Format: password
+             */
+            client_secret?: string | null;
+        };
+        /** Body_reset_forgot_password_api_v1_auth_forgot_password_post */
+        Body_reset_forgot_password_api_v1_auth_forgot_password_post: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
+        /** Body_reset_reset_password_api_v1_auth_reset_password_post */
+        Body_reset_reset_password_api_v1_auth_reset_password_post: {
+            /** Token */
+            token: string;
+            /** Password */
+            password: string;
+        };
+        /** Body_verify_request_token_api_v1_auth_request_verify_token_post */
+        Body_verify_request_token_api_v1_auth_request_verify_token_post: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
+        /** Body_verify_verify_api_v1_auth_verify_post */
+        Body_verify_verify_api_v1_auth_verify_post: {
+            /** Token */
+            token: string;
+        };
+        /** Episode */
+        Episode: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /** Number */
+            number: number;
+            /** External Id */
+            external_id: number;
+            /** Title */
+            title: string;
+            /** Overview */
+            overview?: string | null;
+        };
+        /** ErrorModel */
+        ErrorModel: {
+            /** Detail */
+            detail: string | {
+                [key: string]: string;
+            };
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HealthResponse */
+        HealthResponse: {
+            /** Message */
+            message: string;
+            /** Version */
+            version: string;
+            /** Latest Version */
+            latest_version?: string | null;
+            /**
+             * Update Available
+             * @default false
+             */
+            update_available: boolean;
+        };
+        /** IndexerQueryResult */
+        IndexerQueryResult: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /** Title */
+            title: string;
+            /** Seeders */
+            seeders: number;
+            /** Flags */
+            flags: string[];
+            /** Size */
+            size: number;
+            /** Usenet */
+            usenet: boolean;
+            /** Age */
+            age: number;
+            /**
+             * Score
+             * @default 0
+             */
+            score: number;
+            /** Indexer */
+            indexer: string | null;
+            /**
+             * Comments
+             * @description Link to the indexer's detail page for this release
+             */
+            comments?: string | null;
+            readonly quality: components["schemas"]["Quality"];
+            /** Season */
+            readonly season: number[];
+            /** Episode */
+            readonly episode: number[];
+        };
+        /** LibraryItem */
+        LibraryItem: {
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+        };
+        /** MediaImportSuggestion */
+        MediaImportSuggestion: {
+            /**
+             * Directory
+             * Format: path
+             */
+            directory: string;
+            /** Candidates */
+            candidates: components["schemas"]["MetaDataProviderSearchResult"][];
+        };
+        /**
+         * MediaType
+         * @description The media types a metadata provider (or the local search index) can
+         *     return. Add a member here when a new media type becomes searchable.
+         * @enum {string}
+         */
+        MediaType: "movie" | "tv";
+        /** MetaDataProviderSearchResult */
+        MetaDataProviderSearchResult: {
+            /** Poster Path */
+            poster_path: string | null;
+            /** Overview */
+            overview: string | null;
+            /** Name */
+            name: string;
+            /** External Id */
+            external_id: number;
+            /** Year */
+            year: number | null;
+            /** Metadata Provider */
+            metadata_provider: string;
+            media_type: components["schemas"]["MediaType"];
+            /** Added */
+            added: boolean;
+            /** Vote Average */
+            vote_average?: number | null;
+            /** Original Language */
+            original_language?: string | null;
+            /** Id */
+            id?: string | null;
+        };
+        /** Movie */
+        Movie: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /** Name */
+            name: string;
+            /** Overview */
+            overview: string;
+            /** Year */
+            year: number | null;
+            /** External Id */
+            external_id: number;
+            /** Metadata Provider */
+            metadata_provider: string;
+            /**
+             * Library
+             * @default Default
+             */
+            library: string;
+            /** Original Language */
+            original_language?: string | null;
+            /** Imdb Id */
+            imdb_id?: string | null;
+            /** Tagline */
+            tagline?: string | null;
+            /** Genres */
+            genres?: string[];
+            /** Runtime */
+            runtime?: number | null;
+            /** Release Date */
+            release_date?: string | null;
+            /** Metadata Updated At */
+            metadata_updated_at?: string | null;
+        };
+        /** MovieTorrent */
+        MovieTorrent: {
+            /**
+             * Torrent Id
+             * Format: uuid
+             */
+            torrent_id: string;
+            /** Torrent Title */
+            torrent_title: string;
+            status: components["schemas"]["TorrentStatus"];
+            quality: components["schemas"]["Quality"];
+            /** Imported */
+            imported: boolean;
+            /** File Path Suffix */
+            file_path_suffix: string;
+            /** Usenet */
+            usenet: boolean;
+        };
+        /** Notification */
+        Notification: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Unique identifier for the notification
+             */
+            id?: string;
+            /**
+             * Read
+             * @description Whether the notification has been read
+             * @default false
+             */
+            read: boolean;
+            /**
+             * Message
+             * @description The content of the notification
+             */
+            message: string;
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The timestamp of the notification
+             */
+            timestamp?: string;
+        };
+        /** OAuth2AuthorizeResponse */
+        OAuth2AuthorizeResponse: {
+            /** Authorization Url */
+            authorization_url: string;
+        };
+        /** PublicEpisode */
+        PublicEpisode: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Number */
+            number: number;
+            /**
+             * Downloaded
+             * @default false
+             */
+            downloaded: boolean;
+            /** Title */
+            title: string;
+            /** Overview */
+            overview?: string | null;
+            /** External Id */
+            external_id: number;
+        };
+        /** PublicEpisodeFile */
+        PublicEpisodeFile: {
+            quality: components["schemas"]["Quality"];
+            /** Torrent Id */
+            torrent_id?: string | null;
+            /** File Path Suffix */
+            file_path_suffix: string;
+            /**
+             * Episode Id
+             * Format: uuid
+             */
+            episode_id: string;
+            /**
+             * Downloaded
+             * @default false
+             */
+            downloaded: boolean;
+        };
+        /** PublicMovie */
+        PublicMovie: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /** Name */
+            name: string;
+            /** Overview */
+            overview: string;
+            /** Year */
+            year: number | null;
+            /** External Id */
+            external_id: number;
+            /** Metadata Provider */
+            metadata_provider: string;
+            /**
+             * Library
+             * @default Default
+             */
+            library: string;
+            /** Original Language */
+            original_language?: string | null;
+            /** Imdb Id */
+            imdb_id?: string | null;
+            /** Tagline */
+            tagline?: string | null;
+            /** Genres */
+            genres?: string[];
+            /** Runtime */
+            runtime?: number | null;
+            /** Release Date */
+            release_date?: string | null;
+            /** Metadata Updated At */
+            metadata_updated_at?: string | null;
+            /**
+             * Downloaded
+             * @default false
+             */
+            downloaded: boolean;
+            /** Torrents */
+            torrents?: components["schemas"]["MovieTorrent"][];
+        };
+        /** PublicMovieFile */
+        PublicMovieFile: {
+            quality: components["schemas"]["Quality"];
+            /** Torrent Id */
+            torrent_id?: string | null;
+            /** File Path Suffix */
+            file_path_suffix: string;
+            /**
+             * Movie Id
+             * Format: uuid
+             */
+            movie_id: string;
+            /**
+             * Imported
+             * @default false
+             */
+            imported: boolean;
+        };
+        /** PublicSeason */
+        PublicSeason: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Number */
+            number: number;
+            /**
+             * Downloaded
+             * @default false
+             */
+            downloaded: boolean;
+            /** Name */
+            name: string;
+            /** Overview */
+            overview: string;
+            /** External Id */
+            external_id: number;
+            /** Episodes */
+            episodes: components["schemas"]["PublicEpisode"][];
+        };
+        /** PublicShow */
+        PublicShow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Overview */
+            overview: string;
+            /** Year */
+            year: number | null;
+            /** External Id */
+            external_id: number;
+            /** Metadata Provider */
+            metadata_provider: string;
+            /**
+             * Ended
+             * @default false
+             */
+            ended: boolean;
+            /**
+             * Continuous Download
+             * @default false
+             */
+            continuous_download: boolean;
+            /** Library */
+            library: string;
+            /** Tagline */
+            tagline?: string | null;
+            /** Genres */
+            genres?: string[];
+            /** Runtime */
+            runtime?: number | null;
+            /** Release Date */
+            release_date?: string | null;
+            /** Metadata Updated At */
+            metadata_updated_at?: string | null;
+            /** Seasons */
+            seasons: components["schemas"]["PublicSeason"][];
+        };
+        /**
+         * Quality
+         * @enum {integer}
+         */
+        Quality: 1 | 2 | 3 | 4 | 5;
+        /** RichMovieTorrent */
+        RichMovieTorrent: {
+            /**
+             * Movie Id
+             * Format: uuid
+             */
+            movie_id: string;
+            /** Name */
+            name: string;
+            /** Year */
+            year: number | null;
+            /** Metadata Provider */
+            metadata_provider: string;
+            /** Torrents */
+            torrents: components["schemas"]["MovieTorrent"][];
+        };
+        /** RichSeasonTorrent */
+        RichSeasonTorrent: {
+            /**
+             * Torrent Id
+             * Format: uuid
+             */
+            torrent_id: string;
+            /** Torrent Title */
+            torrent_title: string;
+            status: components["schemas"]["TorrentStatus"];
+            quality: components["schemas"]["Quality"];
+            /** Imported */
+            imported: boolean;
+            /** Usenet */
+            usenet: boolean;
+            /** File Path Suffix */
+            file_path_suffix: string;
+            /** Seasons */
+            seasons: number[];
+            /** Episodes */
+            episodes: number[];
+        };
+        /** RichShowTorrent */
+        RichShowTorrent: {
+            /**
+             * Show Id
+             * Format: uuid
+             */
+            show_id: string;
+            /** Name */
+            name: string;
+            /** Year */
+            year: number | null;
+            /** Metadata Provider */
+            metadata_provider: string;
+            /** Torrents */
+            torrents: components["schemas"]["RichSeasonTorrent"][];
+        };
+        /** SearchResult */
+        SearchResult: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            media_type: components["schemas"]["MediaType"];
+            /** Name */
+            name: string;
+            /** Overview */
+            overview: string;
+            /** Year */
+            year: number | null;
+        };
+        /** Season */
+        Season: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /** Number */
+            number: number;
+            /** Name */
+            name: string;
+            /** Overview */
+            overview: string;
+            /** External Id */
+            external_id: number;
+            /** Episodes */
+            episodes: components["schemas"]["Episode"][];
+        };
+        /** ServiceHealth */
+        ServiceHealth: {
+            /** Name */
+            name: string;
+            /** Display Name */
+            display_name: string;
+            status: components["schemas"]["ServiceStatus"];
+            /** Message */
+            message?: string | null;
+            /** Last Checked */
+            last_checked?: string | null;
+        };
+        /**
+         * ServiceStatus
+         * @enum {string}
+         */
+        ServiceStatus: "healthy" | "unavailable" | "unknown";
+        /** Show */
+        Show: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /** Name */
+            name: string;
+            /** Overview */
+            overview: string;
+            /** Year */
+            year: number | null;
+            /** External Id */
+            external_id: number;
+            /** Metadata Provider */
+            metadata_provider: string;
+            /**
+             * Library
+             * @default Default
+             */
+            library: string;
+            /** Original Language */
+            original_language?: string | null;
+            /** Imdb Id */
+            imdb_id?: string | null;
+            /** Tagline */
+            tagline?: string | null;
+            /** Genres */
+            genres?: string[];
+            /** Runtime */
+            runtime?: number | null;
+            /** Release Date */
+            release_date?: string | null;
+            /** Metadata Updated At */
+            metadata_updated_at?: string | null;
+            /**
+             * Ended
+             * @default false
+             */
+            ended: boolean;
+            /**
+             * Continuous Download
+             * @default false
+             */
+            continuous_download: boolean;
+            /** Seasons */
+            seasons: components["schemas"]["Season"][];
+        };
+        /** SystemHealth */
+        SystemHealth: {
+            /** Services */
+            services: components["schemas"]["ServiceHealth"][];
+            overall: components["schemas"]["ServiceStatus"];
+        };
+        /** Torrent */
+        Torrent: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            status: components["schemas"]["TorrentStatus"];
+            /** Title */
+            title: string;
+            quality: components["schemas"]["Quality"];
+            /** Imported */
+            imported: boolean;
+            /** Hash */
+            hash: string;
+            /**
+             * Usenet
+             * @default false
+             */
+            usenet: boolean;
+            /** Initiated By User Id */
+            initiated_by_user_id?: string | null;
+            /** Initiated At */
+            initiated_at?: string | null;
+        };
+        /**
+         * TorrentStatus
+         * @enum {integer}
+         */
+        TorrentStatus: 1 | 2 | 3 | 4;
+        /** UserCreate */
+        UserCreate: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean | null;
+            /**
+             * Is Superuser
+             * @default false
+             */
+            is_superuser: boolean | null;
+            /**
+             * Is Verified
+             * @default false
+             */
+            is_verified: boolean | null;
+        };
+        /** UserRead */
+        UserRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+            /**
+             * Is Superuser
+             * @default false
+             */
+            is_superuser: boolean;
+            /**
+             * Is Verified
+             * @default false
+             */
+            is_verified: boolean;
+        };
+        /** UserUpdate */
+        UserUpdate: {
+            /** Password */
+            password?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Is Active */
+            is_active?: boolean | null;
+            /** Is Superuser */
+            is_superuser?: boolean | null;
+            /** Is Verified */
+            is_verified?: boolean | null;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
+        };
+    };
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
+export type AdminUserCreate = components['schemas']['AdminUserCreate'];
 export type AuthMetadata = components['schemas']['AuthMetadata'];
 export type BearerResponse = components['schemas']['BearerResponse'];
-export type BodyAuthCookieLoginApiV1AuthCookieLoginPost =
-	components['schemas']['Body_auth_cookie_login_api_v1_auth_cookie_login_post'];
-export type BodyAuthJwtLoginApiV1AuthJwtLoginPost =
-	components['schemas']['Body_auth_jwt_login_api_v1_auth_jwt_login_post'];
-export type BodyResetForgotPasswordApiV1AuthForgotPasswordPost =
-	components['schemas']['Body_reset_forgot_password_api_v1_auth_forgot_password_post'];
-export type BodyResetResetPasswordApiV1AuthResetPasswordPost =
-	components['schemas']['Body_reset_reset_password_api_v1_auth_reset_password_post'];
-export type BodyVerifyRequestTokenApiV1AuthRequestVerifyTokenPost =
-	components['schemas']['Body_verify_request_token_api_v1_auth_request_verify_token_post'];
-export type BodyVerifyVerifyApiV1AuthVerifyPost =
-	components['schemas']['Body_verify_verify_api_v1_auth_verify_post'];
+export type BodyAuthCookieLoginApiV1AuthCookieLoginPost = components['schemas']['Body_auth_cookie_login_api_v1_auth_cookie_login_post'];
+export type BodyAuthJwtLoginApiV1AuthJwtLoginPost = components['schemas']['Body_auth_jwt_login_api_v1_auth_jwt_login_post'];
+export type BodyResetForgotPasswordApiV1AuthForgotPasswordPost = components['schemas']['Body_reset_forgot_password_api_v1_auth_forgot_password_post'];
+export type BodyResetResetPasswordApiV1AuthResetPasswordPost = components['schemas']['Body_reset_reset_password_api_v1_auth_reset_password_post'];
+export type BodyVerifyRequestTokenApiV1AuthRequestVerifyTokenPost = components['schemas']['Body_verify_request_token_api_v1_auth_request_verify_token_post'];
+export type BodyVerifyVerifyApiV1AuthVerifyPost = components['schemas']['Body_verify_verify_api_v1_auth_verify_post'];
 export type Episode = components['schemas']['Episode'];
 export type ErrorModel = components['schemas']['ErrorModel'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
+export type HealthResponse = components['schemas']['HealthResponse'];
 export type IndexerQueryResult = components['schemas']['IndexerQueryResult'];
 export type LibraryItem = components['schemas']['LibraryItem'];
 export type MediaImportSuggestion = components['schemas']['MediaImportSuggestion'];
@@ -1876,9 +1979,12 @@ export type Quality = components['schemas']['Quality'];
 export type RichMovieTorrent = components['schemas']['RichMovieTorrent'];
 export type RichSeasonTorrent = components['schemas']['RichSeasonTorrent'];
 export type RichShowTorrent = components['schemas']['RichShowTorrent'];
-export type Season = components['schemas']['Season'];
 export type SearchResult = components['schemas']['SearchResult'];
+export type Season = components['schemas']['Season'];
+export type ServiceHealth = components['schemas']['ServiceHealth'];
+export type ServiceStatus = components['schemas']['ServiceStatus'];
 export type Show = components['schemas']['Show'];
+export type SystemHealth = components['schemas']['SystemHealth'];
 export type Torrent = components['schemas']['Torrent'];
 export type TorrentStatus = components['schemas']['TorrentStatus'];
 export type UserCreate = components['schemas']['UserCreate'];
@@ -1887,2201 +1993,2241 @@ export type UserUpdate = components['schemas']['UserUpdate'];
 export type ValidationError = components['schemas']['ValidationError'];
 export type $defs = Record<string, never>;
 export interface operations {
-	hello_world_api_v1_health_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HealthResponse'];
-				};
-			};
-		};
-	};
-	auth_jwt_login_api_v1_auth_jwt_login_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/x-www-form-urlencoded': components['schemas']['Body_auth_jwt_login_api_v1_auth_jwt_login_post'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					/**
-					 * @example {
-					 *       "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiOTIyMWZmYzktNjQwZi00MzcyLTg2ZDMtY2U2NDJjYmE1NjAzIiwiYXVkIjoiZmFzdGFwaS11c2VyczphdXRoIiwiZXhwIjoxNTcxNTA0MTkzfQ.M10bjOe45I5Ncu_uXvOmVV8QxnL-nZfcH96U90JaocI",
-					 *       "token_type": "bearer"
-					 *     }
-					 */
-					'application/json': components['schemas']['BearerResponse'];
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	auth_jwt_logout_api_v1_auth_jwt_logout_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-			/** @description Missing token or inactive user. */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	auth_cookie_login_api_v1_auth_cookie_login_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/x-www-form-urlencoded': components['schemas']['Body_auth_cookie_login_api_v1_auth_cookie_login_post'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-			/** @description No Content */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	auth_cookie_logout_api_v1_auth_cookie_logout_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-			/** @description No Content */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Missing token or inactive user. */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	register_register_api_v1_auth_register_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['UserCreate'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	reset_forgot_password_api_v1_auth_forgot_password_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['Body_reset_forgot_password_api_v1_auth_forgot_password_post'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			202: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	reset_reset_password_api_v1_auth_reset_password_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['Body_reset_reset_password_api_v1_auth_reset_password_post'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	verify_request_token_api_v1_auth_request_verify_token_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['Body_verify_request_token_api_v1_auth_request_verify_token_post'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			202: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	verify_verify_api_v1_auth_verify_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['Body_verify_verify_api_v1_auth_verify_post'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_all_users_api_v1_users_all_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'][];
-				};
-			};
-		};
-	};
-	admin_create_user_api_v1_users__post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['AdminUserCreate'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	users_current_user_api_v1_users_me_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Missing token or inactive user. */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	users_patch_current_user_api_v1_users_me_patch: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['UserUpdate'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Missing token or inactive user. */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	users_user_api_v1_users__id__get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Missing token or inactive user. */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Not a superuser. */
-			403: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description The user does not exist. */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	users_delete_user_api_v1_users__id__delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Missing token or inactive user. */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Not a superuser. */
-			403: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description The user does not exist. */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	users_patch_user_api_v1_users__id__patch: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['UserUpdate'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Missing token or inactive user. */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Not a superuser. */
-			403: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description The user does not exist. */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_auth_metadata_api_v1_auth_metadata_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['AuthMetadata'];
-				};
-			};
-		};
-	};
-	oauth_oauth2_cookie_authorize_api_v1_auth_oauth_authorize_get: {
-		parameters: {
-			query?: {
-				scopes?: string[];
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['OAuth2AuthorizeResponse'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	oauth_oauth2_cookie_callback_api_v1_auth_oauth_callback_get: {
-		parameters: {
-			query?: {
-				code?: string | null;
-				code_verifier?: string | null;
-				state?: string | null;
-				error?: string | null;
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	search_metadata_providers_for_a_show_api_v1_tv_search_get: {
-		parameters: {
-			query: {
-				query: string;
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['MetaDataProviderSearchResult'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_recommended_shows_api_v1_tv_recommended_get: {
-		parameters: {
-			query?: {
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['MetaDataProviderSearchResult'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_all_importable_shows_api_v1_tv_importable_get: {
-		parameters: {
-			query?: {
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['MediaImportSuggestion'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	import_detected_show_api_v1_tv_importable__show_id__post: {
-		parameters: {
-			query: {
-				directory: string;
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the show */
-				show_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_all_shows_api_v1_tv_shows_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Show'][];
-				};
-			};
-		};
-	};
-	add_a_show_api_v1_tv_shows_post: {
-		parameters: {
-			query: {
-				show_id: number;
-				language?: string | null;
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successfully created show */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Show'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_shows_with_torrents_api_v1_tv_shows_torrents_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['RichShowTorrent'][];
-				};
-			};
-		};
-	};
-	get_available_libraries_api_v1_tv_shows_libraries_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['LibraryItem'][];
-				};
-			};
-		};
-	};
-	get_a_show_api_v1_tv_shows__show_id__get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description The ID of the show */
-				show_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['PublicShow'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	delete_a_show_api_v1_tv_shows__show_id__delete: {
-		parameters: {
-			query?: {
-				delete_files_on_disk?: boolean;
-				delete_torrents?: boolean;
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the show */
-				show_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	update_shows_metadata_api_v1_tv_shows__show_id__metadata_post: {
-		parameters: {
-			query?: {
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the show */
-				show_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['PublicShow'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	set_continuous_download_api_v1_tv_shows__show_id__continuousDownload_post: {
-		parameters: {
-			query: {
-				continuous_download: boolean;
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the show */
-				show_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['PublicShow'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	set_library_api_v1_tv_shows__show_id__library_post: {
-		parameters: {
-			query: {
-				library: string;
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the show */
-				show_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_a_shows_torrents_api_v1_tv_shows__show_id__torrents_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description The ID of the show */
-				show_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['RichShowTorrent'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_season_api_v1_tv_seasons__season_id__get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description The ID of the season */
-				season_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Season'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_episode_files_api_v1_tv_seasons__season_id__files_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description The ID of the season */
-				season_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['PublicEpisodeFile'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_torrents_for_a_season_api_v1_tv_torrents_get: {
-		parameters: {
-			query: {
-				show_id: string;
-				season_number?: number;
-				search_query_override?: string | null;
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['IndexerQueryResult'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	download_a_torrent_api_v1_tv_torrents_post: {
-		parameters: {
-			query: {
-				public_indexer_result_id: string;
-				show_id: string;
-				override_file_path_suffix?: string;
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Torrent'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_total_count_of_downloaded_episodes_api_v1_tv_episodes_count_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': number;
-				};
-			};
-		};
-	};
-	get_all_torrents_api_v1_torrent_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Torrent'][];
-				};
-			};
-		};
-	};
-	get_torrent_api_v1_torrent__torrent_id__get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				torrent_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Torrent'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	delete_torrent_api_v1_torrent__torrent_id__delete: {
-		parameters: {
-			query?: {
-				delete_files?: boolean;
-			};
-			header?: never;
-			path: {
-				torrent_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	retry_torrent_download_api_v1_torrent__torrent_id__retry_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				torrent_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	update_torrent_status_api_v1_torrent__torrent_id__status_patch: {
-		parameters: {
-			query?: {
-				state?: components['schemas']['TorrentStatus'] | null;
-				imported?: boolean | null;
-			};
-			header?: never;
-			path: {
-				torrent_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Torrent'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	search_for_movie_api_v1_movies_search_get: {
-		parameters: {
-			query: {
-				query: string;
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['MetaDataProviderSearchResult'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	search_media_api_v1_search_get: {
-		parameters: {
-			query: {
-				q: string;
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['SearchResult'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	search_external_media_api_v1_search_external_get: {
-		parameters: {
-			query: {
-				q: string;
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['MetaDataProviderSearchResult'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_popular_movies_api_v1_movies_recommended_get: {
-		parameters: {
-			query?: {
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['MetaDataProviderSearchResult'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_all_importable_movies_api_v1_movies_importable_get: {
-		parameters: {
-			query?: {
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['MediaImportSuggestion'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	import_detected_movie_api_v1_movies_importable__movie_id__post: {
-		parameters: {
-			query: {
-				directory: string;
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the movie */
-				movie_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_all_movies_api_v1_movies_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Movie'][];
-				};
-			};
-		};
-	};
-	add_a_movie_api_v1_movies_post: {
-		parameters: {
-			query: {
-				movie_id: number;
-				language?: string | null;
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successfully created movie */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Movie'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_all_movies_with_torrents_api_v1_movies_torrents_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['RichMovieTorrent'][];
-				};
-			};
-		};
-	};
-	get_available_libraries_api_v1_movies_libraries_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['LibraryItem'][];
-				};
-			};
-		};
-	};
-	get_movie_by_id_api_v1_movies__movie_id__get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description The ID of the movie */
-				movie_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['PublicMovie'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	delete_a_movie_api_v1_movies__movie_id__delete: {
-		parameters: {
-			query?: {
-				delete_files_on_disk?: boolean;
-				delete_torrents?: boolean;
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the movie */
-				movie_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	set_library_api_v1_movies__movie_id__library_post: {
-		parameters: {
-			query: {
-				library: string;
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the movie */
-				movie_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_movie_files_by_movie_id_api_v1_movies__movie_id__files_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description The ID of the movie */
-				movie_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['PublicMovieFile'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	search_for_torrents_for_movie_api_v1_movies__movie_id__torrents_get: {
-		parameters: {
-			query?: {
-				search_query_override?: string | null;
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the movie */
-				movie_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['IndexerQueryResult'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	download_torrent_for_movie_api_v1_movies__movie_id__torrents_post: {
-		parameters: {
-			query: {
-				public_indexer_result_id: string;
-				override_file_path_suffix?: string;
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the movie */
-				movie_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Torrent'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_all_notifications_api_v1_notification_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Notification'][];
-				};
-			};
-		};
-	};
-	get_unread_notifications_api_v1_notification_unread_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Notification'][];
-				};
-			};
-		};
-	};
-	get_notification_api_v1_notification__notification_id__get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				notification_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['Notification'];
-				};
-			};
-			/** @description Notification not found */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	delete_notification_api_v1_notification__notification_id__delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				notification_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Notification not found */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	mark_notification_as_read_api_v1_notification__notification_id__read_patch: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				notification_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Notification not found */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	mark_notification_as_unread_api_v1_notification__notification_id__unread_patch: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				notification_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Notification not found */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	root__get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-		};
-	};
-	dashboard_dashboard_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-		};
-	};
-	login_login_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-		};
-	};
+    hello_world_api_v1_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    auth_jwt_login_api_v1_auth_jwt_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["Body_auth_jwt_login_api_v1_auth_jwt_login_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiOTIyMWZmYzktNjQwZi00MzcyLTg2ZDMtY2U2NDJjYmE1NjAzIiwiYXVkIjoiZmFzdGFwaS11c2VyczphdXRoIiwiZXhwIjoxNTcxNTA0MTkzfQ.M10bjOe45I5Ncu_uXvOmVV8QxnL-nZfcH96U90JaocI",
+                     *       "token_type": "bearer"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["BearerResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auth_jwt_logout_api_v1_auth_jwt_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Missing token or inactive user. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    auth_cookie_login_api_v1_auth_cookie_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["Body_auth_cookie_login_api_v1_auth_cookie_login_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auth_cookie_logout_api_v1_auth_cookie_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing token or inactive user. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    register_register_api_v1_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_forgot_password_api_v1_auth_forgot_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Body_reset_forgot_password_api_v1_auth_forgot_password_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_reset_password_api_v1_auth_reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Body_reset_reset_password_api_v1_auth_reset_password_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_request_token_api_v1_auth_request_verify_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Body_verify_request_token_api_v1_auth_request_verify_token_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_verify_api_v1_auth_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Body_verify_verify_api_v1_auth_verify_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_users_api_v1_users_all_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"][];
+                };
+            };
+        };
+    };
+    admin_create_user_api_v1_users__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUserCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    users_current_user_api_v1_users_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"];
+                };
+            };
+            /** @description Missing token or inactive user. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    users_patch_current_user_api_v1_users_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Missing token or inactive user. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    users_user_api_v1_users__id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"];
+                };
+            };
+            /** @description Missing token or inactive user. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a superuser. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The user does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    users_delete_user_api_v1_users__id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing token or inactive user. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a superuser. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The user does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    users_patch_user_api_v1_users__id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Missing token or inactive user. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a superuser. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The user does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_auth_metadata_api_v1_auth_metadata_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthMetadata"];
+                };
+            };
+        };
+    };
+    oauth_oauth2_cookie_authorize_api_v1_auth_oauth_authorize_get: {
+        parameters: {
+            query?: {
+                scopes?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuth2AuthorizeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    oauth_oauth2_cookie_callback_api_v1_auth_oauth_callback_get: {
+        parameters: {
+            query?: {
+                code?: string | null;
+                code_verifier?: string | null;
+                state?: string | null;
+                error?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_metadata_providers_for_a_show_api_v1_tv_search_get: {
+        parameters: {
+            query: {
+                query: string;
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaDataProviderSearchResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recommended_shows_api_v1_tv_recommended_get: {
+        parameters: {
+            query?: {
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaDataProviderSearchResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_importable_shows_api_v1_tv_importable_get: {
+        parameters: {
+            query?: {
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaImportSuggestion"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_detected_show_api_v1_tv_importable__show_id__post: {
+        parameters: {
+            query: {
+                directory: string;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the show */
+                show_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_shows_api_v1_tv_shows_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Show"][];
+                };
+            };
+        };
+    };
+    add_a_show_api_v1_tv_shows_post: {
+        parameters: {
+            query: {
+                show_id: number;
+                language?: string | null;
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successfully created show */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Show"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_shows_with_torrents_api_v1_tv_shows_torrents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RichShowTorrent"][];
+                };
+            };
+        };
+    };
+    get_available_libraries_api_v1_tv_shows_libraries_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItem"][];
+                };
+            };
+        };
+    };
+    get_a_show_api_v1_tv_shows__show_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the show */
+                show_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicShow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_a_show_api_v1_tv_shows__show_id__delete: {
+        parameters: {
+            query?: {
+                delete_files_on_disk?: boolean;
+                delete_torrents?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the show */
+                show_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_shows_metadata_api_v1_tv_shows__show_id__metadata_post: {
+        parameters: {
+            query?: {
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the show */
+                show_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicShow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_continuous_download_api_v1_tv_shows__show_id__continuousDownload_post: {
+        parameters: {
+            query: {
+                continuous_download: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the show */
+                show_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicShow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_library_api_v1_tv_shows__show_id__library_post: {
+        parameters: {
+            query: {
+                library: string;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the show */
+                show_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_a_shows_torrents_api_v1_tv_shows__show_id__torrents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the show */
+                show_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RichShowTorrent"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_season_api_v1_tv_seasons__season_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the season */
+                season_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Season"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_episode_files_api_v1_tv_seasons__season_id__files_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the season */
+                season_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicEpisodeFile"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_torrents_for_a_season_api_v1_tv_torrents_get: {
+        parameters: {
+            query: {
+                show_id: string;
+                season_number?: number;
+                search_query_override?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexerQueryResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_a_torrent_api_v1_tv_torrents_post: {
+        parameters: {
+            query: {
+                public_indexer_result_id: string;
+                show_id: string;
+                override_file_path_suffix?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Torrent"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_total_count_of_downloaded_episodes_api_v1_tv_episodes_count_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": number;
+                };
+            };
+        };
+    };
+    get_all_torrents_api_v1_torrent_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Torrent"][];
+                };
+            };
+        };
+    };
+    get_own_torrents_api_v1_torrent_mine_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Torrent"][];
+                };
+            };
+        };
+    };
+    get_torrent_api_v1_torrent__torrent_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torrent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Torrent"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_torrent_api_v1_torrent__torrent_id__delete: {
+        parameters: {
+            query?: {
+                delete_files?: boolean;
+            };
+            header?: never;
+            path: {
+                torrent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_torrent_download_api_v1_torrent__torrent_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                torrent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_torrent_status_api_v1_torrent__torrent_id__status_patch: {
+        parameters: {
+            query?: {
+                state?: components["schemas"]["TorrentStatus"] | null;
+                imported?: boolean | null;
+            };
+            header?: never;
+            path: {
+                torrent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Torrent"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_for_movie_api_v1_movies_search_get: {
+        parameters: {
+            query: {
+                query: string;
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaDataProviderSearchResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_popular_movies_api_v1_movies_recommended_get: {
+        parameters: {
+            query?: {
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaDataProviderSearchResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_importable_movies_api_v1_movies_importable_get: {
+        parameters: {
+            query?: {
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaImportSuggestion"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_detected_movie_api_v1_movies_importable__movie_id__post: {
+        parameters: {
+            query: {
+                directory: string;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the movie */
+                movie_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_movies_api_v1_movies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Movie"][];
+                };
+            };
+        };
+    };
+    add_a_movie_api_v1_movies_post: {
+        parameters: {
+            query: {
+                movie_id: number;
+                language?: string | null;
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successfully created movie */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Movie"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_movies_with_torrents_api_v1_movies_torrents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RichMovieTorrent"][];
+                };
+            };
+        };
+    };
+    get_available_libraries_api_v1_movies_libraries_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItem"][];
+                };
+            };
+        };
+    };
+    get_movie_by_id_api_v1_movies__movie_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the movie */
+                movie_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMovie"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_a_movie_api_v1_movies__movie_id__delete: {
+        parameters: {
+            query?: {
+                delete_files_on_disk?: boolean;
+                delete_torrents?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the movie */
+                movie_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_library_api_v1_movies__movie_id__library_post: {
+        parameters: {
+            query: {
+                library: string;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the movie */
+                movie_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_movie_files_by_movie_id_api_v1_movies__movie_id__files_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the movie */
+                movie_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMovieFile"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_for_torrents_for_movie_api_v1_movies__movie_id__torrents_get: {
+        parameters: {
+            query?: {
+                search_query_override?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the movie */
+                movie_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexerQueryResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_torrent_for_movie_api_v1_movies__movie_id__torrents_post: {
+        parameters: {
+            query: {
+                public_indexer_result_id: string;
+                override_file_path_suffix?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the movie */
+                movie_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Torrent"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_notifications_api_v1_notification_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"][];
+                };
+            };
+        };
+    };
+    get_unread_notifications_api_v1_notification_unread_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"][];
+                };
+            };
+        };
+    };
+    get_notification_api_v1_notification__notification_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"];
+                };
+            };
+            /** @description Notification not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_notification_api_v1_notification__notification_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Notification not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_notification_as_read_api_v1_notification__notification_id__read_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Notification not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_notification_as_unread_api_v1_notification__notification_id__unread_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Notification not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_service_health_api_v1_health_services_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemHealth"];
+                };
+            };
+        };
+    };
+    search_media_api_v1_search_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_external_media_api_v1_search_external_get: {
+        parameters: {
+            query: {
+                q: string;
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaDataProviderSearchResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    root__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    dashboard_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    login_login_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
 }
