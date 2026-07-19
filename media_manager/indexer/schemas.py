@@ -32,6 +32,10 @@ class IndexerQueryResult(BaseModel):
 
     indexer: str | None
 
+    comments: str | None = pydantic.Field(
+        default=None, description="Link to the indexer's detail page for this release"
+    )
+
     @computed_field
     @property
     def quality(self) -> Quality:

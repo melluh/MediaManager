@@ -24,3 +24,4 @@ class IndexerQueryResult(Base):
     age: Mapped[int]
     score: Mapped[int] = mapped_column(default=0)
     indexer: Mapped[str | None]
+    comments: Mapped[str | None]

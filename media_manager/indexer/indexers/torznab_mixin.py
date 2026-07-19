@@ -62,6 +62,8 @@ class TorznabMixin:
                                 flags.append("doubleupload")
 
                 title = item.find("title").text
+                comments_elem = item.find("comments")
+                comments = comments_elem.text if comments_elem is not None else None
                 size_str = item.find("size")
                 if size_str is None or size_str.text is None:
                     log.warning(f"Torznab item {title} has no size, skipping.")
@@ -81,6 +83,7 @@ class TorznabMixin:
                     usenet=is_usenet,
                     age=age,
                     indexer=indexer_name,
+                    comments=comments,
                 )
                 result_list.append(result)
             except Exception:
