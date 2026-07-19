@@ -36,7 +36,7 @@
 
 <div class="flex flex-wrap gap-2">
 	<div class="flex-auto">
-		<AnimatedCard title="TV Shows" footer="Total count of downloaded episodes" number={showCount}
+		<AnimatedCard title="TV Shows" footer="Total count of TV shows" number={showCount}
 		></AnimatedCard>
 	</div>
 	<div class="flex-auto">
