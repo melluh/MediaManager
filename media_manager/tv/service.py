@@ -1,6 +1,7 @@
 import asyncio
 import shutil
 from pathlib import Path
+from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
@@ -389,6 +390,7 @@ class TvService(BaseMediaService[Show, Show]):
         public_indexer_result_id: IndexerQueryResultId,
         show_id: ShowId,
         override_show_file_path_suffix: str = "",
+        user_id: UUID | None = None,
     ) -> Torrent:
         """
         Download a torrent for a given indexer result and show.
@@ -396,12 +398,16 @@ class TvService(BaseMediaService[Show, Show]):
         :param public_indexer_result_id: The ID of the indexer result.
         :param show_id: The ID of the show.
         :param override_show_file_path_suffix: Optional override for the file path suffix.
+        :param user_id: If given, the user that triggered the download, recorded on
+            the torrent as its initiator.
         :return: The downloaded torrent.
         """
         indexer_result = await self.indexer_service.get_result(
             result_id=public_indexer_result_id
         )
-        show_torrent = await self.torrent_service.download(indexer_result=indexer_result)
+        show_torrent = await self.torrent_service.download(
+            indexer_result=indexer_result, user_id=user_id
+        )
         await self.torrent_service.pause_download(torrent=show_torrent)
 
         try:

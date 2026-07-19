@@ -1,7 +1,9 @@
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from media_manager.auth.db import User
 from media_manager.auth.users import current_active_user, current_superuser
 from media_manager.config import LibraryItem, MediaManagerConfig
 from media_manager.exceptions import MediaAlreadyExistsError, NotFoundError
@@ -350,6 +352,7 @@ async def get_torrents_for_a_season(
 )
 async def download_a_torrent(
     tv_service: tv_service_dep,
+    user: Annotated[User, Depends(current_superuser)],
     public_indexer_result_id: IndexerQueryResultId,
     show_id: ShowId,
     override_file_path_suffix: str = "",
@@ -361,6 +364,7 @@ async def download_a_torrent(
         public_indexer_result_id=public_indexer_result_id,
         show_id=show_id,
         override_show_file_path_suffix=override_file_path_suffix,
+        user_id=user.id,
     )
 
 

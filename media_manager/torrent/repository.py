@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
 
@@ -98,3 +100,12 @@ class TorrentRepository:
         stmt = select(MovieFile).where(MovieFile.torrent_id == torrent_id)
         result = (await self.db.execute(stmt)).scalars().all()
         return [MovieFileSchema.model_validate(movie_file) for movie_file in result]
+
+    async def get_active_torrents_initiated_by_user(
+        self, user_id: UUID
+    ) -> list[TorrentSchema]:
+        stmt = select(Torrent).where(
+            Torrent.initiated_by_user_id == user_id, ~Torrent.imported
+        )
+        result = (await self.db.execute(stmt)).scalars().all()
+        return [TorrentSchema.model_validate(torrent) for torrent in result]

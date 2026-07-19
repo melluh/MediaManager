@@ -1,7 +1,9 @@
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from media_manager.auth.db import User
 from media_manager.auth.users import current_active_user, current_superuser
 from media_manager.config import LibraryItem, MediaManagerConfig
 from media_manager.exceptions import ConflictError, NotFoundError
@@ -281,6 +283,7 @@ async def search_for_torrents_for_movie(
 async def download_torrent_for_movie(
     movie_service: movie_service_dep,
     movie: movie_dep,
+    user: Annotated[User, Depends(current_active_user)],
     public_indexer_result_id: IndexerQueryResultId,
     override_file_path_suffix: str = "",
 ) -> Torrent:
@@ -291,4 +294,5 @@ async def download_torrent_for_movie(
         public_indexer_result_id=public_indexer_result_id,
         movie=movie,
         override_movie_file_path_suffix=override_file_path_suffix,
+        user_id=user.id,
     )

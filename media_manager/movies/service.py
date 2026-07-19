@@ -2,6 +2,7 @@ import asyncio
 import logging
 import shutil
 from pathlib import Path
+from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
@@ -238,6 +239,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
         public_indexer_result_id: IndexerQueryResultId,
         movie: Movie,
         override_movie_file_path_suffix: str = "",
+        user_id: UUID | None = None,
     ) -> Torrent:
         """
         Download a torrent for a given indexer result and movie.
@@ -245,12 +247,16 @@ class MovieService(BaseMediaService[Movie, Movie]):
         :param public_indexer_result_id: The ID of the indexer result.
         :param movie: The movie object.
         :param override_movie_file_path_suffix: Optional override for the file path suffix.
+        :param user_id: If given, the user that triggered the download, recorded on
+            the torrent as its initiator.
         :return: The downloaded torrent.
         """
         indexer_result = await self.indexer_service.get_result(
             result_id=public_indexer_result_id
         )
-        movie_torrent = await self.torrent_service.download(indexer_result=indexer_result)
+        movie_torrent = await self.torrent_service.download(
+            indexer_result=indexer_result, user_id=user_id
+        )
         await self.torrent_service.pause_download(torrent=movie_torrent)
         movie_file = MovieFile(
             movie_id=movie.id,

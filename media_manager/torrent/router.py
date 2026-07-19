@@ -1,7 +1,10 @@
+from typing import Annotated
+
 from fastapi import APIRouter, status
 from fastapi.exceptions import HTTPException
 from fastapi.params import Depends
 
+from media_manager.auth.db import User
 from media_manager.auth.users import current_active_user, current_superuser
 from media_manager.torrent.dependencies import (
     torrent_dep,
@@ -20,6 +23,22 @@ router = APIRouter()
 )
 async def get_all_torrents(service: torrent_service_dep) -> list[Torrent]:
     return await service.get_all_torrents()
+
+
+@router.get(
+    "/mine",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(current_active_user)],
+)
+async def get_own_torrents(
+    service: torrent_service_dep,
+    user: Annotated[User, Depends(current_active_user)],
+) -> list[Torrent]:
+    """
+    Get the torrents initiated by the current user that are still downloading,
+    along with their current status.
+    """
+    return await service.get_own_torrents(user_id=user.id)
 
 
 @router.get("/{torrent_id}", status_code=status.HTTP_200_OK)

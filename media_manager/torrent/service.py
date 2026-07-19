@@ -1,5 +1,7 @@
 import asyncio
 import logging
+from datetime import UTC, datetime
+from uuid import UUID
 
 from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.movies.schemas import Movie, MovieFile
@@ -48,9 +50,15 @@ class TorrentService:
         """
         return await self.torrent_repository.get_movie_of_torrent(torrent_id=torrent.id)
 
-    async def download(self, indexer_result: IndexerQueryResult) -> Torrent:
+    async def download(
+        self, indexer_result: IndexerQueryResult, user_id: UUID | None = None
+    ) -> Torrent:
         log.info(f"Starting download for torrent: {indexer_result.title}")
         torrent = await asyncio.to_thread(self.download_manager.download, indexer_result)
+
+        if user_id is not None:
+            torrent.initiated_by_user_id = user_id
+            torrent.initiated_at = datetime.now(UTC)
 
         return await self.torrent_repository.save_torrent(torrent=torrent)
 
@@ -130,3 +138,20 @@ class TorrentService:
         return await self.torrent_repository.get_movie_files_of_torrent(
             torrent_id=torrent.id
         )
+
+    async def get_own_torrents(self, user_id: UUID) -> list[Torrent]:
+        """
+        Returns the torrents initiated by a user that are still downloading
+        (i.e. not yet imported), with their current download status.
+        """
+        own = await self.torrent_repository.get_active_torrents_initiated_by_user(
+            user_id=user_id
+        )
+        torrents: list[Torrent] = []
+        for t in own:
+            try:
+                torrents.append(await self.get_torrent_status(t))
+            except Exception:
+                log.exception(f"Error fetching status for torrent {t.title}")
+                torrents.append(t)
+        return torrents

@@ -1,5 +1,6 @@
 import typing
 import uuid
+from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -40,3 +41,5 @@ class Torrent(BaseModel):
     imported: bool
     hash: str
     usenet: bool = False
+    initiated_by_user_id: uuid.UUID | None = None
+    initiated_at: datetime | None = None
