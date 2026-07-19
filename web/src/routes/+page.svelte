@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { browser } from '$app/environment';
-	import { redirect } from '@sveltejs/kit';
+	import { Spinner } from '$lib/components/ui/spinner';
 
-	if (browser) goto(resolve('/dashboard', {}));
-	else throw redirect(307, resolve('/login', {}));
+	onMount(() => {
+		goto(resolve('/dashboard', {}));
+	});
 </script>
 
 <svelte:head>
@@ -15,4 +16,8 @@
 		name="description"
 	/>
 </svelte:head>
-<h1>Servas</h1>
+
+<div class="flex h-screen w-screen flex-col items-center justify-center gap-3">
+	<Spinner class="size-8" />
+	<p class="text-sm text-muted-foreground">Loading MediaManager…</p>
+</div>

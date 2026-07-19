@@ -15,6 +15,7 @@ export const load: LayoutLoad = async ({ fetch }) => {
 		} else {
 			throw redirect(303, resolve('/login', {}));
 		}
+		return { user: undefined, tvShows: undefined, movies: undefined };
 	}
 	return {
 		user: data,
