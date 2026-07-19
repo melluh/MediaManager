@@ -68,6 +68,7 @@ from media_manager.scheduler import (
     update_all_non_ended_shows_metadata_task,
 )
 from media_manager.torrent.manager import get_download_manager, init_download_manager
+from media_manager.version import HealthResponse, get_version_checker
 
 setup_logging()
 
@@ -132,6 +133,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     download_manager.populate_initial_health(registry)
 
     health_task = asyncio.create_task(_health_check_loop())
+    version_check_task = asyncio.create_task(get_version_checker().check_for_update())
 
     broker_started = False
     started_sources: list = []
@@ -168,6 +170,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
             await health_task
         except asyncio.CancelledError:
             pass
+        version_check_task.cancel()
+        try:
+            await version_check_task
+        except asyncio.CancelledError:
+            pass
         if loop_task is not None:
             loop_task.cancel()
             try:
@@ -198,8 +205,14 @@ api_app = APIRouter(prefix="/api/v1")
 
 
 @api_app.get("/health")
-async def hello_world() -> dict:
-    return {"message": "Hello World!", "version": os.getenv("PUBLIC_VERSION")}
+async def hello_world() -> HealthResponse:
+    checker = get_version_checker()
+    return HealthResponse(
+        message="Hello World!",
+        version=checker.current_version,
+        latest_version=checker.latest_version,
+        update_available=checker.update_available,
+    )
 
 
 api_app.include_router(

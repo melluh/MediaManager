@@ -2,11 +2,9 @@
 	import Card from '$lib/components/stats/card.svelte';
 	import { getContext, onMount } from 'svelte';
 	import client from '$lib/api';
-	import { isSemver, semverIsGreater } from '$lib/utils.ts';
 	import { resolve } from '$app/paths';
 	import AnimatedCard from '$lib/components/stats/animated-card.svelte';
 	let { showCount, moviesCount }: { showCount: number; moviesCount: number } = $props();
-	import { PUBLIC_VERSION } from '$env/static/public';
 
 	let episodeCount: Promise<number> = $state(
 		client.GET('/api/v1/tv/episodes/count').then((res) => {
@@ -19,19 +17,19 @@
 		})
 	);
 
-	let installedVersion: string | undefined = PUBLIC_VERSION.replace(/v*/, '');
-	let releaseUrl: string | null = $state(null);
+	let installedVersion: string | undefined = $state(undefined);
 	let newestVersion: string | null = $state(null);
+	let updateAvailable: boolean = $state(false);
 
 	let importablesShows: () => [] = getContext('importableShows');
 	let importablesMovies: () => [] = getContext('importableMovies');
 
 	onMount(async () => {
-		let releases = await fetch('https://api.github.com/repos/maxdorninger/mediamanager/releases');
-		if (releases.ok) {
-			let latestRelease = await releases.json().then((x) => x[0]);
-			newestVersion = latestRelease.tag_name.toString().replace(/v*/, '');
-			releaseUrl = latestRelease.html_url;
+		let health = await client.GET('/api/v1/health');
+		if (health.data) {
+			installedVersion = health.data.version;
+			newestVersion = health.data.latest_version ?? null;
+			updateAvailable = health.data.update_available ?? false;
 		}
 	});
 </script>
@@ -80,15 +78,15 @@
 		</div>
 	{/if}
 	<div class="flex-auto">
-		{#if semverIsGreater(newestVersion ?? '', installedVersion ?? '') || !isSemver(installedVersion ?? '')}
+		{#if updateAvailable}
 			<Card title="New version available!" footer="A new version of MediaManager is available!">
 				<a
 					rel="external"
 					target="_blank"
-					href={releaseUrl ?? 'https://github.com/maxdorninger/MediaManager/releases'}
+					href="https://github.com/maxdorninger/MediaManager/releases"
 					class="underline"
 				>
-					{isSemver(installedVersion ?? '') ? 'v' : ''}{installedVersion} → v{newestVersion}
+					{installedVersion} → v{newestVersion}
 				</a>
 			</Card>
 		{/if}

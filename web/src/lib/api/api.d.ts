@@ -1227,6 +1227,20 @@ export interface components {
 						[key: string]: string;
 				  };
 		};
+		/** HealthResponse */
+		HealthResponse: {
+			/** Message */
+			message: string;
+			/** Version */
+			version: string;
+			/** Latest Version */
+			latest_version?: string | null;
+			/**
+			 * Update Available
+			 * @default false
+			 */
+			update_available?: boolean;
+		};
 		/** HTTPValidationError */
 		HTTPValidationError: {
 			/** Detail */
@@ -1817,9 +1831,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': {
-						[key: string]: unknown;
-					};
+					'application/json': components['schemas']['HealthResponse'];
 				};
 			};
 		};
