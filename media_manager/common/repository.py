@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Sequence
 from typing import Any, TypeVar
 from uuid import UUID
 
@@ -107,10 +108,15 @@ class BaseRepository[T, S]:
         self,
         media_id: EntityId,
         model_class: type[T],
+        eager_options: Sequence[Any] | None = None,
         **attributes: Any,  # noqa: ANN401
     ) -> S:
         """
         Generic update method for media attributes.
+
+        Pass `eager_options` (e.g. selectinload(...)) when the schema needs
+        relationships loaded, since refreshing them lazily under AsyncSession
+        raises MissingGreenlet.
         """
         db_obj = await self.db.get(model_class, media_id)
         if not db_obj:
@@ -130,10 +136,19 @@ class BaseRepository[T, S]:
         if updated:
             try:
                 await self.db.commit()
-                await self.db.refresh(db_obj)
             except SQLAlchemyError:
                 await self.db.rollback()
                 raise
+
+        if eager_options:
+            stmt = (
+                select(model_class)
+                .where(model_class.id == media_id)
+                .options(*eager_options)
+            )
+            db_obj = (await self.db.execute(stmt)).unique().scalar_one()
+        elif updated:
+            await self.db.refresh(db_obj)
 
         return self.schema.model_validate(db_obj)
 

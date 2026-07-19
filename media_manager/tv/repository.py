@@ -394,9 +394,10 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         continuous_download: bool | None = None,
         imdb_id: str | None = None,
     ) -> ShowSchema:
-        await self.update_media_attributes_base(
+        return await self.update_media_attributes_base(
             media_id=show_id,
             model_class=Show,
+            eager_options=[_load_show_tree()],
             name=name,
             overview=overview,
             year=year,
@@ -404,9 +405,6 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             continuous_download=continuous_download,
             imdb_id=imdb_id,
         )
-        # Reload with seasons/episodes eagerly; the base returns a schema built
-        # from a non-eager db.get() which can't lazy-load under AsyncSession.
-        return await self.get_show_by_id(show_id)
 
     async def update_season_attributes(
         self, season_id: SeasonId, name: str | None = None, overview: str | None = None
