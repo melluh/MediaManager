@@ -8,7 +8,7 @@ from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
-from media_manager.metadataProvider.schemas import MetaDataProviderSearchResult
+from media_manager.metadataProvider.schemas import MediaType, MetaDataProviderSearchResult
 from media_manager.movies.schemas import Movie
 from media_manager.tv.schemas import Episode, Season, SeasonNumber, Show
 
@@ -156,6 +156,7 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
                                 external_id=result["tvdb_id"],
                                 year=year,
                                 metadata_provider=self.name,
+                                media_type=MediaType.tv,
                                 added=False,
                                 vote_average=None,
                             )
@@ -184,6 +185,7 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
                             external_id=result["id"],
                             year=year,
                             metadata_provider=self.name,
+                            media_type=MediaType.tv,
                             added=False,
                             vote_average=None,
                         )
@@ -217,6 +219,7 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
                             external_id=result["tvdb_id"],
                             year=year,
                             metadata_provider=self.name,
+                            media_type=MediaType.movie,
                             added=False,
                             vote_average=None,
                         )
@@ -251,6 +254,53 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
                         external_id=result["id"],
                         year=year,
                         metadata_provider=self.name,
+                        media_type=MediaType.movie,
+                        added=False,
+                        vote_average=None,
+                    )
+                )
+            except Exception:
+                log.warning("Error processing search result", exc_info=True)
+        return formatted_results
+
+    @override
+    async def search_multi(self, query: str) -> list[MetaDataProviderSearchResult]:
+        """
+        Search for movies and TV shows together.
+
+        TVDB's search endpoint already returns both types (and more) mixed
+        in one response, ranked by TVDB's own relevance - `search_show` and
+        `search_movie` each call it too, just to throw away the "other"
+        type. Reuse that single call here instead of querying twice.
+
+        Unlike `search_movie`, this does not fetch extended per-movie
+        metadata (an extra API call per result), so movie overviews/posters
+        may occasionally be missing where the extended lookup would have
+        filled them in.
+        """
+        results = await self.__search_tv(query=query)
+        formatted_results = []
+        for result in results:
+            result_type = result.get("type")
+            if result_type not in ("series", "movie"):
+                continue
+            try:
+                try:
+                    year = result["year"]
+                except KeyError:
+                    year = None
+
+                formatted_results.append(
+                    MetaDataProviderSearchResult(
+                        poster_path=result.get("image_url"),
+                        overview=result.get("overview"),
+                        name=result["name"],
+                        external_id=result["tvdb_id"],
+                        year=year,
+                        metadata_provider=self.name,
+                        media_type=MediaType.tv
+                        if result_type == "series"
+                        else MediaType.movie,
                         added=False,
                         vote_average=None,
                     )

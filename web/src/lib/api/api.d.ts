@@ -21,6 +21,50 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/search': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Search Media
+		 * @description Search local media (movies, TV shows, ...) by name.
+		 *
+		 *     Only queries the local database; no external metadata providers are
+		 *     contacted.
+		 */
+		get: operations['search_media_api_v1_search_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/search/external': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Search External Media
+		 * @description Search the metadata provider for movies and TV shows together, ranked
+		 *     the way the provider itself ranks combined results.
+		 */
+		get: operations['search_external_media_api_v1_search_external_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/auth/jwt/login': {
 		parameters: {
 			query?: never;
@@ -1309,6 +1353,7 @@ export interface components {
 			year: number | null;
 			/** Metadata Provider */
 			metadata_provider: string;
+			media_type: components['schemas']['MediaType'];
 			/** Added */
 			added: boolean;
 			/** Vote Average */
@@ -1548,6 +1593,30 @@ export interface components {
 		 * @enum {integer}
 		 */
 		Quality: 1 | 2 | 3 | 4 | 5;
+		/**
+		 * MediaType
+		 * @description The media types that can be returned by the local search endpoint.
+		 *
+		 *     Add new members here (and a matching repository in `SearchService`) to
+		 *     make another media type searchable.
+		 * @enum {string}
+		 */
+		MediaType: 'movie' | 'tv';
+		/** SearchResult */
+		SearchResult: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			media_type: components['schemas']['MediaType'];
+			/** Name */
+			name: string;
+			/** Overview */
+			overview: string;
+			/** Year */
+			year: number | null;
+		};
 		/** RichMovieTorrent */
 		RichMovieTorrent: {
 			/**
@@ -1791,6 +1860,7 @@ export type HttpValidationError = components['schemas']['HTTPValidationError'];
 export type IndexerQueryResult = components['schemas']['IndexerQueryResult'];
 export type LibraryItem = components['schemas']['LibraryItem'];
 export type MediaImportSuggestion = components['schemas']['MediaImportSuggestion'];
+export type MediaType = components['schemas']['MediaType'];
 export type MetaDataProviderSearchResult = components['schemas']['MetaDataProviderSearchResult'];
 export type Movie = components['schemas']['Movie'];
 export type MovieTorrent = components['schemas']['MovieTorrent'];
@@ -1807,6 +1877,7 @@ export type RichMovieTorrent = components['schemas']['RichMovieTorrent'];
 export type RichSeasonTorrent = components['schemas']['RichSeasonTorrent'];
 export type RichShowTorrent = components['schemas']['RichShowTorrent'];
 export type Season = components['schemas']['Season'];
+export type SearchResult = components['schemas']['SearchResult'];
 export type Show = components['schemas']['Show'];
 export type Torrent = components['schemas']['Torrent'];
 export type TorrentStatus = components['schemas']['TorrentStatus'];
@@ -3291,6 +3362,69 @@ export interface operations {
 		parameters: {
 			query: {
 				query: string;
+				metadata_provider?: 'tmdb' | 'tvdb';
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['MetaDataProviderSearchResult'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	search_media_api_v1_search_get: {
+		parameters: {
+			query: {
+				q: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SearchResult'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	search_external_media_api_v1_search_external_get: {
+		parameters: {
+			query: {
+				q: string;
 				metadata_provider?: 'tmdb' | 'tvdb';
 			};
 			header?: never;

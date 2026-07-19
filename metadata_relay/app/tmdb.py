@@ -23,6 +23,12 @@ else:
     async def search_tmdb_tv(query: str, page: int = 1, language: str = "en") -> dict:
         return Search().tv(page=page, query=query, language=language)
 
+    @router.get("/search/multi")
+    async def search_tmdb_multi(
+        query: str, page: int = 1, language: str = "en"
+    ) -> dict:
+        return Search().multi(page=page, query=query, language=language)
+
     @router.get("/tv/shows/{show_id}")
     async def get_tmdb_show(show_id: int, language: str = "en") -> dict:
         return TV(show_id).info(language=language)

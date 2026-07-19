@@ -49,6 +49,28 @@ class BaseRepository[T, S]:
         results = (await self.db.execute(stmt)).scalars().unique().all()
         return [self.schema.model_validate(r) for r in results]
 
+    async def search_by_name(self, query: str, limit: int = 10) -> Sequence[Any]:
+        """
+        Search for media by (partial, case-insensitive) name match.
+
+        Selects only the columns defined on `MediaMixin` rather than loading
+        full ORM instances, so this works for any model using that mixin
+        (e.g. Movie, Show) without tripping over relationship-backed schema
+        fields that aren't eagerly loaded (see Show.seasons).
+        """
+        stmt = (
+            select(
+                self.model.id,
+                self.model.name,
+                self.model.overview,
+                self.model.year,
+            )
+            .where(self.model.name.ilike(f"%{query}%"))
+            .order_by(self.model.name)
+            .limit(limit)
+        )
+        return (await self.db.execute(stmt)).all()
+
     async def delete(self, entity_id: EntityId) -> None:
         obj = await self.db.get(self.model, entity_id)
         if not obj:

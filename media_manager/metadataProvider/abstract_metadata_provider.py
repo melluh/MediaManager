@@ -42,6 +42,14 @@ class AbstractMetadataProvider(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    async def search_multi(self, query: str) -> list[MetaDataProviderSearchResult]:
+        """
+        Search for movies and TV shows together, ranked the way the
+        provider itself ranks combined results (e.g. TMDB's own website).
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     async def download_show_poster_image(self, show: Show) -> bool:
         """
         Downloads the poster image for a show.

@@ -16,6 +16,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  metadata_relay:
+    build:
+      context: ./metadata_relay
+      dockerfile: Dockerfile
+      args:
+        - VERSION=locally-built
+    container_name: metadata-relay
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
+      - TVDB_API_KEY=${TVDB_API_KEY:-}
   mediamanager:
     build:
       context: .
@@ -35,6 +48,8 @@ services:
       - DISABLE_FRONTEND_MOUNT=TRUE
       - LOG_FILE=/dev/null
       - MEDIAMANAGER_LOG_LEVEL=DEBUG
+      - MEDIAMANAGER_METADATA__TMDB__TMDB_RELAY_URL=http://metadata_relay:8000/tmdb
+      - MEDIAMANAGER_METADATA__TVDB__TVDB_RELAY_URL=http://metadata_relay:8000/tvdb
     volumes:
       #- ./web/build:/app/web/build # this is only needed to test built frontend when developing frontend
       - ./res/images/:/data/images/
@@ -44,6 +59,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      metadata_relay:
+        condition: service_started
   frontend:
     image: node:24-alpine
     container_name: mediamanager-frontend-dev

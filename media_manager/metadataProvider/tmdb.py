@@ -8,7 +8,7 @@ from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
-from media_manager.metadataProvider.schemas import MetaDataProviderSearchResult
+from media_manager.metadataProvider.schemas import MediaType, MetaDataProviderSearchResult
 from media_manager.movies.schemas import Movie
 from media_manager.notification.manager import notification_manager
 from media_manager.tv.schemas import Episode, EpisodeNumber, Season, SeasonNumber, Show
@@ -204,6 +204,27 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                 )
             raise
 
+    async def __search_multi(self, query: str, page: int) -> dict:
+        try:
+            response = await _client.get(
+                url=f"{self.url}/search/multi",
+                params={
+                    "query": query,
+                    "page": page,
+                },
+                timeout=60,
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            log.exception(f"TMDB API error searching multi with query '{query}'")
+            if notification_manager.is_configured():
+                await notification_manager.send_notification(
+                    title="TMDB API Error",
+                    message=f"Failed to search multi with query '{query}' on TMDB. Error: {e}",
+                )
+            raise
+
     async def __get_trending_movies(self) -> dict:
         try:
             response = await _client.get(
@@ -370,6 +391,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                             result["first_air_date"]
                         ),
                         metadata_provider=self.name,
+                        media_type=MediaType.tv,
                         added=False,
                         vote_average=result["vote_average"],
                         original_language=original_language,
@@ -474,8 +496,77 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                             result["release_date"]
                         ),
                         metadata_provider=self.name,
+                        media_type=MediaType.movie,
                         added=False,
                         vote_average=result["vote_average"],
+                        original_language=original_language,
+                    )
+                )
+            except Exception:
+                log.warning("Error processing search result", exc_info=True)
+        return formatted_results
+
+    @override
+    async def search_multi(
+        self, query: str, max_pages: int = 5
+    ) -> list[MetaDataProviderSearchResult]:
+        """
+        Search for movies and TV shows together using TMDB's combined
+        search, so results are ranked the same way as on TMDB's own website
+        instead of stitching two separately-ranked lists together.
+        """
+        results = []
+        for page_number in range(1, max_pages + 1):
+            result_page = await self.__search_multi(query=query, page=page_number)
+
+            if not result_page["results"]:
+                break
+            results.extend(result_page["results"])
+
+        formatted_results = []
+        for result in results:
+            media_type = result.get("media_type")
+            if media_type not in ("movie", "tv"):
+                continue
+            try:
+                if result["poster_path"] is not None:
+                    poster_url = (
+                        "https://image.tmdb.org/t/p/original" + result["poster_path"]
+                    )
+                else:
+                    poster_url = None
+
+                if media_type == "movie":
+                    original_name = result.get("original_title")
+                    display_name = result["title"]
+                    release_date = result.get("release_date")
+                else:
+                    original_name = result.get("original_name")
+                    display_name = result["name"]
+                    release_date = result.get("first_air_date")
+
+                # Determine which name to use based on primary_languages
+                original_language = result.get("original_language")
+                overview = result.get("overview")
+                if original_language and original_language in self.primary_languages:
+                    display_name = original_name
+                    overview = None
+
+                formatted_results.append(
+                    MetaDataProviderSearchResult(
+                        poster_path=poster_url,
+                        overview=overview,
+                        name=display_name,
+                        external_id=result["id"],
+                        year=media_manager.metadataProvider.utils.get_year_from_date(
+                            release_date
+                        ),
+                        metadata_provider=self.name,
+                        media_type=MediaType.movie
+                        if media_type == "movie"
+                        else MediaType.tv,
+                        added=False,
+                        vote_average=result.get("vote_average"),
                         original_language=original_language,
                     )
                 )

@@ -4,6 +4,7 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import StatCard from '$lib/components/stats/stat-cards.svelte';
 	import RecommendedMediaCarousel from '$lib/components/recommended-media-carousel.svelte';
+	import MediaSearchBox from '$lib/components/media-search-box.svelte';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import client from '$lib/api';
@@ -52,6 +53,7 @@
 			</Breadcrumb.List>
 		</Breadcrumb.Root>
 	</div>
+	<MediaSearchBox class="mr-4 ml-auto w-full max-w-md" />
 </header>
 <div class="flex flex-1 flex-col gap-4 p-4 pt-0">
 	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">

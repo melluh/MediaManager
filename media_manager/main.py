@@ -25,6 +25,7 @@ from taskiq_fastapi import populate_dependency_context
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import media_manager.movies.router as movies_router
+import media_manager.search.router as search_router
 import media_manager.torrent.router as torrent_router
 import media_manager.tv.router as tv_router
 from media_manager.auth.router import (
@@ -265,6 +266,7 @@ api_app.include_router(
     notification_router, prefix="/notification", tags=["notification"]
 )
 api_app.include_router(health_router, prefix="/health", tags=["health"])
+api_app.include_router(search_router.router, prefix="/search", tags=["search"])
 
 # serve static image files
 app.mount(
