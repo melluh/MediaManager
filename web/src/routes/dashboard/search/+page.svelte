@@ -42,19 +42,13 @@
 	let externalLoading = $state(false);
 	let externalError = $state(false);
 
-	// Queries the local database for existing media, and the metadata
-	// provider's combined multi-search for new movies/shows to add - a
-	// single call ranked by the provider itself (matching e.g. TMDB's own
-	// website), rather than stitching together two separately-ranked
-	// per-type searches.
+	// Queries the local database for existing media. Only depends on the
+	// query, so switching the metadata provider must not re-trigger this.
 	$effect(() => {
 		const currentQuery = query;
-		const currentMetadataProvider = metadataProvider;
 		if (currentQuery.length === 0) {
 			localResults = [];
-			externalResults = [];
 			localError = false;
-			externalError = false;
 			return;
 		}
 
@@ -77,9 +71,25 @@
 			.finally(() => {
 				localLoading = false;
 			});
+	});
+
+	// Queries the metadata provider's combined multi-search for new
+	// movies/shows to add - a single call ranked by the provider itself
+	// (matching e.g. TMDB's own website), rather than stitching together
+	// two separately-ranked per-type searches. Re-runs whenever the query
+	// or the chosen provider changes, clearing stale results up front so
+	// the loading state is shown rather than a stale list.
+	$effect(() => {
+		const currentQuery = query;
+		const currentMetadataProvider = metadataProvider;
+		externalResults = [];
+		externalError = false;
+
+		if (currentQuery.length === 0) {
+			return;
+		}
 
 		externalLoading = true;
-		externalError = false;
 		client
 			.GET('/api/v1/search/external', {
 				params: { query: { q: currentQuery, metadata_provider: currentMetadataProvider } }
