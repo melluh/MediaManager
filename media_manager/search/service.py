@@ -1,7 +1,6 @@
 from typing import Any
 
 from media_manager.common.repository import BaseRepository
-from media_manager.exceptions import NotFoundError
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
@@ -52,22 +51,30 @@ class SearchService:
     ) -> list[MetaDataProviderSearchResult]:
         """
         Search the metadata provider for movies and TV shows together (via
-        its combined multi-search), flagging results that already exist
-        locally - the same "added" enrichment single-type provider
-        searches do (see `BaseMetadataService.search_for_media_base`).
+        its combined multi-search), excluding results already in the local
+        library (they're already covered by `search`).
+
+        Also de-duplicates by (media_type, external_id): a provider's
+        multi-search can return the same item more than once across pages
+        for broad queries (e.g. ranking shifting slightly between page
+        fetches), which would otherwise reach the frontend as duplicate
+        list keys.
         """
-        results = await metadata_provider.search_multi(query=query)
-        for result in results:
+        raw_results = await metadata_provider.search_multi(query=query)
+        results: list[MetaDataProviderSearchResult] = []
+        seen: set[tuple[MediaType, int]] = set()
+        for result in raw_results:
+            dedupe_key = (result.media_type, result.external_id)
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+
             repository = self.repositories.get(result.media_type)
-            if repository is None:
-                continue
-            try:
-                media = await repository.get_by_external_id(
-                    external_id=result.external_id,
-                    metadata_provider=metadata_provider.name,
-                )
-            except NotFoundError:
-                continue
-            result.added = True
-            result.id = media.id
+            if repository is not None and await repository.exists_by_external_id(
+                external_id=result.external_id,
+                metadata_provider=metadata_provider.name,
+            ):
+                continue  # already in the library
+
+            results.append(result)
         return results

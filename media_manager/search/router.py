@@ -40,7 +40,8 @@ async def search_external_media(
 ) -> list[MetaDataProviderSearchResult]:
     """
     Search the metadata provider for movies and TV shows together, ranked
-    the way the provider itself ranks combined results.
+    the way the provider itself ranks combined results. Excludes results
+    already in the local library.
     """
     query = q.strip()
     if not query:

@@ -44,6 +44,21 @@ class BaseRepository[T, S]:
             raise NotFoundError(msg)
         return self.schema.model_validate(result)
 
+    async def exists_by_external_id(self, external_id: int, metadata_provider: str) -> bool:
+        """
+        Cheap existence check that avoids `model_validate`-ing the full
+        row: for models with relationship-backed schema fields (e.g.
+        `Show.seasons`), building the schema here would trip a
+        MissingGreenlet lazy-load since those relationships aren't
+        eagerly loaded by this query.
+        """
+        stmt = select(self.model.id).where(
+            self.model.external_id == external_id,
+            self.model.metadata_provider == metadata_provider,
+        )
+        result = (await self.db.execute(stmt)).scalar_one_or_none()
+        return result is not None
+
     async def get_all(self) -> list[S]:
         stmt = select(self.model)
         results = (await self.db.execute(stmt)).scalars().unique().all()

@@ -162,14 +162,9 @@ class BaseMetadataService[T, S]:
         self.repository = repository
 
     async def check_if_exists(self, external_id: int, metadata_provider: str) -> bool:
-        try:
-            await self.repository.get_by_external_id(
-                external_id=external_id, metadata_provider=metadata_provider
-            )
-        except NotFoundError:
-            return False
-        else:
-            return True
+        return await self.repository.exists_by_external_id(
+            external_id=external_id, metadata_provider=metadata_provider
+        )
 
     async def add_media_base(
         self,
