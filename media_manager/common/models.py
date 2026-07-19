@@ -12,7 +12,7 @@ class MediaMixin:
     """
 
     id: Mapped[UUID] = mapped_column(primary_key=True)
-    external_id: Mapped[int]
+    external_id: Mapped[int] = mapped_column(index=True)
     metadata_provider: Mapped[str]
     name: Mapped[str]
     overview: Mapped[str]

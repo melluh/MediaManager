@@ -26,6 +26,7 @@ class Season(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     show_id: Mapped[UUID] = mapped_column(
         ForeignKey(column="show.id", ondelete="CASCADE"),
+        index=True,
     )
     number: Mapped[int]
     external_id: Mapped[int]
@@ -44,6 +45,7 @@ class Episode(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     season_id: Mapped[UUID] = mapped_column(
         ForeignKey("season.id", ondelete="CASCADE"),
+        index=True,
     )
     number: Mapped[int]
     external_id: Mapped[int]
@@ -61,6 +63,7 @@ class EpisodeFile(Base, MediaFileMixin):
     __table_args__ = (PrimaryKeyConstraint("episode_id", "file_path_suffix"),)
     episode_id: Mapped[UUID] = mapped_column(
         ForeignKey(column="episode.id", ondelete="CASCADE"),
+        index=True,
     )
 
     torrent = relationship("Torrent", back_populates="episode_files", uselist=False)
