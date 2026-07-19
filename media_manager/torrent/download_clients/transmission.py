@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 class TransmissionDownloadClient(AbstractDownloadClient):
     name = "transmission"
+    display_name = "Transmission"
 
     # Transmission status mappings
     STATUS_MAPPING = MappingProxyType(
@@ -156,3 +157,10 @@ class TransmissionDownloadClient(AbstractDownloadClient):
         except Exception:
             log.exception("Failed to resume torrent")
             raise
+
+    def ping(self) -> bool:
+        try:
+            self._client.session_stats()
+            return True
+        except Exception:
+            return False

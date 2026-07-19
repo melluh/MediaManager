@@ -54,6 +54,9 @@ from media_manager.exceptions import (
     sqlalchemy_integrity_error_handler,
 )
 from media_manager.filesystem_checks import run_filesystem_checks
+from media_manager.health.registry import get_health_registry
+from media_manager.health.router import router as health_router
+from media_manager.health.schemas import ServiceStatus
 from media_manager.logging import LOGGING_CONFIG, setup_logging
 from media_manager.notification.router import router as notification_router
 from media_manager.scheduler import (
@@ -64,6 +67,7 @@ from media_manager.scheduler import (
     update_all_movies_metadata_task,
     update_all_non_ended_shows_metadata_task,
 )
+from media_manager.torrent.manager import get_download_manager, init_download_manager
 
 setup_logging()
 
@@ -84,9 +88,51 @@ FRONTEND_FOLLOW_SYMLINKS = os.getenv("FRONTEND_FOLLOW_SYMLINKS", "").lower() == 
 log.info("Hello World!")
 
 
+async def _health_check_loop() -> None:
+    """Periodically ping all external services and update the health registry."""
+    registry = get_health_registry()
+    while True:
+        await asyncio.sleep(60)
+        try:
+            download_manager = get_download_manager()
+            await download_manager.run_health_check(registry)
+        except Exception:
+            log.exception("Download client health check failed")
+
+        try:
+            indexer_config = config.indexers
+            if indexer_config.prowlarr.enabled:
+                from media_manager.indexer.indexers.prowlarr import Prowlarr
+                ok = await asyncio.to_thread(Prowlarr().ping)
+                registry.update(
+                    "prowlarr", "Prowlarr",
+                    ServiceStatus.healthy if ok else ServiceStatus.unavailable,
+                    None if ok else "Ping failed",
+                )
+            if indexer_config.jackett.enabled:
+                from media_manager.indexer.indexers.jackett import Jackett
+                ok = await asyncio.to_thread(Jackett().ping)
+                registry.update(
+                    "jackett", "Jackett",
+                    ServiceStatus.healthy if ok else ServiceStatus.unavailable,
+                    None if ok else "Ping failed",
+                )
+        except Exception:
+            log.exception("Indexer health check failed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     init_engine(config.database)
+
+    # Initialize singleton DownloadManager (makes sync network calls) and
+    # immediately seed the health registry so the UI has status from second one.
+    download_manager = await asyncio.to_thread(init_download_manager)
+    registry = get_health_registry()
+    download_manager.populate_initial_health(registry)
+
+    health_task = asyncio.create_task(_health_check_loop())
+
     broker_started = False
     started_sources: list = []
     finish_event: asyncio.Event | None = None
@@ -117,6 +163,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
             raise
         yield
     finally:
+        health_task.cancel()
+        try:
+            await health_task
+        except asyncio.CancelledError:
+            pass
         if loop_task is not None:
             loop_task.cancel()
             try:
@@ -200,6 +251,7 @@ api_app.include_router(movies_router.router, prefix="/movies", tags=["movie"])
 api_app.include_router(
     notification_router, prefix="/notification", tags=["notification"]
 )
+api_app.include_router(health_router, prefix="/health", tags=["health"])
 
 # serve static image files
 app.mount(

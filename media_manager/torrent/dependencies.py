@@ -5,6 +5,7 @@ from fastapi.exceptions import HTTPException
 
 from media_manager.database import DbSessionDependency
 from media_manager.exceptions import NotFoundError
+from media_manager.torrent.manager import get_download_manager
 from media_manager.torrent.repository import TorrentRepository
 from media_manager.torrent.schemas import Torrent, TorrentId
 from media_manager.torrent.service import TorrentService
@@ -18,7 +19,10 @@ torrent_repository_dep = Annotated[TorrentRepository, Depends(get_torrent_reposi
 
 
 def get_torrent_service(torrent_repository: torrent_repository_dep) -> TorrentService:
-    return TorrentService(torrent_repository=torrent_repository)
+    return TorrentService(
+        torrent_repository=torrent_repository,
+        download_manager=get_download_manager(),
+    )
 
 
 torrent_service_dep = Annotated[TorrentService, Depends(get_torrent_service)]

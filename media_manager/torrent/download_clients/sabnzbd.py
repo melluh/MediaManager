@@ -14,6 +14,7 @@ log = logging.getLogger(__name__)
 
 class SabnzbdDownloadClient(AbstractDownloadClient):
     name = "sabnzbd"
+    display_name = "SABnzbd"
 
     DOWNLOADING_STATE = (
         "Downloading",
@@ -125,6 +126,13 @@ class SabnzbdDownloadClient(AbstractDownloadClient):
         response = self.client.get_downloads(nzo_ids=torrent.hash)
         status = response["queue"]["status"]
         return self._map_status(status)
+
+    def ping(self) -> bool:
+        try:
+            self.client.version()
+            return True
+        except Exception:
+            return False
 
     def _map_status(self, sabnzbd_status: str) -> TorrentStatus:
         """

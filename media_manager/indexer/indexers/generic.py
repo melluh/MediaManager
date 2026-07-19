@@ -46,3 +46,12 @@ class GenericIndexer(ABC):
         :return: A list of IndexerQueryResult objects representing the search results.
         """
         raise NotImplementedError()
+
+    @abstractmethod
+    def ping(self) -> bool:
+        """
+        Check whether the indexer is reachable.
+
+        :return: True if the indexer responds successfully, False otherwise.
+        """
+        raise NotImplementedError()

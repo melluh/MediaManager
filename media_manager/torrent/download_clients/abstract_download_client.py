@@ -15,6 +15,11 @@ class AbstractDownloadClient(ABC):
     def name(self) -> str:
         pass
 
+    @property
+    @abstractmethod
+    def display_name(self) -> str:
+        """Human-readable name for UIs and logs, with the vendor's preferred capitalization."""
+
     @abstractmethod
     def download_torrent(self, indexer_result: IndexerQueryResult) -> Torrent:
         """
@@ -56,4 +61,12 @@ class AbstractDownloadClient(ABC):
         Resume a torrent download.
 
         :param torrent: The torrent to resume.
+        """
+
+    @abstractmethod
+    def ping(self) -> bool:
+        """
+        Check whether the download client is reachable.
+
+        :return: True if the client responds successfully, False otherwise.
         """

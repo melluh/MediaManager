@@ -3,7 +3,7 @@ import logging
 
 from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.movies.schemas import Movie, MovieFile
-from media_manager.torrent.manager import DownloadManager
+from media_manager.torrent.manager import DownloadManager, get_download_manager
 from media_manager.torrent.repository import TorrentRepository
 from media_manager.torrent.schemas import Torrent, TorrentId, TorrentStatus
 from media_manager.tv.schemas import EpisodeFile, Show
@@ -18,7 +18,7 @@ class TorrentService:
         download_manager: DownloadManager | None = None,
     ) -> None:
         self.torrent_repository = torrent_repository
-        self.download_manager = download_manager or DownloadManager()
+        self.download_manager = download_manager or get_download_manager()
 
     async def get_episode_files_of_torrent(
         self, torrent: Torrent

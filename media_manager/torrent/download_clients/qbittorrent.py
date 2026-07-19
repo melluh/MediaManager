@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 class QbittorrentDownloadClient(AbstractDownloadClient):
     name = "qbittorrent"
+    display_name = "qBittorrent"
 
     DOWNLOADING_STATE = (
         "allocating",
@@ -212,3 +213,10 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
             self.api_client.torrents_resume(torrent_hashes=torrent.hash)
         finally:
             self.api_client.auth_log_out()
+
+    def ping(self) -> bool:
+        try:
+            self.api_client.auth_log_in()
+            return True
+        except Exception:
+            return False

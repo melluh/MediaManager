@@ -206,3 +206,16 @@ class Jackett(GenericIndexer, TorznabMixin):
             params["imdbid"] = movie.imdb_id
         params[movie.metadata_provider + "id"] = movie.external_id
         return self.__search_jackett(params=params)
+
+    def ping(self) -> bool:
+        try:
+            url = f"{self.url}/api/v2.0/indexers/all/results/torznab/api"
+            with requests.Session() as session:
+                response = session.get(
+                    url,
+                    params={"apikey": self.api_key, "t": "caps"},
+                    timeout=5,
+                )
+            return response.ok
+        except Exception:
+            return False

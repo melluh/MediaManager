@@ -179,3 +179,10 @@ class Prowlarr(GenericIndexer, TorznabMixin):
             )
 
         return raw_results
+
+    def ping(self) -> bool:
+        try:
+            response = self._call_prowlarr_api("/system/status")
+            return response.ok
+        except Exception:
+            return False
