@@ -104,6 +104,63 @@ export function formatSecondsToOptimalUnit(seconds: number): string {
 	return '0s';
 }
 
+export function formatRuntime(minutes: number | null | undefined): string | null {
+	if (!minutes || minutes <= 0) return null;
+	const hours = Math.floor(minutes / 60);
+	const remainingMinutes = minutes % 60;
+	if (hours === 0) return `${remainingMinutes}m`;
+	if (remainingMinutes === 0) return `${hours}h`;
+	return `${hours}h ${remainingMinutes}m`;
+}
+
+export function formatReleaseDate(date: string | null | undefined): string | null {
+	if (!date) return null;
+	const parsed = new Date(date);
+	if (Number.isNaN(parsed.getTime())) return date;
+	return parsed.toLocaleDateString(undefined, {
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric'
+	});
+}
+
+const metadataProviderLabels: { [key: string]: string } = {
+	tmdb: 'TMDB',
+	tvdb: 'TVDB'
+};
+
+export function getMetadataProviderLabel(metadataProvider: string): string {
+	return metadataProviderLabels[metadataProvider] ?? metadataProvider.toUpperCase();
+}
+
+export function getMetadataProviderUrl(
+	metadataProvider: string,
+	externalId: number,
+	isShow: boolean
+): string | null {
+	switch (metadataProvider) {
+		case 'tmdb':
+			return `https://www.themoviedb.org/${isShow ? 'tv' : 'movie'}/${externalId}`;
+		case 'tvdb':
+			return `https://www.thetvdb.com/dereferrer/${isShow ? 'series' : 'movie'}/${externalId}`;
+		default:
+			return null;
+	}
+}
+
+export function formatLastUpdated(date: string | null | undefined): string | null {
+	if (!date) return null;
+	const parsed = new Date(date);
+	if (Number.isNaN(parsed.getTime())) return null;
+	return parsed.toLocaleString(undefined, {
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric',
+		hour: 'numeric',
+		minute: '2-digit'
+	});
+}
+
 export function handleQueryNotificationToast(count: number = 0, query: string = '') {
 	if (count > 0 && query.length > 0)
 		toast.success(`Found ${count} ${count > 1 ? 'result' : 'results'} for search term "${query}".`);

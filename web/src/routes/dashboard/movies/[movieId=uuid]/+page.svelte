@@ -3,10 +3,20 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import { ImageOff } from 'lucide-svelte';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import { buttonVariants } from '$lib/components/ui/button/index.js';
+	import { ImageOff, ChevronDown } from 'lucide-svelte';
 	import { getContext } from 'svelte';
 	import type { PublicMovie, PublicMovieFile, UserRead } from '$lib/api/api';
-	import { getFullyQualifiedMediaName, getTorrentQualityString } from '$lib/utils';
+	import {
+		getFullyQualifiedMediaName,
+		getTorrentQualityString,
+		formatRuntime,
+		formatReleaseDate,
+		formatLastUpdated,
+		getMetadataProviderLabel,
+		getMetadataProviderUrl
+	} from '$lib/utils';
 	import { page } from '$app/state';
 	import TorrentTable from '$lib/components/torrents/torrent-table.svelte';
 	import MediaPicture from '$lib/components/media-picture.svelte';
@@ -14,6 +24,7 @@
 	import LibraryCombobox from '$lib/components/library-combobox.svelte';
 	import { resolve } from '$app/paths';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 	import DeleteMediaDialog from '$lib/components/delete-media-dialog.svelte';
 	import CheckmarkX from '$lib/components/checkmark-x.svelte';
 
@@ -57,9 +68,11 @@
 		</Breadcrumb.Root>
 	</div>
 </header>
-<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
-	{getFullyQualifiedMediaName(movie)}
-</h1>
+<div class="mx-auto mb-4 w-full px-4 md:max-w-[80em]">
+	<h1 class="scroll-m-20 text-left text-4xl font-extrabold tracking-tight lg:text-5xl">
+		{getFullyQualifiedMediaName(movie)}
+	</h1>
+</div>
 <main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
 	<div class="flex flex-col gap-4 md:flex-row md:items-stretch">
 		<div class="w-full overflow-hidden rounded-xl bg-muted/50 md:w-1/3 md:max-w-sm">
@@ -73,39 +86,65 @@
 				</div>
 			{/if}
 		</div>
-		<div class="h-full w-full flex-auto rounded-xl md:w-1/4">
-			<Card.Root class="h-full w-full">
+		<div class="flex h-full w-full flex-auto flex-col rounded-xl md:flex-1">
+			<Card.Root class="flex h-full w-full flex-col">
 				<Card.Header>
 					<Card.Title>Overview</Card.Title>
 				</Card.Header>
-				<Card.Content>
-					<p class="text-justify text-sm leading-6 hyphens-auto text-muted-foreground">
-						{movie.overview}
-					</p>
-				</Card.Content>
-			</Card.Root>
-		</div>
-		<div
-			class="flex h-full w-full flex-auto flex-col items-center justify-start gap-4 rounded-xl md:w-1/3 md:max-w-[40em]"
-		>
-			{#if user().is_superuser}
-				<Card.Root class="w-full  flex-1">
-					<Card.Header>
-						<Card.Title>Administrator Controls</Card.Title>
-					</Card.Header>
-					<Card.Content class="flex flex-col items-center gap-4">
-						<LibraryCombobox media={movie} mediaType="movie" />
-						<DeleteMediaDialog isShow={false} media={movie} />
-					</Card.Content>
-				</Card.Root>
-			{/if}
-			<Card.Root class="w-full  flex-1">
-				<Card.Header>
-					<Card.Title>Download Options</Card.Title>
-				</Card.Header>
-				<Card.Content class="flex flex-col items-center gap-4">
+				<Card.Content class="flex flex-1 flex-col justify-between gap-4">
+					<div class="flex flex-col gap-3">
+						{#if movie.tagline}
+							<p class="text-sm italic text-muted-foreground">"{movie.tagline}"</p>
+						{/if}
+						<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+							{#if formatReleaseDate(movie.release_date)}
+								<span>{formatReleaseDate(movie.release_date)}</span>
+							{/if}
+							{#if formatRuntime(movie.runtime)}
+								<span>{formatRuntime(movie.runtime)}</span>
+							{/if}
+							{#if movie.genres && movie.genres.length > 0}
+								<div class="flex flex-wrap gap-1">
+									{#each movie.genres as genre (genre)}
+										<Badge variant="secondary">{genre}</Badge>
+									{/each}
+								</div>
+							{/if}
+						</div>
+						<p class="text-justify text-sm leading-6 hyphens-auto text-muted-foreground">
+							{movie.overview}
+						</p>
+						{#if getMetadataProviderUrl(movie.metadata_provider, movie.external_id, false)}
+							<p class="text-xs text-muted-foreground">
+								Source:
+								<a
+									href={getMetadataProviderUrl(movie.metadata_provider, movie.external_id, false)}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="underline hover:text-foreground"
+								>
+									{getMetadataProviderLabel(movie.metadata_provider)}
+								</a>
+								{#if formatLastUpdated(movie.metadata_updated_at)}
+									· Last updated: {formatLastUpdated(movie.metadata_updated_at)}
+								{/if}
+							</p>
+						{/if}
+					</div>
 					{#if user().is_superuser}
-						<DownloadMovieDialog {movie} />
+						<div class="flex items-center justify-between gap-2">
+							<DownloadMovieDialog {movie} />
+							<DropdownMenu.Root>
+								<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline' })}>
+									Administrator Actions
+									<ChevronDown />
+								</DropdownMenu.Trigger>
+								<DropdownMenu.Content align="end" class="flex w-56 flex-col gap-2 p-3">
+									<LibraryCombobox media={movie} mediaType="movie" />
+									<DeleteMediaDialog isShow={false} media={movie} />
+								</DropdownMenu.Content>
+							</DropdownMenu.Root>
+						</div>
 					{/if}
 				</Card.Content>
 			</Card.Root>
