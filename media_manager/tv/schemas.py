@@ -1,8 +1,9 @@
 import typing
 import uuid
+from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from media_manager.common.schemas import BaseMedia, BaseMediaFile
 from media_manager.torrent.models import Quality
@@ -125,4 +126,15 @@ class PublicShow(BaseModel):
     continuous_download: bool = False
     library: str
 
+    tagline: str | None = None
+    genres: list[str] = Field(default_factory=list)
+    runtime: int | None = None
+    release_date: str | None = None
+    metadata_updated_at: datetime | None = None
+
     seasons: list[PublicSeason]
+
+    @field_validator("genres", mode="before")
+    @classmethod
+    def _default_genres_to_empty_list(cls, v: list[str] | None) -> list[str]:
+        return v or []

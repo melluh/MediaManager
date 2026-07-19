@@ -72,6 +72,11 @@ class MovieMetadataService(BaseMetadataService[Movie, Movie]):
             overview=fresh_movie_data.overview,
             year=fresh_movie_data.year,
             imdb_id=fresh_movie_data.imdb_id,
+            tagline=fresh_movie_data.tagline,
+            genres=fresh_movie_data.genres,
+            runtime=fresh_movie_data.runtime,
+            release_date=fresh_movie_data.release_date,
+            metadata_updated_at=fresh_movie_data.metadata_updated_at,
         )
         updated_movie = await self.movie_repository.get_movie_by_id(db_movie.id)
         await metadata_provider.download_movie_poster_image(movie=updated_movie)

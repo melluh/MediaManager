@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -147,6 +148,11 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
         overview: str | None = None,
         year: int | None = None,
         imdb_id: str | None = None,
+        tagline: str | None = None,
+        genres: list[str] | None = None,
+        runtime: int | None = None,
+        release_date: str | None = None,
+        metadata_updated_at: datetime | None = None,
     ) -> MovieSchema:
         return await self.update_media_attributes_base(
             media_id=movie_id,
@@ -155,4 +161,9 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             overview=overview,
             year=year,
             imdb_id=imdb_id,
+            tagline=tagline,
+            genres=genres,
+            runtime=runtime,
+            release_date=release_date,
+            metadata_updated_at=metadata_updated_at,
         )

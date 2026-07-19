@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import distinct, func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -393,6 +395,11 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         ended: bool | None = None,
         continuous_download: bool | None = None,
         imdb_id: str | None = None,
+        tagline: str | None = None,
+        genres: list[str] | None = None,
+        runtime: int | None = None,
+        release_date: str | None = None,
+        metadata_updated_at: datetime | None = None,
     ) -> ShowSchema:
         return await self.update_media_attributes_base(
             media_id=show_id,
@@ -404,6 +411,11 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             ended=ended,
             continuous_download=continuous_download,
             imdb_id=imdb_id,
+            tagline=tagline,
+            genres=genres,
+            runtime=runtime,
+            release_date=release_date,
+            metadata_updated_at=metadata_updated_at,
         )
 
     async def update_season_attributes(

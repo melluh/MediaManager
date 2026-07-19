@@ -75,6 +75,11 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
             continuous_download=db_show.continuous_download
             if fresh_show_data.ended is False
             else False,
+            tagline=fresh_show_data.tagline,
+            genres=fresh_show_data.genres,
+            runtime=fresh_show_data.runtime,
+            release_date=fresh_show_data.release_date,
+            metadata_updated_at=fresh_show_data.metadata_updated_at,
         )
 
         existing_season_external_ids = {s.external_id: s for s in db_show.seasons}

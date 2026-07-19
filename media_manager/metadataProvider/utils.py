@@ -12,6 +12,12 @@ def get_year_from_date(first_air_date: str | None) -> int | None:
     return None
 
 
+def get_genre_names(genres: list[dict] | None) -> list[str]:
+    if not genres:
+        return []
+    return [genre["name"] for genre in genres if genre.get("name")]
+
+
 def _process_image(image_file_path: Path, content: bytes) -> None:
     image_file_path.write_bytes(content)
 

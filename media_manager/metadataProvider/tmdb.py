@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from typing import override
 
 import httpx
@@ -329,6 +330,8 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             show_metadata["first_air_date"]
         )
 
+        episode_run_times = show_metadata.get("episode_run_time") or []
+
         return Show(
             external_id=show_id,
             name=show_metadata["name"],
@@ -339,6 +342,13 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             ended=show_metadata["status"] in ENDED_STATUS,
             original_language=show_metadata.get("original_language"),
             imdb_id=imdb_id,
+            tagline=show_metadata.get("tagline") or None,
+            genres=media_manager.metadataProvider.utils.get_genre_names(
+                show_metadata.get("genres")
+            ),
+            runtime=episode_run_times[0] if episode_run_times else None,
+            release_date=show_metadata.get("first_air_date") or None,
+            metadata_updated_at=datetime.now(timezone.utc),
         )
 
     @override
@@ -444,6 +454,13 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             metadata_provider=self.name,
             original_language=movie_metadata.get("original_language"),
             imdb_id=imdb_id,
+            tagline=movie_metadata.get("tagline") or None,
+            genres=media_manager.metadataProvider.utils.get_genre_names(
+                movie_metadata.get("genres")
+            ),
+            runtime=movie_metadata.get("runtime"),
+            release_date=movie_metadata.get("release_date") or None,
+            metadata_updated_at=datetime.now(timezone.utc),
         )
 
     @override

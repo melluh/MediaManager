@@ -1,6 +1,8 @@
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
 from media_manager.torrent.models import Quality
@@ -20,6 +22,13 @@ class MediaMixin:
     library: Mapped[str] = mapped_column(default="Default")
     original_language: Mapped[str | None] = mapped_column(default=None)
     imdb_id: Mapped[str | None] = mapped_column(default=None)
+    tagline: Mapped[str | None] = mapped_column(default=None)
+    genres = mapped_column(ARRAY(String), nullable=True, default=list)
+    runtime: Mapped[int | None] = mapped_column(default=None)
+    release_date: Mapped[str | None] = mapped_column(default=None)
+    metadata_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
 
 
 class MediaFileMixin:
