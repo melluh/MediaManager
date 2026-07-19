@@ -4,7 +4,7 @@
 	const user: () => UserRead = getContext('user');
 </script>
 
-<span class="truncate font-semibold">{user().email}</span>
+<span class="truncate font-semibold">{user().username ?? user().email}</span>
 {#if user().is_superuser}
 	<span class="truncate text-xs">Administrator</span>
 {:else}

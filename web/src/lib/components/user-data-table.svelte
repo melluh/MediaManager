@@ -19,6 +19,7 @@
 	let userToDelete: UserRead | null = $state(null);
 	let newPassword: string = $state('');
 	let newEmail: string = $state('');
+	let newUsername: string = $state('');
 	let dialogOpen = $state(false);
 	let deleteDialogOpen = $state(false);
 	let createDialogOpen = $state(false);
@@ -71,7 +72,8 @@
 				is_active: selectedUser.is_active,
 				is_superuser: selectedUser.is_superuser,
 				...(newPassword !== '' && { password: newPassword }),
-				...(newEmail !== '' && { email: newEmail })
+				...(newEmail !== '' && { email: newEmail }),
+				...(newUsername !== '' && { username: newUsername })
 			}
 		});
 
@@ -83,6 +85,7 @@
 			selectedUser = null;
 			newPassword = '';
 			newEmail = '';
+			newUsername = '';
 		}
 		await invalidateAll();
 	}
@@ -116,6 +119,7 @@
 	<Table.Caption>A list of all users.</Table.Caption>
 	<Table.Header>
 		<Table.Row>
+			<Table.Head>Username</Table.Head>
 			<Table.Head>Email</Table.Head>
 			<Table.Head>Verified</Table.Head>
 			<Table.Head>Active</Table.Head>
@@ -125,6 +129,9 @@
 	<Table.Body>
 		{#each sortedUsers as user (user.id)}
 			<Table.Row>
+				<Table.Cell class="font-medium">
+					{user.username ?? '—'}
+				</Table.Cell>
 				<Table.Cell class="font-medium">
 					{user.email}
 				</Table.Cell>
@@ -233,6 +240,17 @@
 						<Label class="text-sm" for="superuser-false">False</Label>
 					</div>
 				</RadioGroup.Root>
+			</div>
+			<!-- Username -->
+			<div>
+				<Label class="mb-1 block text-sm font-medium" for="username">Username</Label>
+				<Input
+					bind:value={newUsername}
+					class="w-full"
+					id="username"
+					placeholder={selectedUser?.username ?? 'Keep empty to not change the username'}
+					type="text"
+				/>
 			</div>
 			<!-- Email -->
 			<div>
