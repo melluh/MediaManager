@@ -20,6 +20,9 @@ export const load: LayoutLoad = async ({ fetch }) => {
 	return {
 		user: data,
 		tvShows: await client.GET('/api/v1/tv/shows', { fetch: fetch }).then((res) => res.data),
-		movies: await client.GET('/api/v1/movies', { fetch: fetch }).then((res) => res.data)
+		movies: await client.GET('/api/v1/movies', { fetch: fetch }).then((res) => res.data),
+		ownTorrents: await client
+			.GET('/api/v1/torrent/mine', { fetch: fetch })
+			.then((res) => res.data ?? [])
 	};
 };
