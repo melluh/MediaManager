@@ -5,15 +5,15 @@ from pydantic import BaseModel, EmailStr
 
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
-    pass
+    username: str | None = None
 
 
 class UserCreate(schemas.BaseUserCreate):
-    pass
+    username: str | None = None
 
 
 class UserUpdate(schemas.BaseUserUpdate):
-    pass
+    username: str | None = None
 
 
 class AdminUserCreate(BaseModel):

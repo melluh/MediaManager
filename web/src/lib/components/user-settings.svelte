@@ -6,16 +6,22 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import client from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
+	import { getContext } from 'svelte';
+	import type { UserRead } from '$lib/api/api';
+
+	let currentUser: () => UserRead = getContext('user');
 
 	let newPassword: string = $state('');
 	let newEmail: string = $state('');
+	let newUsername: string = $state('');
 	let dialogOpen = $state(false);
 
 	async function saveUser() {
 		const { error } = await client.PATCH('/api/v1/users/me', {
 			body: {
 				...(newPassword !== '' && { password: newPassword }),
-				...(newEmail !== '' && { email: newEmail })
+				...(newEmail !== '' && { email: newEmail }),
+				...(newUsername !== '' && { username: newUsername })
 			}
 		});
 		if (error) {
@@ -26,6 +32,7 @@
 		}
 		newPassword = '';
 		newEmail = '';
+		newUsername = '';
 		await invalidateAll();
 	}
 </script>
@@ -44,6 +51,17 @@
 			</Dialog.Description>
 		</Dialog.Header>
 		<div class="space-y-6">
+			<!-- Username -->
+			<div>
+				<Label class="mb-1 block text-sm font-medium" for="username">Username</Label>
+				<Input
+					bind:value={newUsername}
+					class="w-full"
+					id="username"
+					placeholder={currentUser().username ?? 'Keep empty to not change the username'}
+					type="text"
+				/>
+			</div>
 			<!-- Email -->
 			<div>
 				<Label class="mb-1 block text-sm font-medium" for="email">Email</Label>
