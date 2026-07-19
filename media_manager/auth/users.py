@@ -16,6 +16,7 @@ from fastapi_users.authentication import (
 from fastapi_users.db import SQLAlchemyUserDatabase
 from httpx_oauth.clients.openid import OpenID
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from starlette import status
 
 import media_manager.notification.utils
@@ -44,6 +45,21 @@ if config.openid_connect.enabled:
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     reset_password_token_secret = SECRET
     verification_token_secret = SECRET
+
+    @override
+    async def update(
+        self,
+        user_update: UserUpdate,
+        user: User,
+        safe: bool = False,
+        request: Request | None = None,
+    ) -> User:
+        try:
+            return await super().update(
+                user_update, user, safe=safe, request=request
+            )
+        except IntegrityError as e:
+            raise exceptions.UserAlreadyExists() from e
 
     @override
     async def on_after_update(
