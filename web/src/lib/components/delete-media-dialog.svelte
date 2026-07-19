@@ -70,14 +70,15 @@
 				<strong>{getFullyQualifiedMediaName(media)}</strong>.
 			</AlertDialog.Description>
 		</AlertDialog.Header>
-		<div class="flex flex-col gap-3 py-4">
+		<div class="flex flex-col gap-4 py-4">
 			<div class="flex items-center space-x-2">
 				<Checkbox bind:checked={deleteFilesOnDisk} id="delete-files" />
 				<Label
 					for="delete-files"
 					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 				>
-					Also delete files on disk (this will only remove imported files, not downloads)
+					Also delete files on disk<br>
+					<span class="text-sm text-muted-foreground">Removes imported files (not downloads)</span>
 				</Label>
 			</div>
 			<div class="flex items-center space-x-2">
@@ -86,7 +87,8 @@
 					for="delete-torrents"
 					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 				>
-					Also delete torrents (this will remove torrents from your download clients)
+					Also delete torrents<br>
+					<span class="text-sm text-muted-foreground">Removes torrents from your download clients</span>
 				</Label>
 			</div>
 		</div>
