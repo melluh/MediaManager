@@ -6,6 +6,7 @@
 	import { resolve } from '$app/paths';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
 	import client from '$lib/api';
+	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
 
 	let loading = $state(false);
 	let errorMessage = $state<string | null>(null);
@@ -65,11 +66,11 @@
 		>
 	</Card.Header>
 	<Card.Content class="flex flex-1 items-center justify-center">
-		{#if result.poster_path != null}
-			<img
-				class="h-full w-full rounded-lg object-contain"
-				src={result.poster_path}
-				alt="{result.name}'s Poster Image"
+		{#if (result.poster_images?.length ?? 0) > 0}
+			<ExternalPosterImage
+				className="h-full w-full rounded-lg object-contain"
+				posterImages={result.poster_images ?? []}
+				alt={`${result.name}'s Poster Image`}
 			/>
 		{:else}
 			<div class="flex h-full w-full items-center justify-center">

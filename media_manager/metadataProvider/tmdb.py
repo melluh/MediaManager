@@ -9,12 +9,18 @@ from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
-from media_manager.metadataProvider.schemas import MediaType, MetaDataProviderSearchResult
+from media_manager.metadataProvider.schemas import (
+    ExternalPosterImage,
+    MediaType,
+    MetaDataProviderSearchResult,
+)
 from media_manager.movies.schemas import Movie
 from media_manager.notification.manager import notification_manager
 from media_manager.tv.schemas import Episode, EpisodeNumber, Season, SeasonNumber, Show
 
 ENDED_STATUS = {"Ended", "Canceled"}
+TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p"
+TMDB_POSTER_WIDTHS = (92, 154, 185, 342, 500, 780)
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +47,21 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         if original_language and original_language in self.primary_languages:
             return original_language
         return self.default_language
+
+    def __get_poster_images(self, poster_path: str | None) -> list[ExternalPosterImage]:
+        if not poster_path:
+            return []
+
+        return [
+            *[
+                ExternalPosterImage(
+                    url=f"{TMDB_POSTER_BASE_URL}/w{width}{poster_path}",
+                    width=width,
+                )
+                for width in TMDB_POSTER_WIDTHS
+            ],
+            ExternalPosterImage(url=f"{TMDB_POSTER_BASE_URL}/original{poster_path}"),
+        ]
 
     async def __get_show_metadata(
         self, show_id: int, language: str | None = None
@@ -373,13 +394,6 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         formatted_results = []
         for result in results:
             try:
-                if result["poster_path"] is not None:
-                    poster_url = (
-                        "https://image.tmdb.org/t/p/original" + result["poster_path"]
-                    )
-                else:
-                    poster_url = None
-
                 # Determine which name to use based on primary_languages
                 original_language = result.get("original_language")
                 original_name = result.get("original_name")
@@ -393,7 +407,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
 
                 formatted_results.append(
                     MetaDataProviderSearchResult(
-                        poster_path=poster_url,
+                        poster_images=self.__get_poster_images(result.get("poster_path")),
                         overview=overview,
                         name=display_name,
                         external_id=result["id"],
@@ -485,13 +499,6 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         formatted_results = []
         for result in results:
             try:
-                if result["poster_path"] is not None:
-                    poster_url = (
-                        "https://image.tmdb.org/t/p/original" + result["poster_path"]
-                    )
-                else:
-                    poster_url = None
-
                 # Determine which name to use based on primary_languages
                 original_language = result.get("original_language")
                 original_title = result.get("original_title")
@@ -505,7 +512,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
 
                 formatted_results.append(
                     MetaDataProviderSearchResult(
-                        poster_path=poster_url,
+                        poster_images=self.__get_poster_images(result.get("poster_path")),
                         overview=overview,
                         name=display_name,
                         external_id=result["id"],
@@ -546,13 +553,6 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             if media_type not in ("movie", "tv"):
                 continue
             try:
-                if result["poster_path"] is not None:
-                    poster_url = (
-                        "https://image.tmdb.org/t/p/original" + result["poster_path"]
-                    )
-                else:
-                    poster_url = None
-
                 if media_type == "movie":
                     original_name = result.get("original_title")
                     display_name = result["title"]
@@ -571,7 +571,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
 
                 formatted_results.append(
                     MetaDataProviderSearchResult(
-                        poster_path=poster_url,
+                        poster_images=self.__get_poster_images(result.get("poster_path")),
                         overview=overview,
                         name=display_name,
                         external_id=result["id"],

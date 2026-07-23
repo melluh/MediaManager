@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from media_manager.movies.schemas import MovieId
 from media_manager.tv.schemas import ShowId
@@ -16,8 +16,14 @@ class MediaType(str, Enum):
     tv = "tv"
 
 
+class ExternalPosterImage(BaseModel):
+    url: str
+    width: int | None = None
+    height: int | None = None
+
+
 class MetaDataProviderSearchResult(BaseModel):
-    poster_path: str | None
+    poster_images: list[ExternalPosterImage] = Field(default_factory=list)
     overview: str | None
     name: str
     external_id: int

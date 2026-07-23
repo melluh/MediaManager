@@ -1384,6 +1384,15 @@ export interface components {
             /** Candidates */
             candidates: components["schemas"]["MetaDataProviderSearchResult"][];
         };
+        /** ExternalPosterImage */
+        ExternalPosterImage: {
+            /** Url */
+            url: string;
+            /** Width */
+            width?: number | null;
+            /** Height */
+            height?: number | null;
+        };
         /**
          * MediaType
          * @description The media types a metadata provider (or the local search index) can
@@ -1393,8 +1402,8 @@ export interface components {
         MediaType: "movie" | "tv";
         /** MetaDataProviderSearchResult */
         MetaDataProviderSearchResult: {
-            /** Poster Path */
-            poster_path: string | null;
+            /** Poster Images */
+            poster_images?: components["schemas"]["ExternalPosterImage"][];
             /** Overview */
             overview: string | null;
             /** Name */
@@ -1958,6 +1967,7 @@ export type BodyVerifyRequestTokenApiV1AuthRequestVerifyTokenPost = components['
 export type BodyVerifyVerifyApiV1AuthVerifyPost = components['schemas']['Body_verify_verify_api_v1_auth_verify_post'];
 export type Episode = components['schemas']['Episode'];
 export type ErrorModel = components['schemas']['ErrorModel'];
+export type ExternalPosterImage = components['schemas']['ExternalPosterImage'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
 export type HealthResponse = components['schemas']['HealthResponse'];
 export type IndexerQueryResult = components['schemas']['IndexerQueryResult'];

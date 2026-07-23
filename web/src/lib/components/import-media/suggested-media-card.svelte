@@ -3,6 +3,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { ImageOff } from 'lucide-svelte';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
+	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
 
 	let {
 		result,
@@ -26,11 +27,11 @@
 		</Card.Description>
 	</Card.Header>
 	<Card.Content class="flex flex-1 items-center justify-center">
-		{#if result.poster_path != null}
-			<img
-				class="h-full w-full rounded-lg object-contain"
-				src={result.poster_path}
-				alt="{result.name}'s Poster Image"
+		{#if (result.poster_images?.length ?? 0) > 0}
+			<ExternalPosterImage
+				className="h-full w-full rounded-lg object-contain"
+				posterImages={result.poster_images ?? []}
+				alt={`${result.name}'s Poster Image`}
 			/>
 		{:else}
 			<div class="flex h-full w-full items-center justify-center">

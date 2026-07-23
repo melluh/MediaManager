@@ -9,7 +9,11 @@ from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
-from media_manager.metadataProvider.schemas import MediaType, MetaDataProviderSearchResult
+from media_manager.metadataProvider.schemas import (
+    ExternalPosterImage,
+    MediaType,
+    MetaDataProviderSearchResult,
+)
 from media_manager.movies.schemas import Movie
 from media_manager.tv.schemas import Episode, Season, SeasonNumber, Show
 
@@ -24,6 +28,12 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
     def __init__(self) -> None:
         config = MediaManagerConfig().metadata.tvdb
         self.url = config.tvdb_relay_url
+
+    @staticmethod
+    def __get_poster_images(poster_url: str | None) -> list[ExternalPosterImage]:
+        if not poster_url:
+            return []
+        return [ExternalPosterImage(url=poster_url)]
 
     async def __get_show(self, show_id: int) -> dict:
         response = await _client.get(url=f"{self.url}/tv/shows/{show_id}", timeout=60)
@@ -152,7 +162,9 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
 
                         formatted_results.append(
                             MetaDataProviderSearchResult(
-                                poster_path=result.get("image_url"),
+                                poster_images=self.__get_poster_images(
+                                    result.get("image_url")
+                                ),
                                 overview=result.get("overview"),
                                 name=result["name"],
                                 external_id=result["tvdb_id"],
@@ -178,10 +190,11 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
 
                     formatted_results.append(
                         MetaDataProviderSearchResult(
-                            poster_path="https://artworks.thetvdb.com"
-                            + result.get("image")
-                            if result.get("image")
-                            else None,
+                            poster_images=self.__get_poster_images(
+                                "https://artworks.thetvdb.com" + result.get("image")
+                                if result.get("image")
+                                else None
+                            ),
                             overview=result.get("overview"),
                             name=result["name"],
                             external_id=result["id"],
@@ -215,7 +228,9 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
 
                     formatted_results.append(
                         MetaDataProviderSearchResult(
-                            poster_path=result.get("image_url"),
+                            poster_images=self.__get_poster_images(
+                                result.get("image_url")
+                            ),
                             overview=result.get("overview"),
                             name=result["name"],
                             external_id=result["tvdb_id"],
@@ -250,7 +265,9 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
 
                 formatted_results.append(
                     MetaDataProviderSearchResult(
-                        poster_path=poster_path if result.get("image") else None,
+                        poster_images=self.__get_poster_images(
+                            poster_path if result.get("image") else None
+                        ),
                         overview=result.get("overview"),
                         name=result["name"],
                         external_id=result["id"],
@@ -294,7 +311,9 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
 
                 formatted_results.append(
                     MetaDataProviderSearchResult(
-                        poster_path=result.get("image_url"),
+                        poster_images=self.__get_poster_images(
+                            result.get("image_url")
+                        ),
                         overview=result.get("overview"),
                         name=result["name"],
                         external_id=result["tvdb_id"],
