@@ -74,41 +74,39 @@
 		</div>
 
 		{#if ownTorrents.length > 0}
-			<div class="mx-auto my-8">
-				<Card.Root>
-					<Card.Header>
-						<Card.Title>Your Downloads</Card.Title>
-						<Card.Description>Downloads you've started and their progress.</Card.Description>
-					</Card.Header>
-					<Card.Content>
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head>Name</Table.Head>
-									<Table.Head>Download Status</Table.Head>
-									<Table.Head>Quality</Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#each ownTorrents as torrent (torrent.id)}
-									<Table.Row>
-										<Table.Cell class="font-medium">{torrent.title}</Table.Cell>
-										<Table.Cell>{getTorrentStatusString(torrent.status)}</Table.Cell>
-										<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
-									</Table.Row>
-								{/each}
-							</Table.Body>
-						</Table.Root>
-					</Card.Content>
-				</Card.Root>
+			<div class="mx-auto my-8 ml-12">
+				<h3 class="my-4 text-2xl font-semibold">Your Downloads</h3>
+
+				<Table.Root>
+					<Table.Header>
+						<Table.Row>
+							<Table.Head>Name</Table.Head>
+							<Table.Head>Download Status</Table.Head>
+							<Table.Head>Quality</Table.Head>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{#each ownTorrents as torrent (torrent.id)}
+							<Table.Row>
+								<Table.Cell class="font-medium">{torrent.title}</Table.Cell>
+								<Table.Cell>{getTorrentStatusString(torrent.status)}</Table.Cell>
+								<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
+							</Table.Row>
+						{/each}
+					</Table.Body>
+				</Table.Root>
 			</div>
 		{/if}
 
 		<div class="mx-auto">
-			<h3 class="my-4 text-center text-2xl font-semibold">Trending Shows</h3>
-			<RecommendedMediaCarousel isLoading={showsLoading} isShow={true} media={recommendedShows} />
+			<h3 class="my-4 text-2xl font-semibold ml-12">Trending Shows</h3>
+			<RecommendedMediaCarousel
+				isLoading={showsLoading}
+				isShow={true}
+				media={recommendedShows}
+			/>
 
-			<h3 class="my-4 text-center text-2xl font-semibold">Trending Movies</h3>
+			<h3 class="my-4 text-2xl font-semibold ml-12 mt-8">Trending Movies</h3>
 			<RecommendedMediaCarousel
 				isLoading={moviesLoading}
 				isShow={false}

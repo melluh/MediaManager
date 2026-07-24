@@ -1,10 +1,8 @@
 <script lang="ts">
 	import AddMediaCard from '$lib/components/add-media-card.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { Button } from '$lib/components/ui/button';
-	import { ChevronRight } from 'lucide-svelte';
+	import * as Carousel from '$lib/components/ui/carousel/index.js';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
-	import { resolve } from '$app/paths';
 
 	let {
 		media,
@@ -17,33 +15,22 @@
 	} = $props();
 </script>
 
-<div
-	class="grid w-full gap-4 sm:grid-cols-1
-     md:grid-cols-2 lg:grid-cols-4"
->
-	{#if isLoading}
-		<Skeleton class="h-[70vh] w-full" />
-		<Skeleton class="h-[70vh] w-full" />
-		<Skeleton class="h-[70vh] w-full" />
-		<Skeleton class="h-[70vh] w-full" />
-	{:else}
-		{#each media.slice(0, 4) as mediaItem (mediaItem.external_id)}
-			<AddMediaCard {isShow} result={mediaItem} />
-		{/each}
-	{/if}
-	{#if isShow}
-		<Button class="md:col-start-2" variant="secondary" href={resolve('/dashboard/tv/add-show', {})}>
-			More recommendations
-			<ChevronRight />
-		</Button>
-	{:else}
-		<Button
-			class="md:col-start-2"
-			variant="secondary"
-			href={resolve('/dashboard/movies/add-movie', {})}
-		>
-			More recommendations
-			<ChevronRight />
-		</Button>
-	{/if}
-</div>
+<Carousel.Root class="w-full px-12" opts={{ align: 'start' }}>
+	<Carousel.Content>
+		{#if isLoading}
+			{#each { length: 4 }}
+				<Carousel.Item class="sm:basis-full md:basis-1/2 lg:basis-1/4">
+					<Skeleton class="h-[70vh] w-full" />
+				</Carousel.Item>
+			{/each}
+		{:else}
+			{#each media as mediaItem (mediaItem.external_id)}
+				<Carousel.Item class="sm:basis-full md:basis-1/2 lg:basis-1/4">
+					<AddMediaCard {isShow} result={mediaItem} />
+				</Carousel.Item>
+			{/each}
+		{/if}
+	</Carousel.Content>
+	<Carousel.Previous class="left-0 size-10 [&_svg]:size-5" />
+	<Carousel.Next class="right-0 size-10 [&_svg]:size-5" />
+</Carousel.Root>
