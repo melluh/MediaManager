@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Separator } from '$lib/components/ui/separator';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 
 	import client from '$lib/api';
 	import type { Notification } from '$lib/api/api';
-	import { resolve } from '$app/paths';
+	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
+
+	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
+	setCrumbs([{ label: 'Notifications' }]);
 
 	let unreadNotifications: Notification[] = [];
 	let readNotifications: Notification[] = [];
@@ -91,28 +91,6 @@
 <svelte:head>
 	<title>Notifications - MediaManager</title>
 </svelte:head>
-
-<header class="flex h-16 shrink-0 items-center gap-2">
-	<div class="flex items-center gap-2 px-4">
-		<Sidebar.Trigger class="-ml-1" />
-		<Separator class="mr-2 h-4" orientation="vertical" />
-		<Breadcrumb.Root>
-			<Breadcrumb.List>
-				<Breadcrumb.Item class="hidden md:block">
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>MediaManager</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>Home</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Page>Notifications</Breadcrumb.Page>
-				</Breadcrumb.Item>
-			</Breadcrumb.List>
-		</Breadcrumb.Root>
-	</div>
-</header>
 
 <main class="container mx-auto px-4 py-8">
 	<div class="mb-6 flex items-center justify-between">

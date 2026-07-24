@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { Separator } from '$lib/components/ui/separator/index.js';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
@@ -9,11 +7,18 @@
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
 	import AddMediaCard from '$lib/components/add-media-card.svelte';
-	import { onMount } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import client from '$lib/api';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
+	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import { handleQueryNotificationToast } from '$lib/utils.ts';
+
+	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
+	setCrumbs([
+		{ label: 'Movies', href: resolve('/dashboard/movies', {}) },
+		{ label: 'Add a Movie' }
+	]);
 
 	let searchTerm: string = $state('');
 	let metadataProvider: 'tmdb' | 'tvdb' = $state('tmdb');
@@ -54,32 +59,6 @@
 	<title>Add Movie - MediaManager</title>
 	<meta content="Add a new movie to your MediaManager collection" name="description" />
 </svelte:head>
-
-<header class="flex h-16 shrink-0 items-center gap-2">
-	<div class="flex items-center gap-2 px-4">
-		<Sidebar.Trigger class="-ml-1" />
-		<Separator class="mr-2 h-4" orientation="vertical" />
-		<Breadcrumb.Root>
-			<Breadcrumb.List>
-				<Breadcrumb.Item class="hidden md:block">
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>MediaManager</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>Home</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve('/dashboard/movies', {})}>Movies</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Page>Add a Movie</Breadcrumb.Page>
-				</Breadcrumb.Item>
-			</Breadcrumb.List>
-		</Breadcrumb.Root>
-	</div>
-</header>
 
 <main class="flex w-full max-w-[90vw] flex-1 flex-col items-center gap-4 p-4 pt-0">
 	<div class="grid w-full max-w-sm items-center gap-12">

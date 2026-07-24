@@ -1,18 +1,17 @@
 <script lang="ts">
-	import { Separator } from '$lib/components/ui/separator/index.js';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import StatCard from '$lib/components/stats/stat-cards.svelte';
 	import RecommendedMediaCarousel from '$lib/components/recommended-media-carousel.svelte';
-	import MediaSearchBox from '$lib/components/media-search-box.svelte';
+	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import { getTorrentQualityString, getTorrentStatusString } from '$lib/utils';
-	import { resolve } from '$app/paths';
-	import { onMount } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import client from '$lib/api';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api.d.ts';
 	import type { PageProps } from './$types';
+
+	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
+	setCrumbs([{ label: 'Dashboard' }]);
+
 	let { data }: PageProps = $props();
 	let recommendedShows: MetaDataProviderSearchResult[] = $state([]);
 	let showsLoading = $state(true);
@@ -42,34 +41,9 @@
 	/>
 </svelte:head>
 
-<header class="flex h-16 shrink-0 items-center gap-2">
-	<div class="flex items-center gap-2 px-4">
-		<Sidebar.Trigger class="-ml-1" />
-		<Separator class="mr-2 h-4" orientation="vertical" />
-		<Breadcrumb.Root>
-			<Breadcrumb.List>
-				<Breadcrumb.Item class="hidden md:block">
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>MediaManager</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Page>Home</Breadcrumb.Page>
-				</Breadcrumb.Item>
-			</Breadcrumb.List>
-		</Breadcrumb.Root>
-	</div>
-	<MediaSearchBox class="mr-4 ml-auto w-full max-w-md" />
-</header>
-
 <div class="flex flex-1 flex-col gap-4 p-4 pt-0">
-	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
-		Dashboard
-	</h1>
-
 	<main class="min-h-screen flex-1 items-center justify-center rounded-xl p-4 md:min-h-min">
-		<div class="mx-auto">
-			<div class="my-8 block text-2xl">Welcome to MediaManager!</div>
-
+		<div class="mx-auto ml-12">
 			<StatCard showCount={data.tvShows?.length ?? 0} moviesCount={data.movies?.length ?? 0} />
 		</div>
 

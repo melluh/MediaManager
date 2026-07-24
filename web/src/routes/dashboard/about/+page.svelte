@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { Separator } from '$lib/components/ui/separator/index.js';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
-	import { resolve } from '$app/paths';
+	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import logo from '$lib/images/logo.svg';
 	import { PUBLIC_VERSION } from '$env/static/public';
+	import { getContext } from 'svelte';
+
+	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
+	setCrumbs([{ label: 'About' }]);
 </script>
 
 <svelte:head>
@@ -14,28 +15,6 @@
 		name="description"
 	/>
 </svelte:head>
-
-<header class="flex h-16 shrink-0 items-center gap-2">
-	<div class="flex items-center gap-2 px-4">
-		<Sidebar.Trigger class="-ml-1" />
-		<Separator class="mr-2 h-4" orientation="vertical" />
-		<Breadcrumb.Root>
-			<Breadcrumb.List>
-				<Breadcrumb.Item class="hidden md:block">
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>MediaManager</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>Home</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Page>About</Breadcrumb.Page>
-				</Breadcrumb.Item>
-			</Breadcrumb.List>
-		</Breadcrumb.Root>
-	</div>
-</header>
 
 <main class="mx-auto flex w-full flex-1 flex-col items-center gap-4 p-4 md:max-w-[80em]">
 	<img alt="Media Manager Logo" class="mb-4 h-24 w-24" src={logo} />

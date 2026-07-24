@@ -1,7 +1,4 @@
 <script lang="ts">
-	import { Separator } from '$lib/components/ui/separator/index.js';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
@@ -27,10 +24,19 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import DeleteMediaDialog from '$lib/components/delete-media-dialog.svelte';
 	import CheckmarkX from '$lib/components/checkmark-x.svelte';
+	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 
 	let movie: PublicMovie = $derived(page.data.movie);
 	let movieFiles: PublicMovieFile[] = $derived(page.data.movieFiles);
 	let user: () => UserRead = getContext('user');
+
+	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
+	$effect(() => {
+		setCrumbs([
+			{ label: 'Movies', href: resolve('/dashboard/movies', {}) },
+			{ label: getFullyQualifiedMediaName(movie) }
+		]);
+	});
 </script>
 
 <svelte:head>
@@ -43,31 +49,6 @@
 	/>
 </svelte:head>
 
-<header class="flex h-16 shrink-0 items-center gap-2">
-	<div class="flex items-center gap-2 px-4">
-		<Sidebar.Trigger class="-ml-1" />
-		<Separator class="mr-2 h-4" orientation="vertical" />
-		<Breadcrumb.Root>
-			<Breadcrumb.List>
-				<Breadcrumb.Item class="hidden md:block">
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>MediaManager</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>Home</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve('/dashboard/movies', {})}>Movies</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Page>{getFullyQualifiedMediaName(movie)}</Breadcrumb.Page>
-				</Breadcrumb.Item>
-			</Breadcrumb.List>
-		</Breadcrumb.Root>
-	</div>
-</header>
 <div class="mx-auto mb-4 w-full px-4 md:max-w-[80em]">
 	<h1 class="scroll-m-20 text-left text-4xl font-extrabold tracking-tight lg:text-5xl">
 		{getFullyQualifiedMediaName(movie)}

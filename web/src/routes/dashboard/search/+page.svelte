@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { Separator } from '$lib/components/ui/separator/index.js';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
@@ -11,11 +9,15 @@
 	import LoadingBar from '$lib/components/loading-bar.svelte';
 	import { getFullyQualifiedMediaName } from '$lib/utils.js';
 	import { getMediaTypeHref, getMediaTypeLabel } from '$lib/media-types.ts';
-	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
+	import { getContext } from 'svelte';
 	import client from '$lib/api';
 	import type { SearchResult, MetaDataProviderSearchResult } from '$lib/api/api.d.ts';
+	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
+
+	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
+	setCrumbs([{ label: 'Search' }]);
 
 	let query = $derived(page.url.searchParams.get('q')?.trim() ?? '');
 
@@ -116,28 +118,6 @@
 	<title>Search{query ? ` - ${query}` : ''} - MediaManager</title>
 	<meta content="Search your MediaManager library and metadata providers" name="description" />
 </svelte:head>
-
-<header class="flex h-16 shrink-0 items-center gap-2">
-	<div class="flex items-center gap-2 px-4">
-		<Sidebar.Trigger class="-ml-1" />
-		<Separator class="mr-2 h-4" orientation="vertical" />
-		<Breadcrumb.Root>
-			<Breadcrumb.List>
-				<Breadcrumb.Item class="hidden md:block">
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>MediaManager</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>Home</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Page>Search</Breadcrumb.Page>
-				</Breadcrumb.Item>
-			</Breadcrumb.List>
-		</Breadcrumb.Root>
-	</div>
-</header>
 
 <main class="flex w-full flex-1 flex-col gap-8 p-4 pt-0">
 	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">

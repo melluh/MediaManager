@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AppSidebar from '$lib/components/nav/app-sidebar.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import DashboardHeader, { type Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import type { LayoutProps } from './$types';
 	import { setContext } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -12,9 +13,13 @@
 	let { data, children }: LayoutProps = $props();
 	let importableShows: MediaImportSuggestion[] = $state([]);
 	let importableMovies: MediaImportSuggestion[] = $state([]);
+	let crumbs: Crumb[] = $state([]);
 	setContext('user', () => data.user);
 	setContext('importableMovies', () => importableMovies);
 	setContext('importableShows', () => importableShows);
+	setContext('setCrumbs', (newCrumbs: Crumb[]) => {
+		crumbs = newCrumbs;
+	});
 
 	if (!data.user?.is_verified) {
 		toast.info('Your account requires verification. Redirecting...');
@@ -38,6 +43,7 @@
 <Sidebar.Provider>
 	<AppSidebar />
 	<Sidebar.Inset>
+		<DashboardHeader {crumbs} />
 		{@render children()}
 	</Sidebar.Inset>
 </Sidebar.Provider>

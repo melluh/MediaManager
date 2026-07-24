@@ -1,8 +1,5 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Separator } from '$lib/components/ui/separator/index.js';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import type { PublicEpisodeFile, Season, Show } from '$lib/api/api';
 	import CheckmarkX from '$lib/components/checkmark-x.svelte';
@@ -10,10 +7,24 @@
 	import MediaPicture from '$lib/components/media-picture.svelte';
 	import { resolve } from '$app/paths';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import { getContext } from 'svelte';
+	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 
 	let episodeFiles: PublicEpisodeFile[] = $derived(page.data.files);
 	let season: Season = $derived(page.data.season);
 	let show: Show = $derived(page.data.showData);
+
+	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
+	$effect(() => {
+		setCrumbs([
+			{ label: 'Shows', href: resolve('/dashboard/tv', {}) },
+			{
+				label: `${show.name} ${show.year == null ? '' : '(' + show.year + ')'}`,
+				href: resolve('/dashboard/tv/[showId]', { showId: show.id! })
+			},
+			{ label: `Season ${season.number}` }
+		]);
+	});
 
 	let episodeById = $derived(
 		Object.fromEntries(
@@ -32,38 +43,6 @@
 	/>
 </svelte:head>
 
-<header class="flex h-16 shrink-0 items-center gap-2">
-	<div class="flex items-center gap-2 px-4">
-		<Sidebar.Trigger class="-ml-1" />
-		<Separator class="mr-2 h-4" orientation="vertical" />
-		<Breadcrumb.Root>
-			<Breadcrumb.List>
-				<Breadcrumb.Item class="hidden md:block">
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>MediaManager</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve('/dashboard', {})}>Home</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve('/dashboard/tv', {})}>Shows</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve('/dashboard/tv/[showId]', { showId: show.id! })}>
-						{show.name}
-						{show.year == null ? '' : '(' + show.year + ')'}
-					</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator class="hidden md:block" />
-				<Breadcrumb.Item>
-					<Breadcrumb.Page>Season {season.number}</Breadcrumb.Page>
-				</Breadcrumb.Item>
-			</Breadcrumb.List>
-		</Breadcrumb.Root>
-	</div>
-</header>
 <h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
 	{getFullyQualifiedMediaName(show)} - Season {season.number}
 </h1>
