@@ -19,14 +19,15 @@
 
 <div
 	class="grid w-full gap-4 sm:grid-cols-1
-     md:grid-cols-2 lg:grid-cols-3"
+     md:grid-cols-2 lg:grid-cols-4"
 >
 	{#if isLoading}
 		<Skeleton class="h-[70vh] w-full" />
 		<Skeleton class="h-[70vh] w-full" />
 		<Skeleton class="h-[70vh] w-full" />
+		<Skeleton class="h-[70vh] w-full" />
 	{:else}
-		{#each media.slice(0, 3) as mediaItem (mediaItem.external_id)}
+		{#each media.slice(0, 4) as mediaItem (mediaItem.external_id)}
 			<AddMediaCard {isShow} result={mediaItem} />
 		{/each}
 	{/if}

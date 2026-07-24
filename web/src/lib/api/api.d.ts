@@ -1311,6 +1311,15 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** ExternalPosterImage */
+        ExternalPosterImage: {
+            /** Url */
+            url: string;
+            /** Width */
+            width?: number | null;
+            /** Height */
+            height?: number | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1384,15 +1393,6 @@ export interface components {
             /** Candidates */
             candidates: components["schemas"]["MetaDataProviderSearchResult"][];
         };
-        /** ExternalPosterImage */
-        ExternalPosterImage: {
-            /** Url */
-            url: string;
-            /** Width */
-            width?: number | null;
-            /** Height */
-            height?: number | null;
-        };
         /**
          * MediaType
          * @description The media types a metadata provider (or the local search index) can
@@ -1421,6 +1421,10 @@ export interface components {
             vote_average?: number | null;
             /** Original Language */
             original_language?: string | null;
+            /** Genres */
+            genres?: string[];
+            /** Runtime */
+            runtime?: number | null;
             /** Id */
             id?: string | null;
         };

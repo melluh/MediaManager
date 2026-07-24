@@ -18,6 +18,14 @@ def get_genre_names(genres: list[dict] | None) -> list[str]:
     return [genre["name"] for genre in genres if genre.get("name")]
 
 
+def get_genre_names_from_ids(
+    genre_ids: list[int] | None, genre_map: dict[int, str]
+) -> list[str]:
+    if not genre_ids:
+        return []
+    return [genre_map[genre_id] for genre_id in genre_ids if genre_id in genre_map]
+
+
 def _process_image(image_file_path: Path, content: bytes) -> None:
     image_file_path.write_bytes(content)
 

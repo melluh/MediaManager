@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import override
@@ -25,6 +26,18 @@ TMDB_POSTER_WIDTHS = (92, 154, 185, 342, 500, 780)
 log = logging.getLogger(__name__)
 
 _client = httpx.AsyncClient(timeout=30.0)
+
+# Genre id -> name lookup, lazily populated and cached for the process
+# lifetime since TMDB's genre list is effectively static.
+_movie_genre_map: dict[int, str] | None = None
+_tv_genre_map: dict[int, str] | None = None
+_genre_map_lock = asyncio.Lock()
+
+# Popular/trending results are enriched with an extra per-item detail call
+# (to get runtime, which trending/search responses don't include). Bound
+# the concurrency so a dashboard load doesn't fire ~20 simultaneous requests
+# at TMDB.
+_detail_semaphore = asyncio.Semaphore(5)
 
 
 class TmdbMetadataProvider(AbstractMetadataProvider):
@@ -265,6 +278,101 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                 )
             raise
 
+    async def __get_movie_genre_map(self) -> dict[int, str]:
+        global _movie_genre_map
+        if _movie_genre_map is None:
+            async with _genre_map_lock:
+                if _movie_genre_map is None:
+                    try:
+                        response = await _client.get(
+                            url=f"{self.url}/genre/movie/list",
+                            params={"language": self.default_language},
+                            timeout=30,
+                        )
+                        response.raise_for_status()
+                        _movie_genre_map = {
+                            genre["id"]: genre["name"]
+                            for genre in response.json().get("genres", [])
+                        }
+                    except httpx.HTTPError:
+                        log.warning("Failed to fetch TMDB movie genre list", exc_info=True)
+                        return {}
+        return _movie_genre_map
+
+    async def __get_tv_genre_map(self) -> dict[int, str]:
+        global _tv_genre_map
+        if _tv_genre_map is None:
+            async with _genre_map_lock:
+                if _tv_genre_map is None:
+                    try:
+                        response = await _client.get(
+                            url=f"{self.url}/genre/tv/list",
+                            params={"language": self.default_language},
+                            timeout=30,
+                        )
+                        response.raise_for_status()
+                        _tv_genre_map = {
+                            genre["id"]: genre["name"]
+                            for genre in response.json().get("genres", [])
+                        }
+                    except httpx.HTTPError:
+                        log.warning("Failed to fetch TMDB TV genre list", exc_info=True)
+                        return {}
+        return _tv_genre_map
+
+    async def __enrich_shows_with_details(
+        self, results: list[MetaDataProviderSearchResult]
+    ) -> None:
+        """
+        Trending/popular shows don't come with runtime, and only carry
+        genre ids rather than names. Fill both in from the per-show detail
+        endpoint, bounded by `_detail_semaphore` to avoid hammering TMDB.
+        """
+
+        async def enrich(result: MetaDataProviderSearchResult) -> None:
+            try:
+                async with _detail_semaphore:
+                    metadata = await self.__get_show_metadata(
+                        show_id=result.external_id, language=self.default_language
+                    )
+                result.genres = media_manager.metadataProvider.utils.get_genre_names(
+                    metadata.get("genres")
+                )
+                episode_run_times = metadata.get("episode_run_time") or []
+                result.runtime = episode_run_times[0] if episode_run_times else None
+            except Exception:
+                log.warning(
+                    f"Failed to fetch extra details for show {result.external_id}",
+                    exc_info=True,
+                )
+
+        await asyncio.gather(*(enrich(result) for result in results))
+
+    async def __enrich_movies_with_details(
+        self, results: list[MetaDataProviderSearchResult]
+    ) -> None:
+        """
+        Same as `__enrich_shows_with_details`, for movies.
+        """
+
+        async def enrich(result: MetaDataProviderSearchResult) -> None:
+            try:
+                async with _detail_semaphore:
+                    metadata = await self.__get_movie_metadata(
+                        movie_id=result.external_id, language=self.default_language
+                    )
+                result.genres = media_manager.metadataProvider.utils.get_genre_names(
+                    metadata.get("genres")
+                )
+                result.runtime = metadata.get("runtime")
+            except Exception:
+                log.warning(
+                    f"Failed to fetch extra details for movie {result.external_id}",
+                    exc_info=True,
+                )
+
+        await asyncio.gather(*(enrich(result) for result in results))
+
     @override
     async def download_show_poster_image(self, show: Show) -> bool:
         # Determine which language to use based on show's original_language
@@ -381,7 +489,8 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         If no query is provided, it will return the most popular shows.
         """
         results = []
-        if query is None:
+        is_popular = query is None
+        if is_popular:
             results = (await self.__get_trending_tv())["results"]
         else:
             for page_number in range(1, max_pages + 1):
@@ -390,6 +499,8 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                 if not result_page["results"]:
                     break
                 results.extend(result_page["results"])
+
+        tv_genre_map = {} if is_popular else await self.__get_tv_genre_map()
 
         formatted_results = []
         for result in results:
@@ -419,10 +530,17 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                         added=False,
                         vote_average=result["vote_average"],
                         original_language=original_language,
+                        genres=media_manager.metadataProvider.utils.get_genre_names_from_ids(
+                            result.get("genre_ids"), tv_genre_map
+                        ),
                     )
                 )
             except Exception:
                 log.warning("Error processing search result", exc_info=True)
+
+        if is_popular:
+            await self.__enrich_shows_with_details(formatted_results)
+
         return formatted_results
 
     @override
@@ -486,7 +604,8 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         If no query is provided, it will return the most popular movies.
         """
         results = []
-        if query is None:
+        is_popular = query is None
+        if is_popular:
             results = (await self.__get_trending_movies())["results"]
         else:
             for page_number in range(1, max_pages + 1):
@@ -495,6 +614,8 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                 if not result_page["results"]:
                     break
                 results.extend(result_page["results"])
+
+        movie_genre_map = {} if is_popular else await self.__get_movie_genre_map()
 
         formatted_results = []
         for result in results:
@@ -524,10 +645,17 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                         added=False,
                         vote_average=result["vote_average"],
                         original_language=original_language,
+                        genres=media_manager.metadataProvider.utils.get_genre_names_from_ids(
+                            result.get("genre_ids"), movie_genre_map
+                        ),
                     )
                 )
             except Exception:
                 log.warning("Error processing search result", exc_info=True)
+
+        if is_popular:
+            await self.__enrich_movies_with_details(formatted_results)
+
         return formatted_results
 
     @override
@@ -547,6 +675,9 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                 break
             results.extend(result_page["results"])
 
+        movie_genre_map = await self.__get_movie_genre_map()
+        tv_genre_map = await self.__get_tv_genre_map()
+
         formatted_results = []
         for result in results:
             media_type = result.get("media_type")
@@ -557,10 +688,12 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                     original_name = result.get("original_title")
                     display_name = result["title"]
                     release_date = result.get("release_date")
+                    genre_map = movie_genre_map
                 else:
                     original_name = result.get("original_name")
                     display_name = result["name"]
                     release_date = result.get("first_air_date")
+                    genre_map = tv_genre_map
 
                 # Determine which name to use based on primary_languages
                 original_language = result.get("original_language")
@@ -585,6 +718,9 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                         added=False,
                         vote_average=result.get("vote_average"),
                         original_language=original_language,
+                        genres=media_manager.metadataProvider.utils.get_genre_names_from_ids(
+                            result.get("genre_ids"), genre_map
+                        ),
                     )
                 )
             except Exception:

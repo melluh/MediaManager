@@ -33,4 +33,6 @@ class MetaDataProviderSearchResult(BaseModel):
     added: bool
     vote_average: float | None = None
     original_language: str | None = None
+    genres: list[str] = Field(default_factory=list)
+    runtime: int | None = None
     id: MovieId | ShowId | None = None  # Internal ID if already added

@@ -3,7 +3,7 @@ import os
 
 import tmdbsimple
 from fastapi import APIRouter
-from tmdbsimple import TV, Movies, Search, Trending, TV_Seasons
+from tmdbsimple import TV, Genres, Movies, Search, Trending, TV_Seasons
 
 log = logging.getLogger(__name__)
 
@@ -62,3 +62,11 @@ else:
     @router.get("/movies/{movie_id}/external_ids")
     async def get_tmdb_movie_external_ids(movie_id: int) -> dict:
         return Movies(movie_id).external_ids()
+
+    @router.get("/genre/movie/list")
+    async def get_tmdb_movie_genres(language: str = "en") -> dict:
+        return Genres().movie_list(language=language)
+
+    @router.get("/genre/tv/list")
+    async def get_tmdb_tv_genres(language: str = "en") -> dict:
+        return Genres().tv_list(language=language)
