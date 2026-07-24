@@ -27,8 +27,7 @@
 	</h1>
 	<Card.Root id="me">
 		<Card.Header>
-			<Card.Title>You</Card.Title>
-			<Card.Description>Change your email or password</Card.Description>
+			<Card.Title>Your account</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<UserSettings />

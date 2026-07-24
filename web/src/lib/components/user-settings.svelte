@@ -1,92 +1,57 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button/index.js';
 	import { toast } from 'svelte-sonner';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
 	import client from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
 	import { getContext } from 'svelte';
 	import type { UserRead } from '$lib/api/api';
+	import InlineEditField from '$lib/components/inline-edit-field.svelte';
+	import ChangePasswordDialog from '$lib/components/change-password-dialog.svelte';
 
 	let currentUser: () => UserRead = getContext('user');
 
-	let newPassword: string = $state('');
-	let newEmail: string = $state('');
-	let newUsername: string = $state('');
-	let dialogOpen = $state(false);
-
-	async function saveUser() {
+	async function saveUsername(newUsername: string): Promise<boolean> {
 		const { error } = await client.PATCH('/api/v1/users/me', {
-			body: {
-				...(newPassword !== '' && { password: newPassword }),
-				...(newEmail !== '' && { email: newEmail }),
-				...(newUsername !== '' && { username: newUsername })
-			}
+			body: { username: newUsername }
 		});
 		if (error) {
-			toast.error(`Failed to update user`);
-		} else {
-			toast.success(`Updated details successfully.`);
-			dialogOpen = false;
+			toast.error('Failed to update username');
+			return false;
 		}
-		newPassword = '';
-		newEmail = '';
-		newUsername = '';
+		toast.success('Username updated successfully.');
 		await invalidateAll();
+		return true;
+	}
+
+	async function saveEmail(newEmail: string): Promise<boolean> {
+		const { error } = await client.PATCH('/api/v1/users/me', {
+			body: { email: newEmail }
+		});
+		if (error) {
+			toast.error('Failed to update email');
+			return false;
+		}
+		toast.success('Email updated successfully.');
+		await invalidateAll();
+		return true;
 	}
 </script>
 
-<Dialog.Root bind:open={dialogOpen}>
-	<Dialog.Trigger>
-		<Button class="w-full" onclick={() => (dialogOpen = true)} variant="outline">
-			Edit my details
-		</Button>
-	</Dialog.Trigger>
-	<Dialog.Content class="w-full max-w-[600px] rounded-lg p-6 shadow-lg">
-		<Dialog.Header>
-			<Dialog.Title class="mb-1 text-xl font-semibold">Edit User Details</Dialog.Title>
-			<Dialog.Description class="mb-4 text-sm">
-				Change your email or password. Leave fields empty to not change them.
-			</Dialog.Description>
-		</Dialog.Header>
-		<div class="space-y-6">
-			<!-- Username -->
-			<div>
-				<Label class="mb-1 block text-sm font-medium" for="username">Username</Label>
-				<Input
-					bind:value={newUsername}
-					class="w-full"
-					id="username"
-					placeholder={currentUser().username ?? 'Keep empty to not change the username'}
-					type="text"
-				/>
-			</div>
-			<!-- Email -->
-			<div>
-				<Label class="mb-1 block text-sm font-medium" for="email">Email</Label>
-				<Input
-					bind:value={newEmail}
-					class="w-full"
-					id="email"
-					placeholder="Keep empty to not change the email"
-					type="email"
-				/>
-			</div>
-			<!-- Password -->
-			<div>
-				<Label class="mb-1 block text-sm font-medium" for="password">Password</Label>
-				<Input
-					bind:value={newPassword}
-					class="w-full"
-					id="password"
-					placeholder="Keep empty to not change the password"
-					type="password"
-				/>
-			</div>
-		</div>
-		<div class="mt-8 flex justify-end gap-2">
-			<Button onclick={() => saveUser()} variant="destructive">Save</Button>
-		</div>
-	</Dialog.Content>
-</Dialog.Root>
+<div class="space-y-6">
+	<InlineEditField
+		id="username"
+		label="Username"
+		onSave={saveUsername}
+		value={currentUser().username ?? ''}
+	/>
+	<InlineEditField
+		id="email"
+		label="Email"
+		onSave={saveEmail}
+		type="email"
+		value={currentUser().email}
+	/>
+	<div>
+		<span class="mb-1 block text-sm font-medium">Password</span>
+		<ChangePasswordDialog />
+	</div>
+</div>
