@@ -72,6 +72,26 @@ async def get_recommended_shows(
     )
 
 
+@router.get(
+    "/external/{show_id}",
+    dependencies=[Depends(current_active_user)],
+)
+async def get_external_show_details(
+    tv_metadata_service: tv_metadata_service_dep,
+    metadata_provider: metadata_provider_dep,
+    show_id: int,
+    language: str | None = None,
+) -> Show:
+    """
+    Get full details for a show from the metadata provider, without adding it to the library.
+    """
+    return await tv_metadata_service.get_show_details(
+        external_id=show_id,
+        metadata_provider=metadata_provider,
+        language=language,
+    )
+
+
 # -----------------------------------------------------------------------------
 # IMPORTING
 # -----------------------------------------------------------------------------

@@ -339,6 +339,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tv/external/{show_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get External Show Details
+         * @description Get full details for a show from the metadata provider, without adding it to the library.
+         */
+        get: operations["get_external_show_details_api_v1_tv_external__show_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tv/importable": {
         parameters: {
             query?: never;
@@ -754,6 +774,26 @@ export interface paths {
          * @description Get a list of recommended/popular movies from the metadata provider.
          */
         get: operations["get_popular_movies_api_v1_movies_recommended_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/external/{movie_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get External Movie Details
+         * @description Get full details for a movie from the metadata provider, without adding it to the library.
+         */
+        get: operations["get_external_movie_details_api_v1_movies_external__movie_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1404,6 +1444,8 @@ export interface components {
         MetaDataProviderSearchResult: {
             /** Poster Images */
             poster_images?: components["schemas"]["ExternalPosterImage"][];
+            /** Backdrop Images */
+            backdrop_images?: components["schemas"]["ExternalPosterImage"][];
             /** Overview */
             overview: string | null;
             /** Name */
@@ -2830,6 +2872,40 @@ export interface operations {
             };
         };
     };
+    get_external_show_details_api_v1_tv_external__show_id__get: {
+        parameters: {
+            query?: {
+                language?: string | null;
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path: {
+                show_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Show"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_all_importable_shows_api_v1_tv_importable_get: {
         parameters: {
             query?: {
@@ -3548,6 +3624,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetaDataProviderSearchResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_external_movie_details_api_v1_movies_external__movie_id__get: {
+        parameters: {
+            query?: {
+                language?: string | null;
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path: {
+                movie_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Movie"];
                 };
             };
             /** @description Validation Error */

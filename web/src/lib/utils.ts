@@ -113,6 +113,15 @@ export function formatRuntime(minutes: number | null | undefined): string | null
 	return `${hours}h ${remainingMinutes}m`;
 }
 
+export function getLanguageDisplayName(languageCode: string | null | undefined): string | null {
+	if (!languageCode) return null;
+	try {
+		return new Intl.DisplayNames(['en'], { type: 'language' }).of(languageCode) ?? languageCode;
+	} catch {
+		return languageCode;
+	}
+}
+
 export function formatReleaseDate(date: string | null | undefined): string | null {
 	if (!date) return null;
 	const parsed = new Date(date);

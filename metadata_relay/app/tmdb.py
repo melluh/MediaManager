@@ -63,10 +63,9 @@ else:
     async def get_tmdb_movie_external_ids(movie_id: int) -> dict:
         return Movies(movie_id).external_ids()
 
-    @router.get("/genre/movie/list")
-    async def get_tmdb_movie_genres(language: str = "en") -> dict:
-        return Genres().movie_list(language=language)
-
-    @router.get("/genre/tv/list")
-    async def get_tmdb_tv_genres(language: str = "en") -> dict:
-        return Genres().tv_list(language=language)
+    @router.get("/genres")
+    async def get_tmdb_genres(language: str = "en") -> dict:
+        return {
+            "movie": Genres().movie_list(language=language).get("genres", []),
+            "tv": Genres().tv_list(language=language).get("genres", []),
+        }

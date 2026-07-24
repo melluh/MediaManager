@@ -33,6 +33,16 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
             language=language,
         )
 
+    async def get_show_details(
+        self,
+        external_id: int,
+        metadata_provider: AbstractMetadataProvider,
+        language: str | None = None,
+    ) -> Show:
+        return await metadata_provider.get_show_metadata(
+            show_id=external_id, language=language
+        )
+
     async def search_for_show(
         self, query: str, metadata_provider: AbstractMetadataProvider
     ) -> list[MetaDataProviderSearchResult]:

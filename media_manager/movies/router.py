@@ -69,6 +69,26 @@ async def get_popular_movies(
     )
 
 
+@router.get(
+    "/external/{movie_id}",
+    dependencies=[Depends(current_active_user)],
+)
+async def get_external_movie_details(
+    movie_metadata_service: movie_metadata_service_dep,
+    metadata_provider: metadata_provider_dep,
+    movie_id: int,
+    language: str | None = None,
+) -> Movie:
+    """
+    Get full details for a movie from the metadata provider, without adding it to the library.
+    """
+    return await movie_metadata_service.get_movie_details(
+        external_id=movie_id,
+        metadata_provider=metadata_provider,
+        language=language,
+    )
+
+
 # -----------------------------------------------------------------------------
 # IMPORTING
 # -----------------------------------------------------------------------------

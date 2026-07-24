@@ -33,6 +33,16 @@ class MovieMetadataService(BaseMetadataService[Movie, Movie]):
             language=language,
         )
 
+    async def get_movie_details(
+        self,
+        external_id: int,
+        metadata_provider: AbstractMetadataProvider,
+        language: str | None = None,
+    ) -> Movie:
+        return await metadata_provider.get_movie_metadata(
+            movie_id=external_id, language=language
+        )
+
     async def search_for_movie(
         self, query: str, metadata_provider: AbstractMetadataProvider
     ) -> list[MetaDataProviderSearchResult]:

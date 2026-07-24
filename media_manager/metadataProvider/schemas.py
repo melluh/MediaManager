@@ -24,6 +24,7 @@ class ExternalPosterImage(BaseModel):
 
 class MetaDataProviderSearchResult(BaseModel):
     poster_images: list[ExternalPosterImage] = Field(default_factory=list)
+    backdrop_images: list[ExternalPosterImage] = Field(default_factory=list)
     overview: str | None
     name: str
     external_id: int
