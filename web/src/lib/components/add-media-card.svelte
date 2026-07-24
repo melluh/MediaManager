@@ -5,17 +5,29 @@
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
 	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
 	import AddMediaDialog from '$lib/components/add-media-dialog.svelte';
+	import { fetchMediaDetailsCached } from '$lib/api/media-details';
 	import { formatRuntime } from '$lib/utils';
 
 	let detailsOpen = $state(false);
 	let { result, isShow = true }: { result: MetaDataProviderSearchResult; isShow: boolean } =
 		$props();
+
+	// Warm the details cache on hover/focus so the dialog's fetch (~1s) is
+	// often already in flight or done by the time the user clicks.
+	let prefetched = false;
+	function prefetchDetails() {
+		if (prefetched) return;
+		prefetched = true;
+		fetchMediaDetailsCached(result, isShow);
+	}
 </script>
 
 <Card.Root class="group col-span-full overflow-hidden sm:col-span-1">
 	<Dialog.Root bind:open={detailsOpen}>
 		<Dialog.Trigger
 			class="relative block aspect-2/3 w-full cursor-pointer overflow-hidden rounded-xl text-left"
+			onmouseenter={prefetchDetails}
+			onfocus={prefetchDetails}
 		>
 			{#if (result.poster_images?.length ?? 0) > 0}
 				<ExternalPosterImage

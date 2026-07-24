@@ -7,6 +7,7 @@
 	import { resolve } from '$app/paths';
 	import type { MetaDataProviderSearchResult, Movie, Show } from '$lib/api/api';
 	import client from '$lib/api';
+	import { fetchMediaDetailsCached } from '$lib/api/media-details';
 	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
 	import { formatRuntime, getLanguageDisplayName } from '$lib/utils';
 	import Skeleton from './ui/skeleton/skeleton.svelte';
@@ -42,28 +43,10 @@
 	});
 
 	async function fetchDetails() {
-		const params = {
-			query: {
-				metadata_provider: result.metadata_provider as 'tmdb' | 'tvdb',
-				language: result.original_language ?? undefined
-			}
-		};
-		if (isShow) {
-			const { data } = await client.GET('/api/v1/tv/external/{show_id}', {
-				params: { ...params, path: { show_id: result.external_id } }
-			});
-			if (data) {
-				details = data;
-				detailsLoaded = true;
-			}
-		} else {
-			const { data } = await client.GET('/api/v1/movies/external/{movie_id}', {
-				params: { ...params, path: { movie_id: result.external_id } }
-			});
-			if (data) {
-				details = data;
-				detailsLoaded = true;
-			}
+		const data = await fetchMediaDetailsCached(result, isShow);
+		if (data) {
+			details = data;
+			detailsLoaded = true;
 		}
 	}
 
