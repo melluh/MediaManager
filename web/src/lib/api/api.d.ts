@@ -802,6 +802,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/movies/external/{movie_id}/torrents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search For Torrents For External Movie
+         * @description Search for torrents for a movie that hasn't been added to the library yet.
+         */
+        get: operations["search_for_torrents_for_external_movie_api_v1_movies_external__movie_id__torrents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/movies/importable": {
         parameters: {
             query?: never;
@@ -3668,6 +3688,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Movie"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_for_torrents_for_external_movie_api_v1_movies_external__movie_id__torrents_get: {
+        parameters: {
+            query?: {
+                language?: string | null;
+                metadata_provider?: "tmdb" | "tvdb";
+            };
+            header?: never;
+            path: {
+                movie_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexerQueryResult"][];
                 };
             };
             /** @description Validation Error */

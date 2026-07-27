@@ -89,6 +89,28 @@ async def get_external_movie_details(
     )
 
 
+@router.get(
+    "/external/{movie_id}/torrents",
+    dependencies=[Depends(current_active_user)],
+)
+async def search_for_torrents_for_external_movie(
+    movie_service: movie_service_dep,
+    movie_metadata_service: movie_metadata_service_dep,
+    metadata_provider: metadata_provider_dep,
+    movie_id: int,
+    language: str | None = None,
+) -> list[IndexerQueryResult]:
+    """
+    Search for torrents for a movie that hasn't been added to the library yet.
+    """
+    movie = await movie_metadata_service.get_movie_details(
+        external_id=movie_id,
+        metadata_provider=metadata_provider,
+        language=language,
+    )
+    return await movie_service.get_all_available_torrents_for_movie(movie=movie)
+
+
 # -----------------------------------------------------------------------------
 # IMPORTING
 # -----------------------------------------------------------------------------

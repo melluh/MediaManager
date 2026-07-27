@@ -4,7 +4,7 @@
 	import { ChevronRight, ImageOff } from 'lucide-svelte';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
 	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
-	import AddMediaDialog from '$lib/components/add-media-dialog.svelte';
+	import AddMediaDialog from '$lib/components/add-media-dialog/add-media-dialog.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { fetchMediaDetailsCached } from '$lib/api/media-details';
 	import { formatRuntime } from '$lib/utils';
