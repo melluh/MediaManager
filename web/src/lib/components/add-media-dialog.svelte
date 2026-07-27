@@ -2,14 +2,19 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { LoaderCircle } from 'lucide-svelte';
+	import { ExternalLink, LoaderCircle } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { MetaDataProviderSearchResult, Movie, Show } from '$lib/api/api';
 	import client from '$lib/api';
 	import { fetchMediaDetailsCached } from '$lib/api/media-details';
 	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
-	import { formatRuntime, getLanguageDisplayName } from '$lib/utils';
+	import {
+		formatRuntime,
+		getLanguageDisplayName,
+		getMetadataProviderLabel,
+		getMetadataProviderUrl
+	} from '$lib/utils';
 	import Skeleton from './ui/skeleton/skeleton.svelte';
 	import { Spinner } from '$lib/components/ui/spinner';
 
@@ -37,6 +42,13 @@
 	);
 	let tagline = $derived(details?.tagline);
 	let language = $derived(getLanguageDisplayName(details?.original_language));
+	let providerUrl = $derived(
+		getMetadataProviderUrl(result.metadata_provider, result.external_id, isShow)
+	);
+	let providerLabel = $derived(getMetadataProviderLabel(result.metadata_provider));
+	let imdbUrl = $derived(
+		details?.imdb_id ? `https://www.imdb.com/title/${details.imdb_id}/` : null
+	);
 
 	$effect(() => {
 		if (open && !detailsFetched) {
@@ -93,7 +105,9 @@
 	}
 </script>
 
-<Dialog.Content class="flex h-[90vh] w-[95vw] max-w-4xl flex-col gap-0 overflow-hidden border-0 p-0">
+<Dialog.Content
+	class="flex h-[90vh] w-[95vw] max-w-4xl flex-col gap-0 overflow-hidden border-0 p-0"
+>
 	{#if (result.backdrop_images?.length ?? 0) > 0}
 		<div class="relative h-48 w-full shrink-0 bg-muted sm:h-64 md:h-72">
 			<ExternalPosterImage
@@ -111,9 +125,9 @@
 			{/if}
 		</div>
 	{/if}
-	<div class="relative z-10 shrink-0 flex flex-row gap-4 p-6 text-left">
+	<div class="relative z-10 flex shrink-0 flex-row gap-4 p-6 text-left">
 		{#if (result.poster_images?.length ?? 0) > 0}
-			<div class="relative h-44 w-32 shrink-0 -mt-16 sm:-mt-20 sm:h-56 sm:w-36">
+			<div class="relative -mt-16 h-44 w-32 shrink-0 sm:-mt-20 sm:h-56 sm:w-36">
 				<ExternalPosterImage
 					className="h-full w-full rounded-lg object-cover shadow-lg ring-1 ring-border"
 					posterImages={result.poster_images ?? []}
@@ -129,15 +143,45 @@
 			</div>
 		{/if}
 
-		<div class="flex flex-col gap-2">
-			<h2 class="text-xl font-bold sm:text-2xl">
-				{result.name}
-				{#if result.year != null}
-					<span class="font-light">
-						({result.year})
-					</span>
-				{/if}
-			</h2>
+		<div class="flex min-w-0 flex-1 flex-col gap-2">
+			<div class="flex flex-wrap items-start justify-between gap-2">
+				<h2 class="text-xl font-bold sm:text-2xl">
+					{result.name}
+					{#if result.year != null}
+						<span class="font-light">
+							({result.year})
+						</span>
+					{/if}
+				</h2>
+				<div class="flex shrink-0 items-center gap-2">
+					{#if !detailsLoaded}
+						<Skeleton class="h-8 w-16" />
+					{:else if imdbUrl}
+						<Button
+							variant="outline"
+							size="sm"
+							href={imdbUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							IMDb
+							<ExternalLink />
+						</Button>
+					{/if}
+					{#if providerUrl}
+						<Button
+							variant="outline"
+							size="sm"
+							href={providerUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							{providerLabel}
+							<ExternalLink />
+						</Button>
+					{/if}
+				</div>
+			</div>
 
 			{#if detailsLoaded}
 				<span class="text-sm text-muted-foreground">
@@ -181,7 +225,7 @@
 
 			{#if detailsLoaded}
 				{#if tagline}
-					<p class="text-lg font-medium italic text-muted-foreground">{tagline}</p>
+					<p class="text-lg font-medium text-muted-foreground italic">{tagline}</p>
 				{/if}
 			{:else}
 				<Skeleton class="h-6 w-64" />
