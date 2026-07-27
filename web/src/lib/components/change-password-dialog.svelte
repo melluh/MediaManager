@@ -44,6 +44,12 @@
 				bind:value={newPassword}
 				class="w-full"
 				id="new-password"
+				onkeydown={(e) => {
+					if (e.key === 'Enter' && newPassword !== '') {
+						e.preventDefault();
+						savePassword();
+					}
+				}}
 				placeholder="New password"
 				type="password"
 			/>

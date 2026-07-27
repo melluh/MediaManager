@@ -1244,6 +1244,10 @@ export interface components {
             oauth_providers: string[];
             /** Registration Enabled */
             registration_enabled: boolean;
+            /** Allow Self Account Edit */
+            allow_self_account_edit: boolean;
+            /** Allow Self Password Change */
+            allow_self_password_change: boolean;
         };
         /** BearerResponse */
         BearerResponse: {

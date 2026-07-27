@@ -26,3 +26,5 @@ class AdminUserCreate(BaseModel):
 class AuthMetadata(BaseModel):
     oauth_providers: list[str]
     registration_enabled: bool
+    allow_self_account_edit: bool
+    allow_self_password_change: bool

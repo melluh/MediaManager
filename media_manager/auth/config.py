@@ -20,4 +20,6 @@ class AuthConfig(BaseSettings):
     admin_emails: list[str] = []
     email_password_resets: bool = False
     registration_enabled: bool = False
+    allow_self_account_edit: bool = True
+    allow_self_password_change: bool = True
     openid_connect: OpenIdConfig = OpenIdConfig()

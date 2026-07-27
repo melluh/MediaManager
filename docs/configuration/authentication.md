@@ -21,8 +21,14 @@ All authentication settings are configured in the `[auth]` section of your `conf
   Enables password resets via email. Default is `false`.
 * `registration_enabled`\
   Allows new users to sign up for an account. Default is `false`.
+* `allow_self_account_edit`\
+  Allows non-superusers to edit their own username and email on the settings page. Default is `true`.
+* `allow_self_password_change`\
+  Allows non-superusers to change their own password on the settings page. Default is `true`.
 
 !!! info To use email password resets, you must also configure SMTP settings in the `[notifications.smtp_config]` section.
+
+!!! info Superusers can always edit their own account details and change their own password, regardless of `allow_self_account_edit` and `allow_self_password_change`. These settings only restrict non-superusers.
 
 !!! info When `registration_enabled` is `false`, the sign-up page is hidden, `/auth/register` returns 403, and OIDC rejects unknown users (existing users keep working). The bootstrap admin (see `admin_emails`) is unaffected.
 
@@ -74,6 +80,8 @@ session_lifetime = 604800  # 1 week
 admin_emails = ["admin@example.com", "manager@example.com"]
 email_password_resets = true
 registration_enabled = false
+allow_self_account_edit = true
+allow_self_password_change = true
 
 [auth.openid_connect]
 enabled = true

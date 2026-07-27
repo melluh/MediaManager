@@ -30,7 +30,7 @@
 			<Card.Title>Your account</Card.Title>
 		</Card.Header>
 		<Card.Content>
-			<UserSettings />
+			<UserSettings authMetadata={page.data.authMetadata} />
 		</Card.Content>
 	</Card.Root>
 	{#if currentUser().is_superuser}

@@ -54,6 +54,23 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         safe: bool = False,
         request: Request | None = None,
     ) -> User:
+        # safe=True is only ever passed by the self-service PATCH /users/me
+        # route (admin edits of other users use safe=False), so this scopes
+        # the check to users editing their own account.
+        if safe and not user.is_superuser:
+            changed_fields = user_update.model_dump(exclude_unset=True)
+            if "password" in changed_fields and not config.allow_self_password_change:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Changing your own password is disabled. Contact a superuser for assistance.",
+                )
+            if (
+                "email" in changed_fields or "username" in changed_fields
+            ) and not config.allow_self_account_edit:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Editing your own account details is disabled. Contact a superuser for assistance.",
+                )
         try:
             return await super().update(
                 user_update, user, safe=safe, request=request
