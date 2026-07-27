@@ -11,9 +11,12 @@
 	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
 	import { formatRuntime, getLanguageDisplayName } from '$lib/utils';
 	import Skeleton from './ui/skeleton/skeleton.svelte';
+	import { Spinner } from '$lib/components/ui/spinner';
 
 	let loading = $state(false);
 	let errorMessage = $state<string | null>(null);
+	let backdropImageLoaded = $state(false);
+	let posterImageLoaded = $state(false);
 	let {
 		result,
 		isShow = true,
@@ -99,17 +102,31 @@
 				alt={`${result.name}'s Backdrop Image`}
 				sizes="95vw"
 				loading="eager"
+				bind:loaded={backdropImageLoaded}
 			/>
+			{#if !backdropImageLoaded}
+				<div class="absolute inset-0 flex items-center justify-center">
+					<Spinner class="size-8" />
+				</div>
+			{/if}
 		</div>
 	{/if}
 	<div class="relative z-10 shrink-0 flex flex-row gap-4 p-6 text-left">
 		{#if (result.poster_images?.length ?? 0) > 0}
-			<ExternalPosterImage
-				className="h-44 w-32 shrink-0 rounded-lg object-cover shadow-lg ring-1 ring-border sm:h-56 sm:w-36 -mt-16 sm:-mt-20"
-				posterImages={result.poster_images ?? []}
-				alt={`${result.name}'s Poster Image`}
-				sizes="144px"
-			/>
+			<div class="relative h-44 w-32 shrink-0 -mt-16 sm:-mt-20 sm:h-56 sm:w-36">
+				<ExternalPosterImage
+					className="h-full w-full rounded-lg object-cover shadow-lg ring-1 ring-border"
+					posterImages={result.poster_images ?? []}
+					alt={`${result.name}'s Poster Image`}
+					sizes="144px"
+					bind:loaded={posterImageLoaded}
+				/>
+				{#if !posterImageLoaded}
+					<div class="absolute inset-0 flex items-center justify-center rounded-lg bg-muted">
+						<Spinner class="size-6" />
+					</div>
+				{/if}
+			</div>
 		{/if}
 
 		<div class="flex flex-col gap-2">

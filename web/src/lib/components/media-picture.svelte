@@ -3,7 +3,7 @@
 	import { env } from '$env/dynamic/public';
 
 	const apiUrl = env.PUBLIC_API_URL;
-	let { media } = $props();
+	let { media, loaded = $bindable(false) } = $props();
 </script>
 
 <picture>
@@ -13,5 +13,8 @@
 		alt="{getFullyQualifiedMediaName(media)}'s Poster Image"
 		class="h-full w-full rounded-lg object-cover"
 		src="{apiUrl}/api/v1/static/image/{media.id}.jpeg"
+		decoding="async"
+		onload={() => (loaded = true)}
+		onerror={() => (loaded = true)}
 	/>
 </picture>

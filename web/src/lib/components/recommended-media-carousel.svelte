@@ -20,7 +20,7 @@
 		{#if isLoading}
 			{#each { length: 4 }}
 				<Carousel.Item class="sm:basis-full md:basis-1/2 lg:basis-1/4">
-					<Skeleton class="h-[70vh] w-full" />
+					<Skeleton class="aspect-2/3 w-full" />
 				</Carousel.Item>
 			{/each}
 		{:else}

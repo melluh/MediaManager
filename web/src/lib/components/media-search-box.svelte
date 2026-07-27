@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Input } from '$lib/components/ui/input/index.js';
 	import MediaPicture from '$lib/components/media-picture.svelte';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Search, LoaderCircle } from 'lucide-svelte';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
@@ -17,6 +18,7 @@
 	let isLoading = $state(false);
 	let hasError = $state(false);
 	let highlightedIndex = $state(-1);
+	let posterLoaded: Record<string, boolean> = $state({});
 	let containerRef: HTMLDivElement | undefined = $state();
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -36,6 +38,9 @@
 				results = [];
 			} else {
 				results = data ?? [];
+				for (const result of results) {
+					if (!(result.id in posterLoaded)) posterLoaded[result.id] = false;
+				}
 			}
 			highlightedIndex = -1;
 			isOpen = true;
@@ -146,8 +151,11 @@
 						onmouseenter={() => (highlightedIndex = index)}
 						onclick={() => (isOpen = false)}
 					>
-						<div class="h-12 w-9 shrink-0 overflow-hidden rounded">
-							<MediaPicture media={result} />
+						<div class="relative h-12 w-9 shrink-0 overflow-hidden rounded">
+							<MediaPicture media={result} bind:loaded={posterLoaded[result.id]} />
+							{#if !posterLoaded[result.id]}
+								<Skeleton class="absolute inset-0 h-full w-full" />
+							{/if}
 						</div>
 						<div class="flex min-w-0 flex-col">
 							<span class="truncate font-medium">{getFullyQualifiedMediaName(result)}</span>

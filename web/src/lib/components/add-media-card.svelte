@@ -5,10 +5,12 @@
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
 	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
 	import AddMediaDialog from '$lib/components/add-media-dialog.svelte';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { fetchMediaDetailsCached } from '$lib/api/media-details';
 	import { formatRuntime } from '$lib/utils';
 
 	let detailsOpen = $state(false);
+	let posterImageLoaded = $state(false);
 	let { result, isShow = true }: { result: MetaDataProviderSearchResult; isShow: boolean } =
 		$props();
 
@@ -34,7 +36,11 @@
 					className="h-full w-full object-cover"
 					posterImages={result.poster_images ?? []}
 					alt={`${result.name}'s Poster Image`}
+					bind:loaded={posterImageLoaded}
 				/>
+				{#if !posterImageLoaded}
+					<Skeleton class="absolute inset-0 h-full w-full" />
+				{/if}
 			{:else}
 				<div class="flex h-full w-full items-center justify-center bg-muted">
 					<ImageOff class="h-12 w-12 text-gray-400" />

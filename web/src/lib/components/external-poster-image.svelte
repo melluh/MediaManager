@@ -6,13 +6,15 @@
 		alt,
 		className = '',
 		sizes = '(min-width: 1536px) 18vw, (min-width: 1280px) 22vw, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 90vw',
-		loading = 'lazy'
+		loading = 'lazy',
+		loaded = $bindable(false)
 	}: {
 		posterImages?: ExternalPosterImage[];
 		alt: string;
 		className?: string;
 		sizes?: string;
 		loading?: 'lazy' | 'eager';
+		loaded?: boolean;
 	} = $props();
 
 	const availableImages = $derived((posterImages ?? []).filter((image) => image.url?.length > 0));
@@ -29,6 +31,12 @@
 	const srcset = $derived(
 		dimensionedImages.map((image) => `${image.url} ${image.width}w`).join(', ')
 	);
+
+	$effect(() => {
+		// Reset (and settle "loaded" for images with no source) whenever the
+		// resolved image changes, e.g. when a new set of posterImages is passed in.
+		loaded = fallbackImage == null;
+	});
 </script>
 
 {#if fallbackImage}
@@ -40,5 +48,7 @@
 		{alt}
 		{loading}
 		decoding="async"
+		onload={() => (loaded = true)}
+		onerror={() => (loaded = true)}
 	/>
 {/if}
