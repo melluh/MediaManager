@@ -5,6 +5,11 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import client from '$lib/api';
+	import KeyRound from '@lucide/svelte/icons/key-round';
+	import Check from '@lucide/svelte/icons/check';
+	import X from '@lucide/svelte/icons/x';
+
+	let { userId }: { userId?: string } = $props();
 
 	let newPassword: string = $state('');
 	let dialogOpen = $state(false);
@@ -15,11 +20,14 @@
 	}
 
 	async function savePassword() {
-		const { error } = await client.PATCH('/api/v1/users/me', {
-			body: {
-				password: newPassword
-			}
-		});
+		const { error } = userId
+			? await client.PATCH('/api/v1/users/{id}', {
+					params: { path: { id: userId } },
+					body: { password: newPassword }
+				})
+			: await client.PATCH('/api/v1/users/me', {
+					body: { password: newPassword }
+				});
 		if (error) {
 			toast.error('Failed to update password');
 			return;
@@ -31,7 +39,9 @@
 
 <Dialog.Root bind:open={dialogOpen}>
 	<Dialog.Trigger>
-		<Button onclick={() => (dialogOpen = true)} variant="outline">Change Password</Button>
+		<Button onclick={() => (dialogOpen = true)} variant="outline">
+			<KeyRound class="mr-2 size-4" />Change Password
+		</Button>
 	</Dialog.Trigger>
 	<Dialog.Content class="w-full max-w-[600px] rounded-lg p-6 shadow-lg">
 		<Dialog.Header>
@@ -55,8 +65,10 @@
 			/>
 		</div>
 		<Dialog.Footer class="mt-8 flex justify-between gap-2">
-			<Button onclick={closeDialog} variant="secondary">Cancel</Button>
-			<Button disabled={newPassword === ''} onclick={savePassword}>Save</Button>
+			<Button onclick={closeDialog} variant="secondary"><X class="mr-2 size-4" />Cancel</Button>
+			<Button disabled={newPassword === ''} onclick={savePassword}>
+				<Check class="mr-2 size-4" />Save
+			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

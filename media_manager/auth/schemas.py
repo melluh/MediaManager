@@ -18,6 +18,7 @@ class UserUpdate(schemas.BaseUserUpdate):
 
 class AdminUserCreate(BaseModel):
     email: EmailStr
+    username: str | None = None
     password: str | None = None
     is_superuser: bool = False
     is_verified: bool = True

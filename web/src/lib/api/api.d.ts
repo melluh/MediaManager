@@ -1245,6 +1245,8 @@ export interface components {
              * Format: email
              */
             email: string;
+            /** Username */
+            username?: string | null;
             /** Password */
             password?: string | null;
             /**

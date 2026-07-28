@@ -11,9 +11,6 @@
 	setCrumbs([{ label: 'Settings' }]);
 
 	let currentUser: () => UserRead = getContext('user');
-	let users: UserRead[] = $derived(
-		page.data.users.filter((user: UserRead) => user.id !== currentUser().id)
-	);
 </script>
 
 <svelte:head>
@@ -40,7 +37,7 @@
 				<Card.Description>Edit, delete or change the permissions of other users</Card.Description>
 			</Card.Header>
 			<Card.Content>
-				<UserTable {users} />
+				<UserTable currentUserId={currentUser().id} users={page.data.users} />
 			</Card.Content>
 		</Card.Root>
 	{/if}
