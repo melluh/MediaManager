@@ -3,19 +3,31 @@
 	import { getFullyQualifiedMediaName } from '$lib/utils';
 	import MediaPicture from '$lib/components/media-picture.svelte';
 	import { resolve } from '$app/paths';
-	import type { MediaImportSuggestion } from '$lib/api/api';
+	import type { MediaImportSuggestion, UserRead } from '$lib/api/api';
 	import ImportCandidatesDialog from '$lib/components/import-media/import-candidates-dialog.svelte';
 	import DetectedMediaCard from '$lib/components/import-media/detected-media-card.svelte';
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import type { PageProps } from './$types';
 	import LoadingBar from '$lib/components/loading-bar.svelte';
+	import client from '$lib/api';
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Movies' }]);
 
 	let { data }: PageProps = $props();
-	let importableMovies: () => MediaImportSuggestion[] = getContext('importableMovies');
+	let user: () => UserRead = getContext('user');
+	let importableMovies: MediaImportSuggestion[] = $state([]);
+
+	onMount(() => {
+		if (user()?.is_superuser) {
+			client.GET('/api/v1/movies/importable').then(({ data, error }) => {
+				if (!error) {
+					importableMovies = data;
+				}
+			});
+		}
+	});
 </script>
 
 <svelte:head>
@@ -25,11 +37,11 @@
 
 <main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0">
 	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">Movies</h1>
-	{#if importableMovies().length > 0}
+	{#if importableMovies.length > 0}
 		<div
 			class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4"
 		>
-			{#each importableMovies() as importable (importable.directory)}
+			{#each importableMovies as importable (importable.directory)}
 				<DetectedMediaCard isTv={false} directory={importable.directory}>
 					<ImportCandidatesDialog
 						isTv={false}

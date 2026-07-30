@@ -6,18 +6,22 @@
 	import { getTorrentQualityString, getTorrentStatusString } from '$lib/utils';
 	import { getContext, onMount } from 'svelte';
 	import client from '$lib/api';
-	import type { MetaDataProviderSearchResult } from '$lib/api/api.d.ts';
+	import type { MetaDataProviderSearchResult, MediaImportSuggestion, UserRead } from '$lib/api/api.d.ts';
 	import type { PageProps } from './$types';
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Dashboard' }]);
 
 	let { data }: PageProps = $props();
+	let user: () => UserRead = getContext('user');
 	let recommendedShows: MetaDataProviderSearchResult[] = $state([]);
 	let showsLoading = $state(true);
 
 	let recommendedMovies: MetaDataProviderSearchResult[] = $state([]);
 	let moviesLoading = $state(true);
+
+	let importableShows: MediaImportSuggestion[] = $state([]);
+	let importableMovies: MediaImportSuggestion[] = $state([]);
 
 	let ownTorrents = $derived(data.ownTorrents ?? []);
 
@@ -30,6 +34,18 @@
 			recommendedMovies = res.data as MetaDataProviderSearchResult[];
 			moviesLoading = false;
 		});
+		if (user()?.is_superuser) {
+			client.GET('/api/v1/movies/importable').then(({ data, error }) => {
+				if (!error) {
+					importableMovies = data;
+				}
+			});
+			client.GET('/api/v1/tv/importable').then(({ data, error }) => {
+				if (!error) {
+					importableShows = data;
+				}
+			});
+		}
 	});
 </script>
 
@@ -44,7 +60,12 @@
 <div class="flex flex-1 flex-col gap-4 p-4 pt-0">
 	<main class="min-h-screen flex-1 items-center justify-center rounded-xl p-4 md:min-h-min">
 		<div class="mx-auto ml-12">
-			<StatCard showCount={data.tvShows?.length ?? 0} moviesCount={data.movies?.length ?? 0} />
+			<StatCard
+				showCount={data.tvShows?.length ?? 0}
+				moviesCount={data.movies?.length ?? 0}
+				{importableShows}
+				{importableMovies}
+			/>
 		</div>
 
 		{#if ownTorrents.length > 0}

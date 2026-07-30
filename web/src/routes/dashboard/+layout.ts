@@ -15,14 +15,7 @@ export const load: LayoutLoad = async ({ fetch }) => {
 		} else {
 			throw redirect(303, resolve('/login', {}));
 		}
-		return { user: undefined, tvShows: undefined, movies: undefined };
+		return { user: undefined };
 	}
-	return {
-		user: data,
-		tvShows: await client.GET('/api/v1/tv/shows', { fetch: fetch }).then((res) => res.data),
-		movies: await client.GET('/api/v1/movies', { fetch: fetch }).then((res) => res.data),
-		ownTorrents: await client
-			.GET('/api/v1/torrent/mine', { fetch: fetch })
-			.then((res) => res.data ?? [])
-	};
+	return { user: data };
 };

@@ -5,17 +5,29 @@
 	import { resolve } from '$app/paths';
 	import ImportCandidatesDialog from '$lib/components/import-media/import-candidates-dialog.svelte';
 	import DetectedMediaCard from '$lib/components/import-media/detected-media-card.svelte';
-	import type { MediaImportSuggestion } from '$lib/api/api';
-	import { getContext } from 'svelte';
+	import type { MediaImportSuggestion, UserRead } from '$lib/api/api';
+	import { getContext, onMount } from 'svelte';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import type { PageProps } from './$types';
 	import LoadingBar from '$lib/components/loading-bar.svelte';
+	import client from '$lib/api';
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Shows' }]);
 
 	let { data }: PageProps = $props();
-	let importableShows: () => MediaImportSuggestion[] = getContext('importableShows');
+	let user: () => UserRead = getContext('user');
+	let importableShows: MediaImportSuggestion[] = $state([]);
+
+	onMount(() => {
+		if (user()?.is_superuser) {
+			client.GET('/api/v1/tv/importable').then(({ data, error }) => {
+				if (!error) {
+					importableShows = data;
+				}
+			});
+		}
+	});
 </script>
 
 <svelte:head>
@@ -27,11 +39,11 @@
 	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
 		TV Shows
 	</h1>
-	{#if importableShows().length > 0}
+	{#if importableShows.length > 0}
 		<div
 			class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4"
 		>
-			{#each importableShows() as importable (importable.directory)}
+			{#each importableShows as importable (importable.directory)}
 				<DetectedMediaCard isTv={true} directory={importable.directory}>
 					<ImportCandidatesDialog
 						isTv={true}

@@ -1,10 +1,21 @@
 <script lang="ts">
 	import Card from '$lib/components/stats/card.svelte';
-	import { getContext, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import client from '$lib/api';
 	import { resolve } from '$app/paths';
 	import AnimatedCard from '$lib/components/stats/animated-card.svelte';
-	let { showCount, moviesCount }: { showCount: number; moviesCount: number } = $props();
+	import type { MediaImportSuggestion } from '$lib/api/api';
+	let {
+		showCount,
+		moviesCount,
+		importableShows,
+		importableMovies
+	}: {
+		showCount: number;
+		moviesCount: number;
+		importableShows: MediaImportSuggestion[];
+		importableMovies: MediaImportSuggestion[];
+	} = $props();
 
 	let episodeCount: Promise<number> = $state(
 		client.GET('/api/v1/tv/episodes/count').then((res) => {
@@ -20,9 +31,6 @@
 	let installedVersion: string | undefined = $state(undefined);
 	let newestVersion: string | null = $state(null);
 	let updateAvailable: boolean = $state(false);
-
-	let importablesShows: () => [] = getContext('importableShows');
-	let importablesMovies: () => [] = getContext('importableMovies');
 
 	onMount(async () => {
 		let health = await client.GET('/api/v1/health');
@@ -54,16 +62,16 @@
 			></AnimatedCard>
 		{/await}
 	</div>
-	{#if importablesShows().length > 0}
+	{#if importableShows.length > 0}
 		<div class="flex-auto">
 			<Card title="Detected TV shows!" footer="Count of detected TV shows ready to import">
 				<a rel="external" target="_blank" href={resolve('/dashboard/tv/', {})} class="underline">
-					{importablesShows().length}
+					{importableShows.length}
 				</a>
 			</Card>
 		</div>
 	{/if}
-	{#if importablesMovies().length > 0}
+	{#if importableMovies.length > 0}
 		<div class="flex-auto">
 			<Card title="Detected movies!" footer="Count of detected movies ready to import">
 				<a
@@ -72,7 +80,7 @@
 					href={resolve('/dashboard/movies/', {})}
 					class="underline"
 				>
-					{importablesMovies().length}
+					{importableMovies.length}
 				</a>
 			</Card>
 		</div>
