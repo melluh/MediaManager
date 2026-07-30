@@ -20,7 +20,7 @@ export const load: LayoutLoad = async ({ params, fetch }) => {
 			params: { path: { show_id: params.showId } }
 		});
 		if (!show) {
-			error(404, 'Show not found');
+			error(404, 'This show could not be found. It may have been deleted.');
 		}
 		if (show.slug) {
 			redirect(301, resolve('/dashboard/tv/[showId]', { showId: show.slug }));
@@ -37,7 +37,7 @@ export const load: LayoutLoad = async ({ params, fetch }) => {
 	});
 
 	if (!show) {
-		error(404, 'Show not found');
+		error(404, 'This show could not be found. It may have been deleted.');
 	}
 
 	return {

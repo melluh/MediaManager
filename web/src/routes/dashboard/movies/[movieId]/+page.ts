@@ -20,7 +20,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
 			params: { path: { movie_id: params.movieId } }
 		});
 		if (!movie) {
-			error(404, 'Movie not found');
+			error(404, 'This movie could not be found. It may have been deleted.');
 		}
 		if (movie.slug) {
 			redirect(301, resolve('/dashboard/movies/[movieId]', { movieId: movie.slug }));
@@ -37,7 +37,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
 	});
 
 	if (!movie) {
-		error(404, 'Movie not found');
+		error(404, 'This movie could not be found. It may have been deleted.');
 	}
 
 	return {
