@@ -10,6 +10,11 @@ from media_manager.torrent.models import Quality
 IndexerQueryResultId = typing.NewType("IndexerQueryResultId", UUID)
 
 
+class ScoreBreakdownEntry(BaseModel):
+    rule_name: str
+    score_modifier: int
+
+
 class IndexerQueryResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -29,6 +34,7 @@ class IndexerQueryResult(BaseModel):
     age: int
 
     score: int = 0
+    score_breakdown: list[ScoreBreakdownEntry] = pydantic.Field(default_factory=list)
 
     indexer: str | None
 

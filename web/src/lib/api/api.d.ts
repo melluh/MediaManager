@@ -1469,6 +1469,8 @@ export interface components {
              * @default 0
              */
             score: number;
+            /** Score Breakdown */
+            score_breakdown?: components["schemas"]["ScoreBreakdownEntry"][];
             /** Indexer */
             indexer: string | null;
             /**
@@ -1859,6 +1861,13 @@ export interface components {
             /** Torrents */
             torrents: components["schemas"]["RichSeasonTorrent"][];
         };
+        /** ScoreBreakdownEntry */
+        ScoreBreakdownEntry: {
+            /** Rule Name */
+            rule_name: string;
+            /** Score Modifier */
+            score_modifier: number;
+        };
         /** SearchResult */
         SearchResult: {
             /**
@@ -2123,6 +2132,7 @@ export type Quality = components['schemas']['Quality'];
 export type RichMovieTorrent = components['schemas']['RichMovieTorrent'];
 export type RichSeasonTorrent = components['schemas']['RichSeasonTorrent'];
 export type RichShowTorrent = components['schemas']['RichShowTorrent'];
+export type ScoreBreakdownEntry = components['schemas']['ScoreBreakdownEntry'];
 export type SearchResult = components['schemas']['SearchResult'];
 export type Season = components['schemas']['Season'];
 export type ServiceHealth = components['schemas']['ServiceHealth'];

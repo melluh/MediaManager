@@ -14,6 +14,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import TorrentTable from '$lib/components/download-dialogs/torrent-table.svelte';
 	import DownloadDialogWrapper from '$lib/components/download-dialogs/download-dialog-wrapper.svelte';
+	import TorrentScoreCell from '$lib/components/download-dialogs/torrent-score-cell.svelte';
 	import { getFullyQualifiedMediaName } from '$lib/utils';
 
 	let { show }: { show: Show } = $props();
@@ -159,7 +160,7 @@
 			<Table.Cell>
 				{torrent.age ? formatSecondsToOptimalUnit(torrent.age) : torrent.usenet ? 'N/A' : ''}
 			</Table.Cell>
-			<Table.Cell>{torrent.score}</Table.Cell>
+			<TorrentScoreCell score={torrent.score} breakdown={torrent.score_breakdown} />
 			<Table.Cell>{torrent.indexer ?? 'unknown'}</Table.Cell>
 			<Table.Cell>
 				{#if torrent.flags}

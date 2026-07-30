@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy import Integer, String
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql.sqltypes import BigInteger
 
@@ -23,5 +23,6 @@ class IndexerQueryResult(Base):
     usenet: Mapped[bool]
     age: Mapped[int]
     score: Mapped[int] = mapped_column(default=0)
+    score_breakdown = mapped_column(JSONB, nullable=False, server_default="[]")
     indexer: Mapped[str | None]
     comments: Mapped[str | None]

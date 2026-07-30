@@ -17,6 +17,7 @@
 	import TorrentTable from '$lib/components/download-dialogs/torrent-table.svelte';
 	import SearchTabs from '$lib/components/download-dialogs/search-tabs.svelte';
 	import DownloadDialogWrapper from '$lib/components/download-dialogs/download-dialog-wrapper.svelte';
+	import TorrentScoreCell from '$lib/components/download-dialogs/torrent-score-cell.svelte';
 
 	let { show }: { show: Show } = $props();
 	let dialogueState = $state(false);
@@ -156,7 +157,7 @@
 						? 'N/A'
 						: ''}</Table.Cell
 			>
-			<Table.Cell>{torrent.score}</Table.Cell>
+			<TorrentScoreCell score={torrent.score} breakdown={torrent.score_breakdown} />
 			<Table.Cell>{torrent.indexer ?? 'unknown'}</Table.Cell>
 			<Table.Cell>
 				{#if torrent.flags}

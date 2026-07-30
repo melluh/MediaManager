@@ -6,7 +6,7 @@ import requests
 
 from media_manager.config import MediaManagerConfig
 from media_manager.indexer.config import ScoringRuleSet
-from media_manager.indexer.schemas import IndexerQueryResult
+from media_manager.indexer.schemas import IndexerQueryResult, ScoreBreakdownEntry
 from media_manager.movies.schemas import Movie
 from media_manager.tv.schemas import Show
 
@@ -37,6 +37,11 @@ def evaluate_indexer_query_result(
                         f"Rule {rule.name} with keywords {rule.keywords} matched for {query_result.title}"
                     )
                     query_result.score += rule.score_modifier
+                    query_result.score_breakdown.append(
+                        ScoreBreakdownEntry(
+                            rule_name=rule.name, score_modifier=rule.score_modifier
+                        )
+                    )
                 elif (
                     not any(
                         re.search(
@@ -52,6 +57,11 @@ def evaluate_indexer_query_result(
                         f"Negated rule {rule.name} with keywords {rule.keywords} matched for {query_result.title}"
                     )
                     query_result.score += rule.score_modifier
+                    query_result.score_breakdown.append(
+                        ScoreBreakdownEntry(
+                            rule_name=rule.name, score_modifier=rule.score_modifier
+                        )
+                    )
                 else:
                     log.debug(
                         f"Rule {rule.name} with keywords {rule.keywords} did not match for {query_result.title}"
@@ -67,6 +77,11 @@ def evaluate_indexer_query_result(
                         f"Rule {rule.name} with flags {rule.flags} matched for {query_result.title} with flags {query_result.flags}"
                     )
                     query_result.score += rule.score_modifier
+                    query_result.score_breakdown.append(
+                        ScoreBreakdownEntry(
+                            rule_name=rule.name, score_modifier=rule.score_modifier
+                        )
+                    )
                 elif (
                     not any(flag in query_result.flags for flag in rule.flags)
                     and rule.negate
@@ -75,6 +90,11 @@ def evaluate_indexer_query_result(
                         f"Negated rule {rule.name} with flags {rule.flags} matched for {query_result.title} with flags {query_result.flags}"
                     )
                     query_result.score += rule.score_modifier
+                    query_result.score_breakdown.append(
+                        ScoreBreakdownEntry(
+                            rule_name=rule.name, score_modifier=rule.score_modifier
+                        )
+                    )
                 else:
                     log.debug(
                         f"Rule {rule.name} with flags {rule.flags} did not match for {query_result.title} with flags {query_result.flags}"
