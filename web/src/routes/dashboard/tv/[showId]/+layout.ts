@@ -15,12 +15,15 @@ function getShowTorrents(showId: string, fetch: typeof globalThis.fetch) {
 
 export const load: LayoutLoad = async ({ params, fetch }) => {
 	if (uuidValidate(params.showId)) {
-		const { data: show } = await client.GET('/api/v1/tv/shows/{show_id}', {
+		const { data: show, response } = await client.GET('/api/v1/tv/shows/{show_id}', {
 			fetch: fetch,
 			params: { path: { show_id: params.showId } }
 		});
 		if (!show) {
-			error(404, 'This show could not be found. It may have been deleted.');
+			if (response.status === 404) {
+				error(404, 'This show could not be found. It may have been deleted.');
+			}
+			error(response.status, 'Failed to load this show. Please try again.');
 		}
 		if (show.slug) {
 			redirect(301, resolve('/dashboard/tv/[showId]', { showId: show.slug }));
@@ -31,13 +34,16 @@ export const load: LayoutLoad = async ({ params, fetch }) => {
 		};
 	}
 
-	const { data: show } = await client.GET('/api/v1/tv/shows/slug/{slug}', {
+	const { data: show, response } = await client.GET('/api/v1/tv/shows/slug/{slug}', {
 		fetch: fetch,
 		params: { path: { slug: params.showId } }
 	});
 
 	if (!show) {
-		error(404, 'This show could not be found. It may have been deleted.');
+		if (response.status === 404) {
+			error(404, 'This show could not be found. It may have been deleted.');
+		}
+		error(response.status, 'Failed to load this show. Please try again.');
 	}
 
 	return {

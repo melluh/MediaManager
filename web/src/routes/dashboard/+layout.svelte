@@ -15,7 +15,7 @@
 		crumbs = newCrumbs;
 	});
 
-	if (!data.user?.is_verified) {
+	if (data.user && !data.user.is_verified) {
 		toast.info('Your account requires verification. Redirecting...');
 		goto(resolve('/login/verify', {}));
 	}
