@@ -1,16 +1,23 @@
 import logging
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
 import taskiq_fastapi
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
 from taskiq import TaskiqDepends, TaskiqScheduler
 from taskiq.cli.scheduler.run import SchedulerLoop
 from taskiq_postgresql import PostgresqlBroker
 from taskiq_postgresql.scheduler_source import PostgresqlSchedulerSource
 
+from media_manager.database import get_async_session
+from media_manager.indexer.models import IndexerQueryResult
 from media_manager.movies.dependencies import get_movie_service
 from media_manager.movies.service import MovieService
 from media_manager.tv.dependencies import get_tv_service
 from media_manager.tv.service import TvService
+
+INDEXER_QUERY_RESULT_EXPIRY = timedelta(hours=6)
 
 
 def _build_db_connection_string_for_taskiq() -> str:
@@ -68,6 +75,18 @@ async def update_all_non_ended_shows_metadata_task(
     await tv_service.update_all_non_ended_shows_metadata()
 
 
+@broker.task
+async def delete_expired_indexer_query_results_task(
+    db: AsyncSession = TaskiqDepends(get_async_session),
+) -> None:
+    cutoff = datetime.now(timezone.utc) - INDEXER_QUERY_RESULT_EXPIRY
+    result = await db.execute(
+        delete(IndexerQueryResult).where(IndexerQueryResult.created_at < cutoff)
+    )
+    await db.commit()
+    log.info("Deleted %d expired indexer query results", result.rowcount)
+
+
 # Maps each task to its cron schedule so PostgresqlSchedulerSource can seed
 # the taskiq_schedulers table on first startup.
 _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
@@ -75,6 +94,7 @@ _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
     import_all_show_torrents_task.task_name: [{"cron": "*/2 * * * *"}],
     update_all_movies_metadata_task.task_name: [{"cron": "0 0 * * 1"}],
     update_all_non_ended_shows_metadata_task.task_name: [{"cron": "0 0 * * 1"}],
+    delete_expired_indexer_query_results_task.task_name: [{"cron": "*/30 * * * *"}],
 }
 
 

@@ -1,6 +1,7 @@
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Integer, String
+from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql.sqltypes import BigInteger
@@ -12,6 +13,9 @@ from media_manager.torrent.schemas import Quality
 class IndexerQueryResult(Base):
     __tablename__ = "indexer_query_result"
     id: Mapped[UUID] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     title: Mapped[str]
     download_url: Mapped[str]
     seeders: Mapped[int]
