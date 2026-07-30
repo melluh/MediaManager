@@ -114,6 +114,14 @@ api_key = ""
 base_path = "/api"
 
 [indexers]
+# Minimum seeders for a torrent result to be considered (hard filter)
+min_seeders = 5
+# Legacy title/flag rule scores are clamped to +/- this amount so they can
+# only break ties within a slot, never cross a tier boundary. A rule that
+# nets a raw negative score (e.g. avoid_cam, reject_nuked below) still
+# rejects the result outright - the clamp only applies to survivors.
+legacy_rule_score_clamp = 20
+
 # Prowlarr settings
 [indexers.prowlarr]
 enabled = false
@@ -165,6 +173,124 @@ rule_names = ["prefer_h265", "avoid_cam", "reject_nuked"]
 name = "strict_quality"
 libraries = ["ALL_MOVIES"]
 rule_names = ["prefer_h265", "avoid_cam", "reject_non_freeleech"]
+
+# --- Slot-based classification & scoring ---
+# Results are first classified (resolution/source/codec/HDR/audio/etc, via
+# guessit), then matched against these slots in order (first match wins).
+# Scoring only ever compares results within the same slot - a WEBRip can
+# never outrank a WEB-DL of a different slot. The rules above still apply,
+# but only as a small tiebreak within a slot (see legacy_rule_score_clamp
+# above) - a negative-scoring rule like "avoid_cam" still rejects the
+# result outright.
+
+[indexers.hdr_ladder]
+# Best-to-worst. A release with only "dv" (no HDR10/HDR10+ fallback layer)
+# is additionally penalized via dv_only_penalty.
+order = ["dv_hdr10plus", "dv_hdr10", "hdr10plus", "hdr10", "dv", "sdr"]
+dv_only_penalty = -20
+
+[indexers.language_policy]
+# language_variant values that don't require an explicit per-search opt-in.
+# Everything else ("multi", "nordic", "german_dl", "dubbed", ...) is
+# hard-filtered out unless the user opts in for that search.
+allowed_variants_default = []
+
+# Release-group tiers, e.g. imported from TRaSH Guides' tier lists. Lower
+# tier number = better. Groups not listed here score as unranked (0).
+[[indexers.release_group_tiers]]
+tier = 1
+groups = ["FraMeSToR", "EDGE2020", "NTb"]
+
+[[indexers.release_group_tiers]]
+tier = 2
+groups = ["Tigole", "QxR"]
+
+[[indexers.slots]]
+name = "4k_remux"
+label = "4K Remux"
+[[indexers.slots.conditions]]
+attribute = "resolution"
+operator = "eq"
+value = "2160p"
+[[indexers.slots.conditions]]
+attribute = "source"
+operator = "eq"
+value = "remux"
+[indexers.slots.bitrate]
+min_mbps = 50
+preferred_mbps = 70
+max_mbps = 90
+
+[[indexers.slots]]
+name = "4k_encode"
+label = "4K Encode"
+[[indexers.slots.conditions]]
+attribute = "resolution"
+operator = "eq"
+value = "2160p"
+[[indexers.slots.conditions]]
+attribute = "source"
+operator = "not_in"
+value = ["remux"]
+[[indexers.slots.conditions]]
+attribute = "codec"
+operator = "in"
+value = ["h265", "av1"]
+[indexers.slots.bitrate]
+min_mbps = 10
+preferred_mbps = 17
+max_mbps = 25
+
+[[indexers.slots]]
+name = "1080p_remux"
+label = "1080p Remux"
+[[indexers.slots.conditions]]
+attribute = "resolution"
+operator = "eq"
+value = "1080p"
+[[indexers.slots.conditions]]
+attribute = "source"
+operator = "eq"
+value = "remux"
+[indexers.slots.bitrate]
+min_mbps = 25
+preferred_mbps = 32
+max_mbps = 40
+
+[[indexers.slots]]
+name = "1080p_encode"
+label = "1080p Encode"
+[[indexers.slots.conditions]]
+attribute = "resolution"
+operator = "eq"
+value = "1080p"
+[[indexers.slots.conditions]]
+attribute = "source"
+operator = "not_in"
+value = ["remux"]
+[[indexers.slots.conditions]]
+attribute = "codec"
+operator = "in"
+value = ["h264", "h265", "av1"]
+[indexers.slots.bitrate]
+# Widened to cover both h264 and h265 rather than splitting into separate
+# slots - x265/AV1 are still preferred over x264 via the codec scoring
+# factor, not via slot membership.
+min_mbps = 4
+preferred_mbps = 8
+max_mbps = 15
+
+[[indexers.slots]]
+name = "720p"
+label = "720p"
+[[indexers.slots.conditions]]
+attribute = "resolution"
+operator = "eq"
+value = "720p"
+[indexers.slots.bitrate]
+min_mbps = 2
+preferred_mbps = 4
+max_mbps = 8
 
 # its very unlikely that you need to change this
 [metadata]

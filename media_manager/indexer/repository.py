@@ -27,11 +27,32 @@ class IndexerRepository:
     async def save_result(
         self, result: IndexerQueryResultSchema
     ) -> IndexerQueryResultSchema:
-        result_data = result.model_dump()
-        result_data["download_url"] = str(
-            result.download_url
-        )  # this is the needful, because sqlalchemy is too dumb to handle the HttpUrl type
-
-        self.db.add(IndexerQueryResult(**result_data))
+        # Explicit, named-field construction (not **result.model_dump()):
+        # the schema carries transient, per-search fields (slot_name,
+        # slot_label, slot_index, effective_mbps) that have no matching ORM
+        # column, and model_dump() would pass them straight into the
+        # constructor and raise TypeError.
+        self.db.add(
+            IndexerQueryResult(
+                id=result.id,
+                title=result.title,
+                download_url=str(result.download_url),
+                seeders=result.seeders,
+                flags=result.flags,
+                quality=result.quality,
+                season=result.season,
+                episode=result.episode,
+                size=result.size,
+                usenet=result.usenet,
+                age=result.age,
+                score=result.score,
+                score_breakdown=[entry.model_dump() for entry in result.score_breakdown],
+                indexer=result.indexer,
+                comments=result.comments,
+                attributes=result.attributes.model_dump(mode="json")
+                if result.attributes
+                else None,
+            )
+        )
         await self.db.commit()
         return result

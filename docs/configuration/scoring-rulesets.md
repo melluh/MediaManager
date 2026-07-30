@@ -2,6 +2,9 @@
 
 Scoring rulesets in MediaManager allow you to flexibly control which releases are preferred or avoided when searching for media. Each ruleset is a collection of scoring rules that can be assigned to one or more libraries. When MediaManager evaluates releases, it applies the relevant ruleset(s) to adjust the score of each result, influencing which releases are selected for download.
 
+!!! info
+    Primary ranking (which releases are "top picks" and in which order) is now driven by [slot-based classification & scoring](slots-and-classification.md). A rule set that nets a positive score here only breaks ties *within* a slot - it can no longer make e.g. a WEBRip outrank a WEB-DL. A rule set that nets a negative score still rejects the release outright, exactly as before.
+
 ## How Rulesets Work
 
 * Rulesets are defined in the configuration and contain a list of rule names and the libraries they apply to.

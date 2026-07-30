@@ -9,8 +9,8 @@ from sqlalchemy.exc import IntegrityError
 from media_manager.common.service import BaseMediaService
 from media_manager.config import MediaManagerConfig
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
+from media_manager.indexer.scoring import resolve_slot_label, slot_and_score_results
 from media_manager.indexer.service import IndexerService
-from media_manager.indexer.utils import evaluate_indexer_query_results
 from media_manager.movies.importer import MovieImportService
 from media_manager.movies.metadata import MovieMetadataService
 from media_manager.movies.repository import MovieRepository
@@ -24,9 +24,12 @@ from media_manager.movies.schemas import (
 )
 from media_manager.notification.service import NotificationService
 from media_manager.torrent.schemas import (
+    Quality,
+    QualityStrings,
     Torrent,
 )
 from media_manager.torrent.service import TorrentService
+from media_manager.torrent.utils import remove_special_characters
 
 log = logging.getLogger(__name__)
 
@@ -115,13 +118,19 @@ class MovieService(BaseMediaService[Movie, Movie]):
         return result
 
     async def get_all_available_torrents_for_movie(
-        self, movie: Movie, search_query_override: str | None = None
+        self,
+        movie: Movie,
+        search_query_override: str | None = None,
+        allow_language_variants: list[str] | None = None,
     ) -> list[IndexerQueryResult]:
         """
         Get all available torrents for a given movie.
 
         :param movie: The movie object.
         :param search_query_override: Optional override for the search query.
+        :param allow_language_variants: Language variants (e.g. "multi",
+            "dubbed") to allow for this search on top of the configured
+            defaults.
         :return: A list of indexer query results.
         """
         if search_query_override:
@@ -129,8 +138,11 @@ class MovieService(BaseMediaService[Movie, Movie]):
 
         torrents = await self.indexer_service.search_movie(movie=movie)
 
-        return evaluate_indexer_query_results(
-            is_tv=False, query_results=torrents, media=movie
+        return slot_and_score_results(
+            is_tv=False,
+            results=torrents,
+            media=movie,
+            allow_language_variants=allow_language_variants,
         )
 
     async def get_public_movie_by_id(self, movie: Movie) -> PublicMovie:
@@ -264,6 +276,9 @@ class MovieService(BaseMediaService[Movie, Movie]):
         indexer_result = await self.indexer_service.get_result(
             result_id=public_indexer_result_id
         )
+        file_path_suffix = override_movie_file_path_suffix or self._default_file_path_suffix(
+            indexer_result
+        )
         movie_torrent = await self.torrent_service.download(
             indexer_result=indexer_result, user_id=user_id
         )
@@ -272,7 +287,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
             movie_id=movie.id,
             quality=indexer_result.quality,
             torrent_id=movie_torrent.id,
-            file_path_suffix=override_movie_file_path_suffix,
+            file_path_suffix=file_path_suffix,
         )
         try:
             await self.movie_repository.add_movie_file(movie_file=movie_file)
@@ -290,6 +305,20 @@ class MovieService(BaseMediaService[Movie, Movie]):
             )
             await self.torrent_service.resume_download(torrent=movie_torrent)
         return movie_torrent
+
+    @staticmethod
+    def _default_file_path_suffix(indexer_result: IndexerQueryResult) -> str:
+        """
+        Default file path suffix for a download that didn't get an explicit
+        override: the label of the slot the release's stored attributes
+        match (e.g. "1080p Encode", "4K Remux"), falling back to a coarse
+        quality string if it didn't match a configured slot. Sanitized since
+        it ends up as part of a filename on disk.
+        """
+        label = resolve_slot_label(indexer_result)
+        if not label and indexer_result.quality != Quality.unknown:
+            label = QualityStrings[indexer_result.quality.name].value
+        return remove_special_characters(label) if label else ""
 
     def get_movie_root_path(self, movie: Movie) -> Path:
         misc_config = MediaManagerConfig().misc

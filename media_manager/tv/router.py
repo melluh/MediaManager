@@ -367,6 +367,7 @@ async def get_torrents_for_a_season(
     show_id: ShowId,
     season_number: int = 1,
     search_query_override: str | None = None,
+    allow_language_variants: list[str] | None = None,
 ) -> list[IndexerQueryResult]:
     """
     Search for torrents for a specific season of a show.
@@ -376,6 +377,7 @@ async def get_torrents_for_a_season(
         season_number=season_number,
         show_id=show_id,
         search_query_override=search_query_override,
+        allow_language_variants=allow_language_variants,
     )
 
 

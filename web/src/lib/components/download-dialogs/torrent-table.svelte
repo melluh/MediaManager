@@ -13,7 +13,10 @@
 		rowSnippet: Snippet<[any]>;
 	} = $props();
 
-	let sortBy = $state({ col: 'score', ascending: false });
+	// Defaults to slot_index (the backend's slot-priority-then-score order):
+	// `score` is only ever comparable within a single slot, so sorting this
+	// raw/full list by score by default would visually scramble tiers.
+	let sortBy = $state({ col: 'slot_index', ascending: true });
 
 	function getSortedColumnState(column: string | undefined): boolean | null {
 		if (sortBy.col !== column) return null;
@@ -30,6 +33,14 @@
 	function sort(data: any[], column: string, ascending: boolean): any[] {
 		let modifier = ascending ? 1 : -1;
 		return [...data].sort((a, b) => {
+			// Unslotted results (slot_index == null) always sort last,
+			// regardless of direction - they never belong ahead of a
+			// classified pick.
+			if (column === 'slot_index') {
+				if (a[column] == null && b[column] == null) return 0;
+				if (a[column] == null) return 1;
+				if (b[column] == null) return -1;
+			}
 			if (a[column] < b[column]) {
 				return -1 * modifier;
 			} else if (a[column] > b[column]) {
@@ -41,14 +52,13 @@
 	}
 </script>
 
-<div class="mt-4 items-center">
+<div class="items-center">
 	{#await torrentsPromise}
 		<div class="flex w-full max-w-sm items-center space-x-2">
 			<LoaderCircle class="animate-spin" />
 			<p>Loading torrents...</p>
 		</div>
 	{:then data}
-		<h3 class="mb-2 text-lg font-semibold">Found Torrents:</h3>
 		<div class="overflow-y-auto rounded-md border p-2">
 			<Table.Root>
 				<Table.Header>

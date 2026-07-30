@@ -42,3 +42,8 @@ ignore = [
 
 [lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Path", "taskiq.TaskiqDepends"]
+
+[lint.per-file-ignores]
+# `assert` is the pytest idiom, and annotating every test function's return
+# type (-> None) is pure boilerplate.
+"tests/**" = ["S101", "ANN"]

@@ -4,8 +4,9 @@
 	import { formatSecondsToOptimalUnit, getTorrentQualityString } from '$lib/utils.ts';
 	import { cn } from '$lib/utils.ts';
 	import * as Table from '$lib/components/ui/table';
+	import * as Collapsible from '$lib/components/ui/collapsible';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Download } from 'lucide-svelte';
+	import { ChevronDown, Download } from 'lucide-svelte';
 	import client from '$lib/api';
 	import type { Show } from '$lib/api/api';
 	import SelectFilePathSuffixDialog from '$lib/components/download-dialogs/select-file-path-suffix-dialog.svelte';
@@ -13,6 +14,8 @@
 	import TorrentTable from '$lib/components/download-dialogs/torrent-table.svelte';
 	import DownloadDialogWrapper from '$lib/components/download-dialogs/download-dialog-wrapper.svelte';
 	import TorrentScoreCell from '$lib/components/download-dialogs/torrent-score-cell.svelte';
+	import TorrentPickCard from '$lib/components/download-dialogs/torrent-pick-card.svelte';
+	import { groupIntoSlots } from '$lib/components/download-dialogs/torrent-grouping';
 
 	let {
 		show,
@@ -28,7 +31,11 @@
 	let torrentsError: string | null = $state(null);
 	let filePathSuffix: string = $state('');
 	let torrentsPromise: any = $state();
+	let torrentsData: any[] | null = $state(null);
 	let isLoading: boolean = $state(false);
+	let showFullList: boolean = $state(false);
+	let grouped = $derived(groupIntoSlots(torrentsData));
+	let selectedResultId: string | null = $derived(grouped.heroPick?.result.id ?? null);
 
 	const tableColumnHeadings = [
 		{ name: 'Quality', id: 'quality' },
@@ -92,6 +99,7 @@
 
 		isLoading = true;
 		torrentsError = null;
+		torrentsData = null;
 
 		toast.info(`Searching torrents for seasons: ${selectedSeasonNumbers.join(', ')}`);
 
@@ -114,7 +122,7 @@
 			.finally(() => (isLoading = false));
 
 		try {
-			await torrentsPromise;
+			torrentsData = await torrentsPromise;
 		} catch (error: any) {
 			console.error(error);
 			torrentsError = error.message || 'An error occurred while searching for torrents.';
@@ -126,7 +134,10 @@
 <DownloadDialogWrapper
 	bind:open={dialogueState}
 	{triggerText}
-	triggerClass={cn(buttonVariants({ variant: 'default' }), 'bg-blue-600 text-white hover:bg-blue-700')}
+	triggerClass={cn(
+		buttonVariants({ variant: 'default' }),
+		'bg-blue-600 text-white hover:bg-blue-700'
+	)}
 	title="Download Selected Seasons"
 	description="Search and download torrents for the selected seasons."
 >
@@ -162,48 +173,90 @@
 		</div>
 	{/if}
 
-	<TorrentTable {torrentsPromise} columns={tableColumnHeadings}>
-		{#snippet rowSnippet(torrent)}
-			<Table.Cell class="font-medium">
-				{#if torrent.comments}
-					<a
-						href={torrent.comments}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="hover:underline">{torrent.title}</a
-					>
-				{:else}
-					{torrent.title}
-				{/if}
-			</Table.Cell>
-			<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
-			<Table.Cell>
-				{(torrent.size / 1024 / 1024 / 1024).toFixed(2)}GB
-			</Table.Cell>
-			<Table.Cell>{torrent.usenet}</Table.Cell>
-			<Table.Cell>{torrent.usenet ? 'N/A' : torrent.seeders}</Table.Cell>
-			<Table.Cell>
-				{torrent.age ? formatSecondsToOptimalUnit(torrent.age) : torrent.usenet ? 'N/A' : ''}
-			</Table.Cell>
-			<TorrentScoreCell score={torrent.score} breakdown={torrent.score_breakdown} />
-			<Table.Cell>{torrent.indexer ?? 'unknown'}</Table.Cell>
-			<Table.Cell>
-				{#if torrent.flags}
-					{#each torrent.flags as flag (flag)}
-						<Badge variant="outline">{flag}</Badge>
-					{/each}
-				{/if}
-			</Table.Cell>
-			<Table.Cell>
-				{torrent.season ?? '-'}
-			</Table.Cell>
-			<Table.Cell class="text-right">
-				<SelectFilePathSuffixDialog
-					bind:filePathSuffix
-					media={show}
-					callback={() => downloadTorrent(torrent.id)}
+	{#if torrentsData && grouped.allPicks.length > 0}
+		<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+			{#each grouped.allPicks as pick (pick.slotName)}
+				<TorrentPickCard
+					result={pick.result}
+					slotLabel={pick.slotLabel}
+					selected={selectedResultId === pick.result.id}
+					onSelect={() => (selectedResultId = pick.result.id ?? null)}
 				/>
-			</Table.Cell>
-		{/snippet}
-	</TorrentTable>
+			{/each}
+		</div>
+	{/if}
+
+	<Collapsible.Root bind:open={showFullList} class="w-full space-y-1">
+		<Collapsible.Trigger>
+			<div class="flex items-center gap-2">
+				<Button class="w-9 p-0" size="sm" variant="ghost">
+					<ChevronDown />
+					<span class="sr-only">Toggle</span>
+				</Button>
+				<span class="text-sm font-semibold">
+					{showFullList ? 'Hide full list' : 'View full list'}
+				</span>
+			</div>
+		</Collapsible.Trigger>
+		<Collapsible.Content class="space-y-1">
+			<TorrentTable {torrentsPromise} columns={tableColumnHeadings}>
+				{#snippet rowSnippet(torrent)}
+					<Table.Cell class="font-medium">
+						{#if torrent.comments}
+							<a
+								href={torrent.comments}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="hover:underline">{torrent.title}</a
+							>
+						{:else}
+							{torrent.title}
+						{/if}
+					</Table.Cell>
+					<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
+					<Table.Cell>
+						{(torrent.size / 1024 / 1024 / 1024).toFixed(2)}GB
+					</Table.Cell>
+					<Table.Cell>{torrent.usenet}</Table.Cell>
+					<Table.Cell>{torrent.usenet ? 'N/A' : torrent.seeders}</Table.Cell>
+					<Table.Cell>
+						{torrent.age ? formatSecondsToOptimalUnit(torrent.age) : torrent.usenet ? 'N/A' : ''}
+					</Table.Cell>
+					<TorrentScoreCell score={torrent.score} breakdown={torrent.score_breakdown} />
+					<Table.Cell>{torrent.indexer ?? 'unknown'}</Table.Cell>
+					<Table.Cell>
+						{#if torrent.flags}
+							{#each torrent.flags as flag (flag)}
+								<Badge variant="outline">{flag}</Badge>
+							{/each}
+						{/if}
+					</Table.Cell>
+					<Table.Cell>
+						{torrent.season ?? '-'}
+					</Table.Cell>
+					<Table.Cell class="text-right">
+						<SelectFilePathSuffixDialog
+							bind:filePathSuffix
+							media={show}
+							callback={() => downloadTorrent(torrent.id)}
+						/>
+					</Table.Cell>
+				{/snippet}
+			</TorrentTable>
+		</Collapsible.Content>
+	</Collapsible.Root>
+	{#if selectedResultId}
+		<div class="flex justify-end pt-2">
+			<SelectFilePathSuffixDialog
+				bind:filePathSuffix
+				media={show}
+				callback={() => downloadTorrent(selectedResultId as string)}
+				size="lg"
+			>
+				{#snippet triggerIcon()}
+					<Download />
+				{/snippet}
+			</SelectFilePathSuffixDialog>
+		</div>
+	{/if}
 </DownloadDialogWrapper>

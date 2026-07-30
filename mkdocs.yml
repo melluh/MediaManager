@@ -47,6 +47,7 @@ nav:
       - Database: configuration/database.md
       - Download Clients: configuration/download-clients.md
       - Indexers: configuration/indexers.md
+      - Slots & Classification: configuration/slots-and-classification.md
       - Scoring Rulesets: configuration/scoring-rulesets.md
       - Notifications: configuration/notifications.md
       - Custom Libraries: configuration/custom-libraries.md

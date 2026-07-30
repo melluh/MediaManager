@@ -1,17 +1,26 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button, type ButtonSize } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import FilePathSuffixSelector from '$lib/components/download-dialogs/file-path-suffix-selector.svelte';
 	import type { Movie, Show } from '$lib/api/api';
+	import { type Snippet } from 'svelte';
 
 	let {
 		filePathSuffix = $bindable(),
 		media,
-		callback
+		callback,
+		triggerIcon,
+		triggerText = 'Download',
+		size,
+		disabled = false
 	}: {
 		filePathSuffix: string;
 		media: Movie | Show;
 		callback: () => void;
+		triggerIcon?: Snippet;
+		triggerText?: string;
+		size?: ButtonSize;
+		disabled?: boolean;
 	} = $props();
 	let dialogOpen = $state(false);
 
@@ -23,7 +32,10 @@
 
 <Dialog.Root bind:open={dialogOpen}>
 	<Dialog.Trigger>
-		<Button class="w-full" onclick={() => (dialogOpen = true)}>Download</Button>
+		<Button class="w-full" {size} {disabled} onclick={() => (dialogOpen = true)}>
+			{#if triggerIcon}{@render triggerIcon()}{/if}
+			{triggerText}
+		</Button>
 	</Dialog.Trigger>
 	<Dialog.Content class="w-full max-w-[600px] rounded-lg p-6 shadow-lg">
 		<Dialog.Header>

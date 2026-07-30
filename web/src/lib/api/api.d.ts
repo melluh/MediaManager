@@ -1478,11 +1478,21 @@ export interface components {
              * @description Link to the indexer's detail page for this release
              */
             comments?: string | null;
-            readonly quality: components["schemas"]["Quality"];
+            /** @default 5 */
+            quality: components["schemas"]["Quality"];
             /** Season */
-            readonly season: number[];
+            season?: number[];
             /** Episode */
-            readonly episode: number[];
+            episode?: number[];
+            attributes?: components["schemas"]["TorrentAttributes"] | null;
+            /** Slot Name */
+            slot_name?: string | null;
+            /** Slot Label */
+            slot_label?: string | null;
+            /** Slot Index */
+            slot_index?: number | null;
+            /** Effective Mbps */
+            effective_mbps?: number | null;
         };
         /** LibraryItem */
         LibraryItem: {
@@ -1971,6 +1981,21 @@ export interface components {
             /** Seasons */
             seasons: components["schemas"]["Season"][];
         };
+        /** SubtitleInfo */
+        SubtitleInfo: {
+            /** Language */
+            language: string;
+            /**
+             * Forced
+             * @default false
+             */
+            forced: boolean;
+            /**
+             * Embedded
+             * @default false
+             */
+            embedded: boolean;
+        };
         /** SystemHealth */
         SystemHealth: {
             /** Services */
@@ -2001,6 +2026,43 @@ export interface components {
             initiated_by_user_id?: string | null;
             /** Initiated At */
             initiated_at?: string | null;
+        };
+        /** TorrentAttributes */
+        TorrentAttributes: {
+            /** Resolution */
+            resolution?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Codec */
+            codec?: string | null;
+            /**
+             * Hdr Flags
+             * @default []
+             */
+            hdr_flags: string[];
+            /**
+             * Audio Codecs
+             * @default []
+             */
+            audio_codecs: string[];
+            /** Audio Channels */
+            audio_channels?: string | null;
+            /** Language Variant */
+            language_variant?: string | null;
+            /**
+             * Languages
+             * @default []
+             */
+            languages: string[];
+            /** Release Group */
+            release_group?: string | null;
+            /** Container */
+            container?: string | null;
+            /**
+             * Subtitles
+             * @default []
+             */
+            subtitles: components["schemas"]["SubtitleInfo"][];
         };
         /**
          * TorrentStatus
@@ -2138,8 +2200,10 @@ export type Season = components['schemas']['Season'];
 export type ServiceHealth = components['schemas']['ServiceHealth'];
 export type ServiceStatus = components['schemas']['ServiceStatus'];
 export type Show = components['schemas']['Show'];
+export type SubtitleInfo = components['schemas']['SubtitleInfo'];
 export type SystemHealth = components['schemas']['SystemHealth'];
 export type Torrent = components['schemas']['Torrent'];
+export type TorrentAttributes = components['schemas']['TorrentAttributes'];
 export type TorrentStatus = components['schemas']['TorrentStatus'];
 export type UserCreate = components['schemas']['UserCreate'];
 export type UserRead = components['schemas']['UserRead'];
@@ -3464,7 +3528,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": string[] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -4164,7 +4232,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": string[] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

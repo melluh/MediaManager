@@ -3,7 +3,13 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from email.utils import parsedate_to_datetime
 
+from media_manager.indexer.classification import classify_release
 from media_manager.indexer.schemas import IndexerQueryResult
+from media_manager.indexer.title_parsing import (
+    derive_episode,
+    derive_quality,
+    derive_season,
+)
 
 log = logging.getLogger(__name__)
 
@@ -74,8 +80,9 @@ class TorznabMixin:
                     log.warning(f"Torznab item {title} has invalid size, skipping.")
                     continue
 
+                result_title = title or "unknown"
                 result = IndexerQueryResult(
-                    title=title or "unknown",
+                    title=result_title,
                     download_url=str(item.find("enclosure").attrib["url"]),
                     seeders=seeders,
                     flags=flags,
@@ -84,6 +91,10 @@ class TorznabMixin:
                     age=age,
                     indexer=indexer_name,
                     comments=comments,
+                    quality=derive_quality(result_title),
+                    season=derive_season(result_title),
+                    episode=derive_episode(result_title),
+                    attributes=classify_release(result_title),
                 )
                 result_list.append(result)
             except Exception:

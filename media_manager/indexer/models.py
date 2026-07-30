@@ -26,3 +26,4 @@ class IndexerQueryResult(Base):
     score_breakdown = mapped_column(JSONB, nullable=False, server_default="[]")
     indexer: Mapped[str | None]
     comments: Mapped[str | None]
+    attributes = mapped_column(JSONB, nullable=True)

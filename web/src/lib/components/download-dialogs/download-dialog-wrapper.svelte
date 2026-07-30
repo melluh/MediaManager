@@ -10,6 +10,7 @@
 		triggerIcon,
 		title,
 		description,
+		headerActions,
 		children
 	}: {
 		open: boolean;
@@ -17,7 +18,8 @@
 		triggerClass?: string;
 		triggerIcon?: Snippet;
 		title: string;
-		description: string;
+		description?: string;
+		headerActions?: Snippet;
 		children: Snippet;
 	} = $props();
 </script>
@@ -28,11 +30,20 @@
 		{triggerText}
 	</Dialog.Trigger>
 	<Dialog.Content class="max-h-[90vh] w-fit min-w-[80vw] overflow-y-auto">
-		<Dialog.Header>
-			<Dialog.Title>{title}</Dialog.Title>
-			<Dialog.Description>
-				{description}
-			</Dialog.Description>
+		<Dialog.Header
+			class={headerActions ? 'flex-row items-start justify-between space-y-0 pr-6' : undefined}
+		>
+			<div class="space-y-1.5 text-center sm:text-left">
+				<Dialog.Title>{title}</Dialog.Title>
+				{#if description}
+					<Dialog.Description>
+						{description}
+					</Dialog.Description>
+				{/if}
+			</div>
+			{#if headerActions}
+				{@render headerActions()}
+			{/if}
 		</Dialog.Header>
 		{@render children()}
 	</Dialog.Content>

@@ -8,8 +8,8 @@ from sqlalchemy.exc import IntegrityError
 from media_manager.common.service import BaseMediaService
 from media_manager.config import MediaManagerConfig
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
+from media_manager.indexer.scoring import slot_and_score_results
 from media_manager.indexer.service import IndexerService
-from media_manager.indexer.utils import evaluate_indexer_query_results
 from media_manager.notification.service import NotificationService
 from media_manager.torrent.schemas import (
     Torrent,
@@ -139,6 +139,7 @@ class TvService(BaseMediaService[Show, Show]):
         season_number: int,
         show_id: ShowId,
         search_query_override: str | None = None,
+        allow_language_variants: list[str] | None = None,
     ) -> list[IndexerQueryResult]:
         """
         Get all available torrents for a given season.
@@ -146,6 +147,9 @@ class TvService(BaseMediaService[Show, Show]):
         :param season_number: The number of the season.
         :param show_id: The ID of the show.
         :param search_query_override: Optional override for the search query.
+        :param allow_language_variants: Language variants (e.g. "multi",
+            "dubbed") to allow for this search on top of the configured
+            defaults.
         :return: A list of indexer query results.
         """
 
@@ -160,8 +164,25 @@ class TvService(BaseMediaService[Show, Show]):
 
         results = [torrent for torrent in torrents if season_number in torrent.season]
 
-        return evaluate_indexer_query_results(
-            is_tv=True, query_results=results, media=show
+        def episode_count_for_torrent(result: IndexerQueryResult) -> int | None:
+            # A single-episode release (S01E05) covers one episode, not the
+            # whole season - only fall back to the season's full episode
+            # count for season packs (result.episode empty).
+            if result.episode:
+                return len(result.episode)
+            count = sum(
+                len(season.episodes)
+                for season in show.seasons
+                if season.number in result.season
+            )
+            return count or None
+
+        return slot_and_score_results(
+            is_tv=True,
+            results=results,
+            media=show,
+            episode_count_for_torrent=episode_count_for_torrent,
+            allow_language_variants=allow_language_variants,
         )
 
     async def get_public_show_by_id(self, show: Show) -> PublicShow:

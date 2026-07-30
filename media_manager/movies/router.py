@@ -322,12 +322,15 @@ async def search_for_torrents_for_movie(
     movie_service: movie_service_dep,
     movie: movie_dep,
     search_query_override: str | None = None,
+    allow_language_variants: list[str] | None = None,
 ) -> list[IndexerQueryResult]:
     """
     Search for torrents for a specific movie.
     """
     return await movie_service.get_all_available_torrents_for_movie(
-        movie=movie, search_query_override=search_query_override
+        movie=movie,
+        search_query_override=search_query_override,
+        allow_language_variants=allow_language_variants,
     )
 
 

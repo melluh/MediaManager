@@ -205,6 +205,15 @@ wheels = [
 ]
 
 [[package]]
+name = "babelfish"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/8f/17ff889327f8a1c36a28418e686727dabc06c080ed49c95e3e2424a77aa6/babelfish-0.6.1.tar.gz", hash = "sha256:decb67a4660888d48480ab6998309837174158d0f1aa63bebb1c2e11aab97aab", size = 87706, upload-time = "2024-05-09T21:16:24.357Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/95/a1/bd4f759db13cd8beb9c9f68682aced5d966781b9d7380cf514a306f56762/babelfish-0.6.1-py3-none-any.whl", hash = "sha256:512f1501d4c8f7d38f0921f48660be7542de1a7b24abb6a6a65324a670150293", size = 94231, upload-time = "2024-05-09T21:16:22.633Z" },
+]
+
+[[package]]
 name = "bcrypt"
 version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -793,6 +802,20 @@ wheels = [
 ]
 
 [[package]]
+name = "guessit"
+version = "4.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "babelfish" },
+    { name = "python-dateutil" },
+    { name = "rebulk" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/87/e2/45b14ca957b0ecda929f9661d2c3319289e0a4f178244c8da270851a2238/guessit-4.2.1.tar.gz", hash = "sha256:511cd34e6666d501277e6eb6f28830ebfaa1298fe0e5c07648c090af90d7173f", size = 473141, upload-time = "2026-07-30T15:17:51.266Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5b/d2/c61dcf55cebadac33f32860aa8371c1ad104c8fab8008be9f73a09d4743d/guessit-4.2.1-py3-none-any.whl", hash = "sha256:040165263cd11284be59e2d1381e80b035de4f2b914b33e7ba2881329bb7fea4", size = 327012, upload-time = "2026-07-30T15:17:49.958Z" },
+]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1036,6 +1059,7 @@ dependencies = [
     { name = "fastapi-restful", extra = ["all"] },
     { name = "fastapi-users", extra = ["sqlalchemy"] },
     { name = "fastapi-utils" },
+    { name = "guessit" },
     { name = "httpx" },
     { name = "httpx-oauth" },
     { name = "jsonschema" },
@@ -1080,6 +1104,7 @@ requires-dist = [
     { name = "fastapi-restful", extras = ["all"], specifier = ">=0.6.0" },
     { name = "fastapi-users", extras = ["sqlalchemy"], specifier = ">=15.0.2" },
     { name = "fastapi-utils", specifier = ">=0.8.0" },
+    { name = "guessit", specifier = ">=3.8.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "httpx-oauth", specifier = ">=0.16.1" },
     { name = "jsonschema", specifier = ">=4.24.0" },
@@ -1622,6 +1647,18 @@ wheels = [
 ]
 
 [[package]]
+name = "python-dateutil"
+version = "2.9.0.post0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/c0/0c8b6ad9f17a802ee498c46e004a0eb49bc148f2fd230864601a86dcf6db/python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3", size = 342432, upload-time = "2024-03-01T18:36:20.211Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427", size = 229892, upload-time = "2024-03-01T18:36:18.57Z" },
+]
+
+[[package]]
 name = "python-dotenv"
 version = "1.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1708,6 +1745,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/63/b4/506b0296fd17d90cb2185149b4fa576645c6fd26397684bfb0806a35435b/qbittorrent_api-2025.11.1.tar.gz", hash = "sha256:5cb2a469f8bc95f616e03bd0259d8b4be60a5c3df0d49910c44309b0f59724c4", size = 1323104, upload-time = "2025-11-20T07:34:50.263Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b4/c5/b77517fb2179ec640034ed8850fee9f9dcff457daef7aeebaf6463cf962d/qbittorrent_api-2025.11.1-py3-none-any.whl", hash = "sha256:6e60f1daa25232d48753d0e6860b0684092910b3fe16fbe449be7fa31caa687a", size = 67042, upload-time = "2025-11-20T07:34:48.684Z" },
+]
+
+[[package]]
+name = "rebulk"
+version = "6.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/09/d4/77c29644d1f9b1ef2881211c9c2a0f89d437f28c80edbc74c698f23055bd/rebulk-6.0.1.tar.gz", hash = "sha256:d6df0c8c896e160087c6981f3770ed513ec973a9f4066b9e4b0614eb08ba0ce1", size = 66093, upload-time = "2026-07-03T06:59:32.476Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/01/44/6a16b13cb50ca25cc88928bf85adef1227d21add9c4cd830958d0124d48b/rebulk-6.0.1-py3-none-any.whl", hash = "sha256:fe67fd0af60962c7f3957fa01ef0039c43631c09146228698ee22e20ac33907e", size = 78315, upload-time = "2026-07-03T06:59:31.192Z" },
 ]
 
 [[package]]
@@ -1942,6 +1988,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/58/15/8b3609fd3830ef7b27b655beb4b4e9c62313a4e8da8c676e142cc210d58e/shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de", size = 10310, upload-time = "2023-10-24T04:13:40.426Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686", size = 9755, upload-time = "2023-10-24T04:13:38.866Z" },
+]
+
+[[package]]
+name = "six"
+version = "1.17.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
 ]
 
 [[package]]
