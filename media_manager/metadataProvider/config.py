@@ -14,3 +14,5 @@ class TvdbConfig(BaseSettings):
 class MetadataProviderConfig(BaseSettings):
     tvdb: TvdbConfig = TvdbConfig()
     tmdb: TmdbConfig = TmdbConfig()
+    # Minimum time between metadata refetches for a movie/show, in hours
+    refetch_interval_hours: int = 24

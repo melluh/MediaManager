@@ -1,10 +1,12 @@
 import logging
 from collections.abc import Awaitable, Callable
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, TypeVar
 
 from media_manager.common.repository import BaseRepository
 from media_manager.common.slug import generate_slug
+from media_manager.config import MediaManagerConfig
 from media_manager.exceptions import InvalidConfigError, NotFoundError
 from media_manager.indexer.service import IndexerService
 from media_manager.metadataProvider.abstract_metadata_provider import (
@@ -248,6 +250,17 @@ class BaseMetadataService[T, S]:
     ) -> None:
         log.info(f"Updating metadata for all {media_type_name}")
         media_list = await get_all_to_update_func()
+
+        refetch_interval_hours = MediaManagerConfig().metadata.refetch_interval_hours
+        min_age = timedelta(hours=refetch_interval_hours)
+        now = datetime.now(timezone.utc)
+        media_list = [
+            item
+            for item in media_list
+            if item.metadata_updated_at is None
+            or now - item.metadata_updated_at >= min_age
+        ]
+
         log.info(f"Found {len(media_list)} {media_type_name} to update")
         for item in media_list:
             try:

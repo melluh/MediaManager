@@ -4,6 +4,11 @@
 
 Metadata provider settings are configured in the `[metadata]` section of your `config.toml` file. These settings control how MediaManager retrieves information about movies and TV shows.
 
+### General Settings (`[metadata]`)
+
+* `refetch_interval_hours`\
+  Minimum number of hours that must pass since a movie/show's metadata was last fetched before it is refetched again. This applies both to the automatic refresh on application startup and the weekly scheduled refresh. Default is `24`. Example: `72`.
+
 ### TMDB Settings (`[metadata.tmdb]`)
 
 TMDB (The Movie Database) is the primary metadata provider for MediaManager. It provides detailed information about movies and TV shows.
@@ -52,6 +57,8 @@ Here's a complete example of the metadata section in your `config.toml`:
 
 ```toml title="config.toml"
 [metadata]
+    refetch_interval_hours = 24
+
     # TMDB configuration
     [metadata.tmdb]
     tmdb_relay_url = "https://metadata-relay.dorninger.co/tmdb"
