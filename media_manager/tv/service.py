@@ -203,6 +203,15 @@ class TvService(BaseMediaService[Show, Show]):
         """
         return await self.tv_repository.get_show_by_id(show_id=show_id)
 
+    async def get_show_by_slug(self, slug: str) -> Show:
+        """
+        Get a show by its slug.
+
+        :param slug: The slug of the show.
+        :return: The show.
+        """
+        return await self.tv_repository.get_show_by_slug(slug=slug)
+
     async def is_season_downloaded(self, season: Season, show: Show) -> bool:
         """
         Check if a season is downloaded.
@@ -371,6 +380,7 @@ class TvService(BaseMediaService[Show, Show]):
         return RichShowTorrent(
             show_id=show.id,
             name=show.name,
+            slug=show.slug,
             year=show.year,
             metadata_provider=show.metadata_provider,
             torrents=rich_season_torrents,

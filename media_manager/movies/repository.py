@@ -57,6 +57,14 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
     async def save_movie(self, movie: MovieSchema) -> MovieSchema:
         return await self.save_media_base(media_schema=movie, model_class=Movie)
 
+    async def get_movie_by_slug(self, slug: str) -> MovieSchema:
+        stmt = select(Movie).where(Movie.slug == slug)
+        result = (await self.db.execute(stmt)).scalar_one_or_none()
+        if not result:
+            msg = f"Movie with slug {slug} not found."
+            raise NotFoundError(msg)
+        return MovieSchema.model_validate(result)
+
     async def add_movie_file(self, movie_file: MovieFileSchema) -> MovieFileSchema:
         return await self.add_media_file_base(
             file_schema=movie_file, model_class=MovieFile, schema_class=MovieFileSchema

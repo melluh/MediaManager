@@ -36,6 +36,7 @@ class MovieTorrent(BaseModel):
 
 
 class PublicMovie(Movie):
+    slug: str
     downloaded: bool = False
     torrents: list[MovieTorrent] = Field(default_factory=list)
 
@@ -43,6 +44,7 @@ class PublicMovie(Movie):
 class RichMovieTorrent(BaseModel):
     movie_id: MovieId
     name: str
+    slug: str
     year: int | None
     metadata_provider: str
     torrents: list[MovieTorrent]

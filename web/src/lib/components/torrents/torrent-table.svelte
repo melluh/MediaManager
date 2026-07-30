@@ -19,13 +19,13 @@
 	let {
 		torrents,
 		isShow = true,
-		showId,
-		movieId
+		showSlug,
+		movieSlug
 	}: {
 		torrents: MovieTorrent[] | RichSeasonTorrent[];
 		isShow: boolean;
-		showId?: string;
-		movieId?: string;
+		showSlug?: string;
+		movieSlug?: string;
 	} = $props();
 
 	let user: () => UserRead = getContext('user');
@@ -71,16 +71,16 @@
 		{#each torrents as torrent (torrent.torrent_id)}
 			<Table.Row>
 				<Table.Cell class="font-medium">
-					{#if isShow && showId}
+					{#if isShow && showSlug}
 						<a
-							href={resolve('/dashboard/tv/[showId]', { showId })}
+							href={resolve('/dashboard/tv/[showId]', { showId: showSlug })}
 							class="text-primary hover:underline"
 						>
 							{torrent.torrent_title}
 						</a>
-					{:else if !isShow && movieId}
+					{:else if !isShow && movieSlug}
 						<a
-							href={resolve('/dashboard/movies/[movieId]', { movieId })}
+							href={resolve('/dashboard/movies/[movieId]', { movieId: movieSlug })}
 							class="text-primary hover:underline"
 						>
 							{torrent.torrent_title}

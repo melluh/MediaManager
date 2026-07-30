@@ -85,6 +85,23 @@ async def get_show_by_id(
 show_dep = Annotated[Show, Depends(get_show_by_id)]
 
 
+async def get_show_by_slug(
+    tv_service: tv_service_dep,
+    slug: str = Path(..., description="The slug of the show"),
+) -> Show:
+    try:
+        show = await tv_service.get_show_by_slug(slug)
+    except NotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Show with slug {slug} not found.",
+        ) from None
+    return show
+
+
+show_by_slug_dep = Annotated[Show, Depends(get_show_by_slug)]
+
+
 async def get_season_by_id(
     tv_service: tv_service_dep,
     season_id: SeasonId = Path(..., description="The ID of the season"),

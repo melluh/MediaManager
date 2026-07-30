@@ -9,7 +9,10 @@ from media_manager.database import Base
 
 class Movie(Base, MediaMixin):
     __tablename__ = "movie"
-    __table_args__ = (UniqueConstraint("external_id", "metadata_provider"),)
+    __table_args__ = (
+        UniqueConstraint("external_id", "metadata_provider"),
+        UniqueConstraint("slug"),
+    )
 
 
 class MovieFile(Base, MediaFileMixin):

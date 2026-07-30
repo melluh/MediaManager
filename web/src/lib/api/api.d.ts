@@ -463,6 +463,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tv/shows/slug/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get A Show By Slug
+         * @description Get details for a specific show by its slug.
+         */
+        get: operations["get_a_show_by_slug_api_v1_tv_shows_slug__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tv/shows/{show_id}": {
         parameters: {
             query?: never;
@@ -918,6 +938,26 @@ export interface paths {
          * @description Get available Movie libraries from configuration.
          */
         get: operations["get_available_libraries_api_v1_movies_libraries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/movies/slug/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Movie By Slug
+         * @description Get details for a specific movie by its slug.
+         */
+        get: operations["get_movie_by_slug_api_v1_movies_slug__slug__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1495,6 +1535,8 @@ export interface components {
             runtime?: number | null;
             /** Id */
             id?: string | null;
+            /** Slug */
+            slug?: string | null;
         };
         /** Movie */
         Movie: {
@@ -1505,6 +1547,8 @@ export interface components {
             id?: string;
             /** Name */
             name: string;
+            /** Slug */
+            slug?: string | null;
             /** Overview */
             overview: string;
             /** Year */
@@ -1630,6 +1674,8 @@ export interface components {
             id?: string;
             /** Name */
             name: string;
+            /** Slug */
+            slug: string;
             /** Overview */
             overview: string;
             /** Year */
@@ -1715,6 +1761,8 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /** Slug */
+            slug: string;
             /** Overview */
             overview: string;
             /** Year */
@@ -1762,6 +1810,8 @@ export interface components {
             movie_id: string;
             /** Name */
             name: string;
+            /** Slug */
+            slug: string;
             /** Year */
             year: number | null;
             /** Metadata Provider */
@@ -1800,6 +1850,8 @@ export interface components {
             show_id: string;
             /** Name */
             name: string;
+            /** Slug */
+            slug: string;
             /** Year */
             year: number | null;
             /** Metadata Provider */
@@ -1817,6 +1869,8 @@ export interface components {
             media_type: components["schemas"]["MediaType"];
             /** Name */
             name: string;
+            /** Slug */
+            slug: string;
             /** Overview */
             overview: string;
             /** Year */
@@ -1866,6 +1920,8 @@ export interface components {
             id?: string;
             /** Name */
             name: string;
+            /** Slug */
+            slug?: string | null;
             /** Overview */
             overview: string;
             /** Year */
@@ -3094,6 +3150,38 @@ export interface operations {
             };
         };
     };
+    get_a_show_by_slug_api_v1_tv_shows_slug__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The slug of the show */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicShow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_a_show_api_v1_tv_shows__show_id__get: {
         parameters: {
             query?: never;
@@ -3889,6 +3977,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LibraryItem"][];
+                };
+            };
+        };
+    };
+    get_movie_by_slug_api_v1_movies_slug__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The slug of the movie */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMovie"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

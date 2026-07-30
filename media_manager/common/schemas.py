@@ -12,6 +12,7 @@ class BaseMedia(BaseModel):
 
     id: UUID = Field(default_factory=uuid.uuid4)
     name: str
+    slug: str | None = None
     overview: str
     year: int | None
     external_id: int

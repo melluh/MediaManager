@@ -31,6 +31,7 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
             save_func=self.tv_repository.save_show,
             download_poster_func=metadata_provider.download_show_poster_image,
             language=language,
+            include_year_in_slug=False,
         )
 
     async def get_show_details(

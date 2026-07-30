@@ -9,7 +9,10 @@ from media_manager.database import Base
 
 class Show(Base, MediaMixin):
     __tablename__ = "show"
-    __table_args__ = (UniqueConstraint("external_id", "metadata_provider"),)
+    __table_args__ = (
+        UniqueConstraint("external_id", "metadata_provider"),
+        UniqueConstraint("slug"),
+    )
 
     ended: Mapped[bool] = mapped_column(default=False)
     continuous_download: Mapped[bool] = mapped_column(default=False)

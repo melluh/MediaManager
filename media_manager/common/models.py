@@ -17,6 +17,7 @@ class MediaMixin:
     external_id: Mapped[int] = mapped_column(index=True)
     metadata_provider: Mapped[str]
     name: Mapped[str]
+    slug: Mapped[str]
     overview: Mapped[str]
     year: Mapped[int | None]
     library: Mapped[str] = mapped_column(default="Default")

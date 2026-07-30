@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from media_manager.common.repository import BaseRepository
+from media_manager.common.slug import generate_slug
 from media_manager.exceptions import InvalidConfigError, NotFoundError
 from media_manager.indexer.service import IndexerService
 from media_manager.metadataProvider.abstract_metadata_provider import (
@@ -174,10 +175,17 @@ class BaseMetadataService[T, S]:
         save_func: Callable[[S], Awaitable[S]],
         download_poster_func: Callable[[S], Awaitable[bool]],
         language: str | None = None,
+        include_year_in_slug: bool = True,
     ) -> S:
         media_with_metadata = await get_metadata_func(external_id, language=language)
         if not media_with_metadata:
             raise NotFoundError
+
+        media_with_metadata.slug = await generate_slug(
+            media_with_metadata.name,
+            media_with_metadata.year if include_year_in_slug else None,
+            self.repository.slug_exists,
+        )
 
         saved_media = await save_func(media_with_metadata)
         await download_poster_func(saved_media)
@@ -204,6 +212,7 @@ class BaseMetadataService[T, S]:
                         metadata_provider=metadata_provider.name,
                     )
                     result.id = media.id
+                    result.slug = media.slug
                 except Exception:
                     log.exception(
                         f"Unable to find internal ID for {result.external_id} on {metadata_provider.name}"

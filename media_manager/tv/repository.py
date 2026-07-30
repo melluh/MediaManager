@@ -77,6 +77,19 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         else:
             return ShowSchema.model_validate(result)
 
+    async def get_show_by_slug(self, slug: str) -> ShowSchema:
+        try:
+            stmt = select(Show).where(Show.slug == slug).options(_load_show_tree())
+            result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
+            if not result:
+                msg = f"Show with slug {slug} not found."
+                raise NotFoundError(msg)
+        except SQLAlchemyError:
+            log.exception(f"Database error while retrieving show by slug {slug}")
+            raise
+        else:
+            return ShowSchema.model_validate(result)
+
     async def get_shows(self) -> list[ShowSchema]:
         try:
             stmt = select(Show).options(_load_show_tree())
@@ -112,7 +125,9 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
 
         if db_show:  # Use base for update
             await self.save_media_base(
-                media_schema=show, model_class=Show, exclude={"seasons", "episodes"}
+                media_schema=show,
+                model_class=Show,
+                exclude={"seasons", "episodes", "slug"},
             )
             # save_media_base returns a non-eager-loaded schema; reload with
             # selectinload so ShowSchema.seasons/episodes don't lazy-load.
@@ -124,6 +139,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             external_id=show.external_id,
             metadata_provider=show.metadata_provider,
             name=show.name,
+            slug=show.slug,
             overview=show.overview,
             year=show.year,
             ended=show.ended,

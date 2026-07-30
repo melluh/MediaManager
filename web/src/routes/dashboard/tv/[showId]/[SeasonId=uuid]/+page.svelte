@@ -20,7 +20,7 @@
 			{ label: 'Shows', href: resolve('/dashboard/tv', {}) },
 			{
 				label: `${show.name} ${show.year == null ? '' : '(' + show.year + ')'}`,
-				href: resolve('/dashboard/tv/[showId]', { showId: show.id! })
+				href: resolve('/dashboard/tv/[showId]', { showId: show.slug! })
 			},
 			{ label: `Season ${season.number}` }
 		]);

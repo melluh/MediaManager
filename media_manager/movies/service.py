@@ -155,6 +155,15 @@ class MovieService(BaseMediaService[Movie, Movie]):
         """
         return await self.movie_repository.get_movie_by_id(movie_id)
 
+    async def get_movie_by_slug(self, slug: str) -> Movie:
+        """
+        Get a movie by its slug.
+
+        :param slug: The slug of the movie.
+        :return: The movie.
+        """
+        return await self.movie_repository.get_movie_by_slug(slug)
+
     async def is_movie_downloaded(self, movie: Movie) -> bool:
         """
         Check if a movie is downloaded.
@@ -220,6 +229,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
         return RichMovieTorrent(
             movie_id=movie.id,
             name=movie.name,
+            slug=movie.slug,
             year=movie.year,
             metadata_provider=movie.metadata_provider,
             torrents=movie_torrents,

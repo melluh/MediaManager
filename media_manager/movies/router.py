@@ -14,6 +14,7 @@ from media_manager.indexer.schemas import (
 from media_manager.metadataProvider.dependencies import metadata_provider_dep
 from media_manager.metadataProvider.schemas import MetaDataProviderSearchResult
 from media_manager.movies.dependencies import (
+    movie_by_slug_dep,
     movie_dep,
     movie_import_service_dep,
     movie_metadata_service_dep,
@@ -234,6 +235,19 @@ def get_available_libraries() -> list[LibraryItem]:
 # -----------------------------------------------------------------------------
 # MOVIES - SINGLE RESOURCE
 # -----------------------------------------------------------------------------
+
+
+@router.get(
+    "/slug/{slug}",
+    dependencies=[Depends(current_active_user)],
+)
+async def get_movie_by_slug(
+    movie_service: movie_service_dep, movie: movie_by_slug_dep
+) -> PublicMovie:
+    """
+    Get details for a specific movie by its slug.
+    """
+    return await movie_service.get_public_movie_by_id(movie=movie)
 
 
 @router.get(

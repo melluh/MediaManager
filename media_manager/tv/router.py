@@ -18,6 +18,7 @@ from media_manager.torrent.schemas import Torrent
 from media_manager.torrent.utils import get_importable_media_directories
 from media_manager.tv.dependencies import (
     season_dep,
+    show_by_slug_dep,
     show_dep,
     tv_import_service_dep,
     tv_metadata_service_dep,
@@ -210,6 +211,19 @@ def get_available_libraries() -> list[LibraryItem]:
 # -----------------------------------------------------------------------------
 # SHOWS - INDIVIDUAL
 # -----------------------------------------------------------------------------
+
+
+@router.get(
+    "/shows/slug/{slug}",
+    dependencies=[Depends(current_active_user)],
+)
+async def get_a_show_by_slug(
+    show: show_by_slug_dep, tv_service: tv_service_dep
+) -> PublicShow:
+    """
+    Get details for a specific show by its slug.
+    """
+    return await tv_service.get_public_show_by_id(show=show)
 
 
 @router.get(

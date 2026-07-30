@@ -78,6 +78,7 @@ class RichShowTorrent(BaseModel):
 
     show_id: ShowId
     name: str
+    slug: str
     year: int | None
     metadata_provider: str
     torrents: list[RichSeasonTorrent]
@@ -116,6 +117,7 @@ class PublicShow(BaseModel):
     id: ShowId
 
     name: str
+    slug: str
     overview: str
     year: int | None
 

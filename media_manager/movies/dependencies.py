@@ -87,3 +87,20 @@ async def get_movie_by_id(
 
 
 movie_dep = Annotated[Movie, Depends(get_movie_by_id)]
+
+
+async def get_movie_by_slug(
+    movie_service: movie_service_dep,
+    slug: str = Path(..., description="The slug of the movie"),
+) -> Movie:
+    try:
+        movie = await movie_service.get_movie_by_slug(slug)
+    except NotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Movie with slug {slug} not found.",
+        ) from None
+    return movie
+
+
+movie_by_slug_dep = Annotated[Movie, Depends(get_movie_by_slug)]

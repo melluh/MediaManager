@@ -37,6 +37,7 @@ class SearchService:
                     id=row.id,
                     media_type=media_type,
                     name=row.name,
+                    slug=row.slug,
                     overview=row.overview,
                     year=row.year,
                 )

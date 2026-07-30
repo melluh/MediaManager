@@ -59,6 +59,11 @@ class BaseRepository[T, S]:
         result = (await self.db.execute(stmt)).scalar_one_or_none()
         return result is not None
 
+    async def slug_exists(self, slug: str) -> bool:
+        stmt = select(self.model.id).where(self.model.slug == slug)
+        result = (await self.db.execute(stmt)).scalar_one_or_none()
+        return result is not None
+
     async def get_all(self) -> list[S]:
         stmt = select(self.model)
         results = (await self.db.execute(stmt)).scalars().unique().all()
@@ -77,6 +82,7 @@ class BaseRepository[T, S]:
             select(
                 self.model.id,
                 self.model.name,
+                self.model.slug,
                 self.model.overview,
                 self.model.year,
             )

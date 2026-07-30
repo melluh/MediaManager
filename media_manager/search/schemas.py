@@ -11,5 +11,6 @@ class SearchResult(BaseModel):
     id: UUID
     media_type: MediaType
     name: str
+    slug: str
     overview: str
     year: int | None

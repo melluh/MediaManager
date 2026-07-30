@@ -37,3 +37,4 @@ class MetaDataProviderSearchResult(BaseModel):
     genres: list[str] = Field(default_factory=list)
     runtime: int | None = None
     id: MovieId | ShowId | None = None  # Internal ID if already added
+    slug: str | None = None  # Internal slug if already added

@@ -189,13 +189,16 @@
 		}
 
 		if (isShow) {
-			await goto(resolve('/dashboard/tv/[showId]', { showId: data?.id ?? '' }), {
+			await goto(resolve('/dashboard/tv/[showId]', { showId: data?.slug ?? data?.id ?? '' }), {
 				invalidateAll: true
 			});
 		} else {
-			await goto(resolve('/dashboard/movies/[movieId]', { movieId: data?.id ?? '' }), {
-				invalidateAll: true
-			});
+			await goto(
+				resolve('/dashboard/movies/[movieId]', { movieId: data?.slug ?? data?.id ?? '' }),
+				{
+					invalidateAll: true
+				}
+			);
 		}
 		loadingAction = null;
 	}
@@ -336,7 +339,9 @@
 				variant="secondary"
 				href={resolve(
 					isShow ? '/dashboard/tv/[showId]' : '/dashboard/movies/[movieId]',
-					isShow ? { showId: result.id ?? '' } : { movieId: result.id ?? '' }
+					isShow
+						? { showId: result.slug ?? result.id ?? '' }
+						: { movieId: result.slug ?? result.id ?? '' }
 				)}
 			>
 				{isShow ? 'Show already exists' : 'Movie already exists'}

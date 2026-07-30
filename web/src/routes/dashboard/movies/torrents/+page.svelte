@@ -34,7 +34,7 @@
 						</Card.Title>
 					</Card.Header>
 					<Card.Content>
-						<TorrentTable isShow={false} torrents={movie.torrents} movieId={movie.movie_id} />
+						<TorrentTable isShow={false} torrents={movie.torrents} movieSlug={movie.slug} />
 					</Card.Content>
 				</Card.Root>
 			</div>

@@ -23,7 +23,7 @@
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 	function hrefForResult(result: SearchResult): string | undefined {
-		return getMediaTypeHref(result.media_type, result.id);
+		return getMediaTypeHref(result.media_type, result.slug);
 	}
 
 	async function runSearch(query: string) {

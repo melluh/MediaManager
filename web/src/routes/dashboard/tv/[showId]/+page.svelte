@@ -323,7 +323,7 @@
 												e.stopPropagation();
 												goto(
 													resolve('/dashboard/tv/[showId]/[seasonId]', {
-														showId: show.id,
+														showId: show.slug,
 														seasonId: season.id
 													})
 												);
@@ -374,7 +374,7 @@
 			</Card.Header>
 
 			<Card.Content class="w-full overflow-x-auto">
-				<TorrentTable isShow={true} torrents={torrents.torrents} showId={show.id} />
+				<TorrentTable isShow={true} torrents={torrents.torrents} showSlug={show.slug} />
 			</Card.Content>
 		</Card.Root>
 	</div>

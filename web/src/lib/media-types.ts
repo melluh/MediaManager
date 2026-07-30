@@ -6,9 +6,9 @@ import type { MediaType } from '$lib/api/api.d.ts';
  * map (and the backend's MediaType enum / SearchService) when a new media
  * type becomes searchable.
  */
-const MEDIA_TYPE_ROUTES: Record<MediaType, (id: string) => string> = {
-	movie: (id) => resolve('/dashboard/movies/[movieId]', { movieId: id }),
-	tv: (id) => resolve('/dashboard/tv/[showId]', { showId: id })
+const MEDIA_TYPE_ROUTES: Record<MediaType, (slug: string) => string> = {
+	movie: (slug) => resolve('/dashboard/movies/[movieId]', { movieId: slug }),
+	tv: (slug) => resolve('/dashboard/tv/[showId]', { showId: slug })
 };
 
 const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
@@ -16,8 +16,8 @@ const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
 	tv: 'TV Show'
 };
 
-export function getMediaTypeHref(mediaType: MediaType, id: string): string | undefined {
-	return MEDIA_TYPE_ROUTES[mediaType]?.(id);
+export function getMediaTypeHref(mediaType: MediaType, slug: string): string | undefined {
+	return MEDIA_TYPE_ROUTES[mediaType]?.(slug);
 }
 
 export function getMediaTypeLabel(mediaType: MediaType): string {
