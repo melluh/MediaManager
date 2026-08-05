@@ -29,3 +29,4 @@ class AuthMetadata(BaseModel):
     registration_enabled: bool
     allow_self_account_edit: bool
     allow_self_password_change: bool
+    password_login_enabled: bool

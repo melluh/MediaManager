@@ -216,16 +216,45 @@ async def hello_world() -> HealthResponse:
     )
 
 
+def reject_if_password_login_disabled() -> None:
+    if not config.auth.password_login_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Username/password login is disabled.",
+        )
+
+
+def _split_off_login_route(router: APIRouter) -> tuple[APIRouter, APIRouter]:
+    # separated so /login alone can be gated; /logout must stay reachable for OIDC's cookie session too
+    login_router = APIRouter()
+    other_router = APIRouter()
+    for route in router.routes:
+        target = login_router if route.path == "/login" else other_router
+        target.routes.append(route)
+    return login_router, other_router
+
+
+jwt_login_router, jwt_other_router = _split_off_login_route(
+    fastapi_users.get_auth_router(bearer_auth_backend)
+)
 api_app.include_router(
-    fastapi_users.get_auth_router(bearer_auth_backend),
+    jwt_login_router,
     prefix="/auth/jwt",
     tags=["auth"],
+    dependencies=[Depends(reject_if_password_login_disabled)],
+)
+api_app.include_router(jwt_other_router, prefix="/auth/jwt", tags=["auth"])
+
+cookie_login_router, cookie_other_router = _split_off_login_route(
+    fastapi_users.get_auth_router(cookie_auth_backend)
 )
 api_app.include_router(
-    fastapi_users.get_auth_router(cookie_auth_backend),
+    cookie_login_router,
     prefix="/auth/cookie",
     tags=["auth"],
+    dependencies=[Depends(reject_if_password_login_disabled)],
 )
+api_app.include_router(cookie_other_router, prefix="/auth/cookie", tags=["auth"])
 
 
 def reject_if_registration_disabled() -> None:

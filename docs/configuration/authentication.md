@@ -25,10 +25,14 @@ All authentication settings are configured in the `[auth]` section of your `conf
   Allows non-superusers to edit their own username and email on the settings page. Default is `true`.
 * `allow_self_password_change`\
   Allows non-superusers to change their own password on the settings page. Default is `true`.
+* `password_login_enabled`\
+  Allows logging in with a username/password. Set to `false` to require OpenID Connect for all logins. Default is `true`.
 
 !!! info To use email password resets, you must also configure SMTP settings in the `[notifications.smtp_config]` section.
 
 !!! info Superusers can always edit their own account details and change their own password, regardless of `allow_self_account_edit` and `allow_self_password_change`. These settings only restrict non-superusers.
+
+!!! warning Before setting `password_login_enabled` to `false`, make sure `[auth.openid_connect]` `enabled` is `true` and at least one admin account is linked to your OIDC provider (matched by email) — otherwise nobody will be able to log in. The `/auth/jwt/login` and `/auth/cookie/login` endpoints return 403 while this is disabled; existing sessions and logout are unaffected.
 
 !!! info When `registration_enabled` is `false`, the sign-up page is hidden, `/auth/register` returns 403, and OIDC rejects unknown users (existing users keep working). The bootstrap admin (see `admin_emails`) is unaffected.
 
@@ -82,6 +86,7 @@ email_password_resets = true
 registration_enabled = false
 allow_self_account_edit = true
 allow_self_password_change = true
+password_login_enabled = true
 
 [auth.openid_connect]
 enabled = true

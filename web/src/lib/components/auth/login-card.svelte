@@ -14,10 +14,12 @@
 
 	let {
 		oauthProviderNames,
-		registrationEnabled
+		registrationEnabled,
+		passwordLoginEnabled
 	}: {
 		oauthProviderNames: string[];
 		registrationEnabled: boolean;
+		passwordLoginEnabled: boolean;
 	} = $props();
 
 	let email = $state('');
@@ -61,78 +63,94 @@
 <Card.Root class="mx-auto max-w-sm">
 	<Card.Header>
 		<Card.Title class="text-2xl">Login</Card.Title>
+		{#if passwordLoginEnabled}
 		<Card.Description>Enter your details below to log in to your account.</Card.Description>
+		{/if}
 	</Card.Header>
 	<Card.Content>
-		<form class="grid gap-4" onsubmit={handleLogin}>
-			<div class="grid gap-2">
-				<Label for="email">Email</Label>
-				<Input
-					autocomplete="email"
-					bind:value={email}
-					id="email"
-					placeholder="m@example.com"
-					required
-					type="email"
-				/>
-			</div>
-			<div class="grid gap-2">
-				<div class="flex items-center">
-					<Label for="password">Password</Label>
-					<a
-						class="ml-auto inline-block text-sm underline"
-						href={resolve('/login/forgot-password', {})}
+		{#if !passwordLoginEnabled && oauthProviderNames.length === 0}
+			<Alert.Root variant="destructive">
+				<AlertCircleIcon class="size-4" />
+				<Alert.Title>No login methods available</Alert.Title>
+				<Alert.Description>
+					There are currently no login methods configured. Please contact your administrator.
+				</Alert.Description>
+			</Alert.Root>
+		{:else}
+			{#if passwordLoginEnabled}
+				<form class="grid gap-4" onsubmit={handleLogin}>
+					<div class="grid gap-2">
+						<Label for="email">Email</Label>
+						<Input
+							autocomplete="email"
+							bind:value={email}
+							id="email"
+							placeholder="m@example.com"
+							required
+							type="email"
+						/>
+					</div>
+					<div class="grid gap-2">
+						<div class="flex items-center">
+							<Label for="password">Password</Label>
+							<a
+								class="ml-auto inline-block text-sm underline"
+								href={resolve('/login/forgot-password', {})}
+							>
+								Forgot your password?
+							</a>
+						</div>
+						<Input
+							autocomplete="current-password"
+							bind:value={password}
+							id="password"
+							required
+							type="password"
+						/>
+					</div>
+
+					{#if errorMessage}
+						<Alert.Root variant="destructive">
+							<AlertCircleIcon class="size-4" />
+							<Alert.Title>Error</Alert.Title>
+							<Alert.Description>{errorMessage}</Alert.Description>
+						</Alert.Root>
+					{/if}
+
+					{#if successMessage}
+						<Alert.Root variant="default">
+							<Alert.Title>Success</Alert.Title>
+							<Alert.Description>{successMessage}</Alert.Description>
+						</Alert.Root>
+					{/if}
+
+					{#if isLoading}
+						<LoadingBar />
+					{/if}
+					<Button class="w-full" disabled={isLoading} type="submit">Login</Button>
+				</form>
+			{/if}
+			{#each oauthProviderNames as name (name)}
+				{#if passwordLoginEnabled}
+					<div
+						class="relative mt-2 text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border"
 					>
-						Forgot your password?
-					</a>
-				</div>
-				<Input
-					autocomplete="current-password"
-					bind:value={password}
-					id="password"
-					required
-					type="password"
-				/>
-			</div>
-
-			{#if errorMessage}
-				<Alert.Root variant="destructive">
-					<AlertCircleIcon class="size-4" />
-					<Alert.Title>Error</Alert.Title>
-					<Alert.Description>{errorMessage}</Alert.Description>
-				</Alert.Root>
-			{/if}
-
-			{#if successMessage}
-				<Alert.Root variant="default">
-					<Alert.Title>Success</Alert.Title>
-					<Alert.Description>{successMessage}</Alert.Description>
-				</Alert.Root>
-			{/if}
-
-			{#if isLoading}
-				<LoadingBar />
-			{/if}
-			<Button class="w-full" disabled={isLoading} type="submit">Login</Button>
-		</form>
-		{#each oauthProviderNames as name (name)}
-			<div
-				class="relative mt-2 text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border"
-			>
-				<span class="relative z-10 bg-background px-2 text-muted-foreground">
-					Or continue with
-				</span>
-			</div>
-			<Button class="mt-2 w-full" onclick={() => handleOauth()} variant="outline"
-				>Login with {name}</Button
-			>
-		{/each}
-		{#if registrationEnabled}
-			<div class="mt-4 text-center text-sm">
-				<Button href={resolve('/login/signup/', {})} variant="link"
-					>Don't have an account? Sign up</Button
+						<span class="relative z-10 bg-background px-2 text-muted-foreground">
+							Or continue with
+						</span>
+					</div>
+				{/if}
+				<Button class="mt-2 w-full" onclick={() => handleOauth()} variant="outline"
+					>Login with {name}</Button
 				>
-			</div>
+			{/each}
+			{#if registrationEnabled && passwordLoginEnabled}
+				<div class="mt-4 text-center text-sm">
+					<Button href={resolve('/login/signup/', {})} variant="link"
+						>Don't have an account? Sign up</Button
+					>
+				</div>
+			{/if}
 		{/if}
 	</Card.Content>
 </Card.Root>

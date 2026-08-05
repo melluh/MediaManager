@@ -17,5 +17,6 @@
 	<LoginCard
 		oauthProviderNames={loginMetaData.oauth_providers}
 		registrationEnabled={loginMetaData.registration_enabled}
+		passwordLoginEnabled={loginMetaData.password_login_enabled}
 	/>
 </main>

@@ -1310,6 +1310,8 @@ export interface components {
 			allow_self_account_edit: boolean;
 			/** Allow Self Password Change */
 			allow_self_password_change: boolean;
+			/** Password Login Enabled */
+			password_login_enabled: boolean;
 		};
 		/** BearerResponse */
 		BearerResponse: {

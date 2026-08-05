@@ -127,4 +127,5 @@ def get_auth_metadata() -> AuthMetadata:
         registration_enabled=auth_config.registration_enabled,
         allow_self_account_edit=auth_config.allow_self_account_edit,
         allow_self_password_change=auth_config.allow_self_password_change,
+        password_login_enabled=auth_config.password_login_enabled,
     )
