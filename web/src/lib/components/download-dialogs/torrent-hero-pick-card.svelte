@@ -51,7 +51,7 @@
 					<a
 						href={result.comments}
 						target="_blank"
-						rel="noopener noreferrer"
+						rel="noopener noreferrer external"
 						class="hover:underline"
 					>
 						{result.title}

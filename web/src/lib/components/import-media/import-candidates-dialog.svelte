@@ -7,6 +7,7 @@
 	import { Spinner } from '$lib/components/ui/spinner';
 	import SuggestedMediaCard from '$lib/components/import-media/suggested-media-card.svelte';
 	import { invalidateAll } from '$app/navigation';
+	import type { Snippet } from 'svelte';
 
 	let {
 		isTv,
@@ -17,7 +18,7 @@
 		isTv: boolean;
 		name: string;
 		candidates: MetaDataProviderSearchResult[];
-		children: any;
+		children?: Snippet;
 	} = $props();
 	let dialogOpen = $state(false);
 	let submitRequestError = $state<string | null>(null);

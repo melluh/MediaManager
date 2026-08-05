@@ -2,15 +2,16 @@
 	import { ArrowDown, ArrowUp, LoaderCircle } from 'lucide-svelte';
 	import * as Table from '$lib/components/ui/table';
 	import { type Snippet } from 'svelte';
+	import type { IndexerQueryResult } from '$lib/api/api';
 
 	let {
 		torrentsPromise,
 		columns,
 		rowSnippet
 	}: {
-		torrentsPromise: Promise<any>;
+		torrentsPromise: Promise<IndexerQueryResult[] | undefined> | null | undefined;
 		columns: { name: string; id: string }[];
-		rowSnippet: Snippet<[any]>;
+		rowSnippet: Snippet<[IndexerQueryResult]>;
 	} = $props();
 
 	// Defaults to slot_index (the backend's slot-priority-then-score order):
@@ -30,24 +31,30 @@
 			sortBy = { col: column, ascending: true };
 		}
 	}
-	function sort(data: any[], column: string, ascending: boolean): any[] {
+	function compareValues(a: unknown, b: unknown): number {
+		if (typeof a === 'number' && typeof b === 'number') return a - b;
+		if (typeof a === 'boolean' && typeof b === 'boolean') return Number(a) - Number(b);
+		return String(a).localeCompare(String(b));
+	}
+
+	function sort(
+		data: IndexerQueryResult[],
+		column: string,
+		ascending: boolean
+	): IndexerQueryResult[] {
 		let modifier = ascending ? 1 : -1;
 		return [...data].sort((a, b) => {
+			const aVal = (a as Record<string, unknown>)[column];
+			const bVal = (b as Record<string, unknown>)[column];
 			// Unslotted results (slot_index == null) always sort last,
 			// regardless of direction - they never belong ahead of a
 			// classified pick.
 			if (column === 'slot_index') {
-				if (a[column] == null && b[column] == null) return 0;
-				if (a[column] == null) return 1;
-				if (b[column] == null) return -1;
+				if (aVal == null && bVal == null) return 0;
+				if (aVal == null) return 1;
+				if (bVal == null) return -1;
 			}
-			if (a[column] < b[column]) {
-				return -1 * modifier;
-			} else if (a[column] > b[column]) {
-				return modifier;
-			} else {
-				return 0;
-			}
+			return compareValues(aVal, bVal) * modifier;
 		});
 	}
 </script>

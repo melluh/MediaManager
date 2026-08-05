@@ -70,6 +70,7 @@
 		const query = searchTerm.trim();
 		if (query.length === 0) return;
 		isOpen = false;
+		// eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve() result, with a query string appended
 		goto(`${resolve('/dashboard/search', {})}?q=${encodeURIComponent(query)}`);
 	}
 
@@ -90,6 +91,7 @@
 			if (highlighted) {
 				const href = hrefForResult(highlighted);
 				isOpen = false;
+				// eslint-disable-next-line svelte/no-navigation-without-resolve -- href is built from resolve() in getMediaTypeHref
 				if (href) goto(href);
 			} else {
 				goToSearchPage();
@@ -140,6 +142,7 @@
 				</p>
 			{:else}
 				{#each results as result, index (result.id)}
+					<!-- eslint-disable svelte/no-navigation-without-resolve -- href is built from resolve() in getMediaTypeHref -->
 					<a
 						href={hrefForResult(result)}
 						class={cn(
@@ -151,6 +154,7 @@
 						onmouseenter={() => (highlightedIndex = index)}
 						onclick={() => (isOpen = false)}
 					>
+						<!-- eslint-enable svelte/no-navigation-without-resolve -->
 						<div class="relative h-12 w-9 shrink-0 overflow-hidden rounded">
 							<MediaPicture media={result} bind:loaded={posterLoaded[result.id]} />
 							{#if !posterLoaded[result.id]}

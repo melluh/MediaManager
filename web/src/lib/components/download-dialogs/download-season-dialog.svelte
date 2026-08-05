@@ -13,7 +13,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { ChevronDown, Download } from 'lucide-svelte';
 	import client from '$lib/api';
-	import type { Show } from '$lib/api/api';
+	import type { IndexerQueryResult, Show } from '$lib/api/api';
 	import SelectFilePathSuffixDialog from '$lib/components/download-dialogs/select-file-path-suffix-dialog.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import TorrentTable from '$lib/components/download-dialogs/torrent-table.svelte';
@@ -30,8 +30,8 @@
 	let queryOverride: string = $state('');
 	let filePathSuffix: string = $state('');
 
-	let torrentsPromise: any = $state();
-	let torrentsData: any[] | null = $state(null);
+	let torrentsPromise: Promise<IndexerQueryResult[] | undefined> | undefined = $state();
+	let torrentsData: IndexerQueryResult[] | null = $state(null);
 	let tabState: string = $state('basic');
 	let isLoading: boolean = $state(false);
 	let showFullList: boolean = $state(false);
@@ -98,7 +98,7 @@
 
 		toast.info('Searching for torrents...');
 
-		torrentsData = await torrentsPromise;
+		torrentsData = (await torrentsPromise) ?? null;
 		toast.info('Found ' + torrentsData?.length + ' torrents.');
 	}
 </script>
@@ -171,7 +171,7 @@
 							<a
 								href={torrent.comments}
 								target="_blank"
-								rel="noopener noreferrer"
+								rel="noopener noreferrer external"
 								class="hover:underline">{torrent.title}</a
 							>
 						{:else}
@@ -207,7 +207,7 @@
 						<SelectFilePathSuffixDialog
 							bind:filePathSuffix
 							media={show}
-							callback={() => downloadTorrent(torrent.id)}
+							callback={() => downloadTorrent(torrent.id as string)}
 						/>
 					</Table.Cell>
 				{/snippet}

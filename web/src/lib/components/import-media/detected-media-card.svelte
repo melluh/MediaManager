@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
+	import type { Snippet } from 'svelte';
 
 	let {
 		directory,
@@ -8,7 +9,7 @@
 	}: {
 		directory: string;
 		isTv: boolean;
-		children: any;
+		children?: Snippet;
 	} = $props();
 </script>
 

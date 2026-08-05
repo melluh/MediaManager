@@ -207,7 +207,7 @@
 								<a
 									href={getMetadataProviderUrl(show.metadata_provider, show.external_id, true)}
 									target="_blank"
-									rel="noopener noreferrer"
+									rel="noopener noreferrer external"
 									class="underline hover:text-foreground"
 								>
 									{getMetadataProviderLabel(show.metadata_provider)}

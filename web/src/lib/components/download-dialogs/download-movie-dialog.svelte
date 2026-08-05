@@ -17,7 +17,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import client from '$lib/api';
-	import type { Movie } from '$lib/api/api';
+	import type { IndexerQueryResult, Movie } from '$lib/api/api';
 	import { invalidateAll } from '$app/navigation';
 	import TorrentTable from '$lib/components/download-dialogs/torrent-table.svelte';
 	import DownloadDialogWrapper from '$lib/components/download-dialogs/download-dialog-wrapper.svelte';
@@ -32,8 +32,8 @@
 	let torrentsError: string | null = $state(null);
 	let queryOverride: string = $state('');
 
-	let torrentsPromise: any = $state(null);
-	let torrentsData: any[] | null = $state(null);
+	let torrentsPromise: Promise<IndexerQueryResult[] | undefined> | null = $state(null);
+	let torrentsData: IndexerQueryResult[] | null = $state(null);
 	let isLoading: boolean = $state(false);
 	let downloadingResultId: string | null = $state(null);
 	let showFullList: boolean = $state(false);
@@ -107,7 +107,7 @@
 			})
 			.then((data) => data?.data)
 			.finally(() => (isLoading = false));
-		torrentsData = await torrentsPromise;
+		torrentsData = (await torrentsPromise) ?? null;
 	}
 
 	// TODO: reimplement
@@ -156,7 +156,7 @@
 						<a
 							href={torrent.comments}
 							target="_blank"
-							rel="noopener noreferrer"
+							rel="noopener noreferrer external"
 							class="hover:underline">{torrent.title}</a
 						>
 					{:else}
@@ -177,7 +177,7 @@
 					<Button
 						class="w-full"
 						disabled={downloadingResultId !== null}
-						onclick={() => downloadTorrent(torrent.id)}
+						onclick={() => downloadTorrent(torrent.id as string)}
 					>
 						{#if downloadingResultId === torrent.id}
 							<LoaderCircle class="animate-spin" />

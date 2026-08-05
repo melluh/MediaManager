@@ -8,7 +8,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { ChevronDown, Download } from 'lucide-svelte';
 	import client from '$lib/api';
-	import type { Show } from '$lib/api/api';
+	import type { IndexerQueryResult, Show } from '$lib/api/api';
 	import SelectFilePathSuffixDialog from '$lib/components/download-dialogs/select-file-path-suffix-dialog.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import TorrentTable from '$lib/components/download-dialogs/torrent-table.svelte';
@@ -30,8 +30,8 @@
 	let dialogueState = $state(false);
 	let torrentsError: string | null = $state(null);
 	let filePathSuffix: string = $state('');
-	let torrentsPromise: any = $state();
-	let torrentsData: any[] | null = $state(null);
+	let torrentsPromise: Promise<IndexerQueryResult[]> | undefined = $state();
+	let torrentsData: IndexerQueryResult[] | null = $state(null);
 	let isLoading: boolean = $state(false);
 	let showFullList: boolean = $state(false);
 	let grouped = $derived(groupIntoSlots(torrentsData));
@@ -123,9 +123,11 @@
 
 		try {
 			torrentsData = await torrentsPromise;
-		} catch (error: any) {
+		} catch (error) {
 			console.error(error);
-			torrentsError = error.message || 'An error occurred while searching for torrents.';
+			torrentsError =
+				(error instanceof Error && error.message) ||
+				'An error occurred while searching for torrents.';
 			toast.error(torrentsError);
 		}
 	}
@@ -206,7 +208,7 @@
 							<a
 								href={torrent.comments}
 								target="_blank"
-								rel="noopener noreferrer"
+								rel="noopener noreferrer external"
 								class="hover:underline">{torrent.title}</a
 							>
 						{:else}
@@ -238,7 +240,7 @@
 						<SelectFilePathSuffixDialog
 							bind:filePathSuffix
 							media={show}
-							callback={() => downloadTorrent(torrent.id)}
+							callback={() => downloadTorrent(torrent.id as string)}
 						/>
 					</Table.Cell>
 				{/snippet}

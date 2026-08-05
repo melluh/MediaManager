@@ -101,7 +101,7 @@
 								<a
 									href={getMetadataProviderUrl(movie.metadata_provider, movie.external_id, false)}
 									target="_blank"
-									rel="noopener noreferrer"
+									rel="noopener noreferrer external"
 									class="underline hover:text-foreground"
 								>
 									{getMetadataProviderLabel(movie.metadata_provider)}

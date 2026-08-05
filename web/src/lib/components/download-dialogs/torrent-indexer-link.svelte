@@ -9,7 +9,7 @@
 	<a
 		href={comments}
 		target="_blank"
-		rel="noopener noreferrer"
+		rel="noopener noreferrer external"
 		class="flex shrink-0 items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
 	>
 		{indexer ?? 'Unknown'}
