@@ -139,8 +139,7 @@
 				<Alert.Root variant="destructive">
 					<AlertCircleIcon class="size-4" />
 					<Alert.Title>Search failed</Alert.Title>
-					<Alert.Description>Could not search your library. Please try again.</Alert.Description
-					>
+					<Alert.Description>Could not search your library. Please try again.</Alert.Description>
 				</Alert.Root>
 			{:else if localResults.length === 0}
 				<p class="text-muted-foreground">No matching media in your library.</p>

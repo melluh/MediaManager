@@ -102,10 +102,7 @@
 		return true;
 	}
 
-	async function saveToggle(
-		field: 'is_verified' | 'is_active' | 'is_superuser',
-		value: boolean
-	) {
+	async function saveToggle(field: 'is_verified' | 'is_active' | 'is_superuser', value: boolean) {
 		if (!selectedUser) return;
 		const previousValue = selectedUser[field];
 		selectedUser[field] = value;
@@ -180,7 +177,7 @@
 				</Table.Cell>
 				<Table.Cell>
 					{#if user.id === currentUserId}
-						<span class="text-sm italic text-muted-foreground">This is your own account</span>
+						<span class="text-sm text-muted-foreground italic">This is your own account</span>
 					{:else}
 						<div class="flex gap-2">
 							<Button
@@ -340,7 +337,8 @@
 					type="password"
 				/>
 				<p class="mt-1 text-sm text-muted-foreground">
-					Leave blank to randomly generate the password. This may be useful when the user will only sign in via OIDC.
+					Leave blank to randomly generate the password. This may be useful when the user will only
+					sign in via OIDC.
 				</p>
 			</div>
 			<hr />

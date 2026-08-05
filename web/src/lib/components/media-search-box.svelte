@@ -137,9 +137,7 @@
 			class="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
 		>
 			{#if hasError}
-				<p class="px-2 py-1.5 text-sm text-destructive">
-					Search failed. Please try again.
-				</p>
+				<p class="px-2 py-1.5 text-sm text-destructive">Search failed. Please try again.</p>
 			{:else}
 				{#each results as result, index (result.id)}
 					<!-- eslint-disable svelte/no-navigation-without-resolve -- href is built from resolve() in getMediaTypeHref -->
@@ -180,8 +178,8 @@
 				onmouseenter={() => (highlightedIndex = -1)}
 				onclick={goToSearchPage}
 			>
-				Press <kbd class="rounded border bg-muted px-1 py-0.5 font-mono text-xs">Enter</kbd> to search
-				for "{searchTerm.trim()}"
+				Press <kbd class="rounded border bg-muted px-1 py-0.5 font-mono text-xs">Enter</kbd> to
+				search for "{searchTerm.trim()}"
 			</button>
 		</div>
 	{/if}

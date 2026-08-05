@@ -77,7 +77,7 @@
 					for="delete-files"
 					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 				>
-					Also delete files on disk<br>
+					Also delete files on disk<br />
 					<span class="text-sm text-muted-foreground">Removes imported files (not downloads)</span>
 				</Label>
 			</div>
@@ -87,8 +87,10 @@
 					for="delete-torrents"
 					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 				>
-					Also delete torrents<br>
-					<span class="text-sm text-muted-foreground">Removes torrents from your download clients</span>
+					Also delete torrents<br />
+					<span class="text-sm text-muted-foreground"
+						>Removes torrents from your download clients</span
+					>
 				</Label>
 			</div>
 		</div>

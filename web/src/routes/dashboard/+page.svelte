@@ -6,7 +6,11 @@
 	import { getTorrentQualityString, getTorrentStatusString } from '$lib/utils';
 	import { getContext, onMount } from 'svelte';
 	import client from '$lib/api';
-	import type { MetaDataProviderSearchResult, MediaImportSuggestion, UserRead } from '$lib/api/api.d.ts';
+	import type {
+		MetaDataProviderSearchResult,
+		MediaImportSuggestion,
+		UserRead
+	} from '$lib/api/api.d.ts';
 	import type { PageProps } from './$types';
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
@@ -94,14 +98,10 @@
 		{/if}
 
 		<div class="mx-auto">
-			<h3 class="my-4 text-2xl font-semibold ml-12">Trending Shows</h3>
-			<RecommendedMediaCarousel
-				isLoading={showsLoading}
-				isShow={true}
-				media={recommendedShows}
-			/>
+			<h3 class="my-4 ml-12 text-2xl font-semibold">Trending Shows</h3>
+			<RecommendedMediaCarousel isLoading={showsLoading} isShow={true} media={recommendedShows} />
 
-			<h3 class="my-4 text-2xl font-semibold ml-12 mt-8">Trending Movies</h3>
+			<h3 class="my-4 mt-8 ml-12 text-2xl font-semibold">Trending Movies</h3>
 			<RecommendedMediaCarousel
 				isLoading={moviesLoading}
 				isShow={false}

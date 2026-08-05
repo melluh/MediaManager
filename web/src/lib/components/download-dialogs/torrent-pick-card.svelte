@@ -1,16 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
-	import {
-		Captions,
-		Circle,
-		CircleCheck,
-		Film,
-		Gauge,
-		HardDrive,
-		Tag,
-		Users
-	} from 'lucide-svelte';
+	import { Captions, Circle, CircleCheck, Film, Gauge, HardDrive, Tag, Users } from 'lucide-svelte';
 	import TorrentStat from '$lib/components/download-dialogs/torrent-stat.svelte';
 	import TorrentBadges from '$lib/components/download-dialogs/torrent-badges.svelte';
 	import TorrentIndexerLink from '$lib/components/download-dialogs/torrent-indexer-link.svelte';

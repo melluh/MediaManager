@@ -11,9 +11,7 @@
 
 	let currentUser: () => UserRead = getContext('user');
 
-	let canEditAccount = $derived(
-		currentUser().is_superuser || authMetadata.allow_self_account_edit
-	);
+	let canEditAccount = $derived(currentUser().is_superuser || authMetadata.allow_self_account_edit);
 	let canChangePassword = $derived(
 		currentUser().is_superuser || authMetadata.allow_self_password_change
 	);

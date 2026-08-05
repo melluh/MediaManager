@@ -100,7 +100,7 @@
 			{#if value}
 				<span class="text-sm" {id}>{value}</span>
 			{:else}
-				<span class="text-sm italic text-muted-foreground" {id}>Not set</span>
+				<span class="text-sm text-muted-foreground italic" {id}>Not set</span>
 			{/if}
 			<Button aria-label="Edit {label}" onclick={startEdit} size="icon" variant="ghost">
 				<Pencil class="size-4" />
@@ -113,7 +113,7 @@
 					{#if value}
 						<span class="text-sm" {id} {...props}>{value}</span>
 					{:else}
-						<span class="text-sm italic text-muted-foreground" {id} {...props}>Not set</span>
+						<span class="text-sm text-muted-foreground italic" {id} {...props}>Not set</span>
 					{/if}
 				{/snippet}
 			</Tooltip.Trigger>

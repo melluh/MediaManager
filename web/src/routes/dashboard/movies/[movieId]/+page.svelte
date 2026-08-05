@@ -75,7 +75,7 @@
 				<Card.Content class="flex flex-1 flex-col justify-between gap-4">
 					<div class="flex flex-col gap-3">
 						{#if movie.tagline}
-							<p class="text-sm italic text-muted-foreground">"{movie.tagline}"</p>
+							<p class="text-sm text-muted-foreground italic">"{movie.tagline}"</p>
 						{/if}
 						<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
 							{#if formatReleaseDate(movie.release_date)}
