@@ -258,7 +258,7 @@ api_app.include_router(cookie_other_router, prefix="/auth/cookie", tags=["auth"]
 
 
 def reject_if_registration_disabled() -> None:
-    if not config.auth.registration_enabled:
+    if not config.auth.registration_enabled or not config.auth.password_login_enabled:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User registration is disabled.",
