@@ -5,15 +5,17 @@
 	import { Search, LoaderCircle } from 'lucide-svelte';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import client from '$lib/api';
 	import type { SearchResult } from '$lib/api/api.d.ts';
-	import { cn, getFullyQualifiedMediaName } from '$lib/utils.js';
+	import { cn, getFullyQualifiedMediaName, withoutTrailingSlash } from '$lib/utils.js';
 	import { getMediaTypeHref } from '$lib/media-types.ts';
 
 	let { class: className = '' }: { class?: string } = $props();
 
 	let searchTerm = $state('');
 	let results: SearchResult[] = $state([]);
+	let hasSearched = $state(false);
 	let isOpen = $state(false);
 	let isLoading = $state(false);
 	let hasError = $state(false);
@@ -21,18 +23,49 @@
 	let posterLoaded: Record<string, boolean> = $state({});
 	let containerRef: HTMLDivElement | undefined = $state();
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+	let searchAbortController: AbortController | undefined;
 
 	function hrefForResult(result: SearchResult): string | undefined {
 		return getMediaTypeHref(result.media_type, result.slug);
 	}
 
+	function cancelPendingSearch() {
+		clearTimeout(debounceTimer);
+		searchAbortController?.abort();
+		isLoading = false;
+	}
+
+	function clearSearch() {
+		cancelPendingSearch();
+		searchTerm = '';
+		results = [];
+		hasSearched = false;
+		isOpen = false;
+		highlightedIndex = -1;
+		hasError = false;
+	}
+
+	$effect(() => {
+		const onSearchPage =
+			withoutTrailingSlash(page.url.pathname) ===
+			withoutTrailingSlash(resolve('/dashboard/search', {}));
+		if (!onSearchPage) {
+			clearSearch();
+		}
+	});
+
 	async function runSearch(query: string) {
+		searchAbortController?.abort();
+		const controller = new AbortController();
+		searchAbortController = controller;
 		isLoading = true;
 		hasError = false;
 		try {
 			const { data, error } = await client.GET('/api/v1/search', {
-				params: { query: { q: query } }
+				params: { query: { q: query } },
+				signal: controller.signal
 			});
+			if (controller.signal.aborted) return;
 			if (error) {
 				hasError = true;
 				results = [];
@@ -42,14 +75,17 @@
 					if (!(result.id in posterLoaded)) posterLoaded[result.id] = false;
 				}
 			}
+			hasSearched = true;
 			highlightedIndex = -1;
 			isOpen = true;
 		} catch {
+			if (controller.signal.aborted) return;
 			hasError = true;
 			results = [];
+			hasSearched = true;
 			isOpen = true;
 		} finally {
-			isLoading = false;
+			if (searchAbortController === controller) isLoading = false;
 		}
 	}
 
@@ -57,7 +93,9 @@
 		clearTimeout(debounceTimer);
 		const query = searchTerm.trim();
 		if (query.length === 0) {
+			searchAbortController?.abort();
 			results = [];
+			hasSearched = false;
 			isOpen = false;
 			highlightedIndex = -1;
 			hasError = false;
@@ -69,6 +107,7 @@
 	function goToSearchPage() {
 		const query = searchTerm.trim();
 		if (query.length === 0) return;
+		cancelPendingSearch();
 		isOpen = false;
 		// eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve() result, with a query string appended
 		goto(`${resolve('/dashboard/search', {})}?q=${encodeURIComponent(query)}`);
@@ -90,6 +129,7 @@
 			const highlighted = results[highlightedIndex];
 			if (highlighted) {
 				const href = hrefForResult(highlighted);
+				cancelPendingSearch();
 				isOpen = false;
 				// eslint-disable-next-line svelte/no-navigation-without-resolve -- href is built from resolve() in getMediaTypeHref
 				if (href) goto(href);
@@ -127,7 +167,7 @@
 		class="pl-9"
 		oninput={handleInput}
 		onfocus={() => {
-			if (results.length > 0) isOpen = true;
+			if (hasSearched || results.length > 0) isOpen = true;
 		}}
 		onkeydown={handleKeydown}
 	/>
@@ -150,7 +190,10 @@
 								: 'hover:bg-accent hover:text-accent-foreground'
 						)}
 						onmouseenter={() => (highlightedIndex = index)}
-						onclick={() => (isOpen = false)}
+						onclick={() => {
+							cancelPendingSearch();
+							isOpen = false;
+						}}
 					>
 						<!-- eslint-enable svelte/no-navigation-without-resolve -->
 						<div class="relative h-12 w-9 shrink-0 overflow-hidden rounded">

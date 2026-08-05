@@ -24,6 +24,10 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
+export function withoutTrailingSlash(pathname: string): string {
+	return pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+}
+
 export function getTorrentQualityString(value: number): string {
 	return qualityMap[value] || 'unknown';
 }
