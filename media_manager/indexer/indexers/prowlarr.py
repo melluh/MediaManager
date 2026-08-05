@@ -183,6 +183,7 @@ class Prowlarr(GenericIndexer, TorznabMixin):
     def ping(self) -> bool:
         try:
             response = self._call_prowlarr_api("/system/status")
-            return response.ok
-        except Exception:
+        except Exception:  # noqa: BLE001 # ping should report failure for any reason
             return False
+        else:
+            return response.ok

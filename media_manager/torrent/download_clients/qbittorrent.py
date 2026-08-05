@@ -217,6 +217,7 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
     def ping(self) -> bool:
         try:
             self.api_client.auth_log_in()
-            return True
-        except Exception:
+        except Exception:  # noqa: BLE001 # ping should report failure for any reason
             return False
+        else:
+            return True

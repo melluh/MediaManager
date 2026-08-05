@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from urllib.parse import quote
 
 import taskiq_fastapi
@@ -79,7 +79,7 @@ async def update_all_non_ended_shows_metadata_task(
 async def delete_expired_indexer_query_results_task(
     db: AsyncSession = TaskiqDepends(get_async_session),
 ) -> None:
-    cutoff = datetime.now(timezone.utc) - INDEXER_QUERY_RESULT_EXPIRY
+    cutoff = datetime.now(UTC) - INDEXER_QUERY_RESULT_EXPIRY
     result = await db.execute(
         delete(IndexerQueryResult).where(IndexerQueryResult.created_at < cutoff)
     )

@@ -173,9 +173,8 @@ def follow_redirects_to_final_torrent_url(
             else:
                 response.raise_for_status()  # Raise an exception for bad status codes
                 return current_url
-        else:
-            msg = "Exceeded maximum number of redirects"
-            raise RuntimeError(msg)
+        msg = "Exceeded maximum number of redirects"
+        raise RuntimeError(msg)
 
     except requests.exceptions.RequestException as e:
         log.debug(

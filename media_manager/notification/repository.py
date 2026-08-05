@@ -79,17 +79,14 @@ class NotificationRepository:
             log.exception("Could not save notification")
             msg = f"Notification with id {notification.id} already exists."
             raise ConflictError(msg) from None
-        return
 
     async def mark_notification_as_read(self, nid: NotificationId) -> None:
         stmt = update(Notification).where(Notification.id == nid).values(read=True)
         await self.db.execute(stmt)
-        return
 
     async def mark_notification_as_unread(self, nid: NotificationId) -> None:
         stmt = update(Notification).where(Notification.id == nid).values(read=False)
         await self.db.execute(stmt)
-        return
 
     async def delete_notification(self, nid: NotificationId) -> None:
         stmt = delete(Notification).where(Notification.id == nid)
@@ -98,4 +95,3 @@ class NotificationRepository:
             msg = f"Notification with id {nid} not found."
             raise NotFoundError(msg)
         await self.db.commit()
-        return

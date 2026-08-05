@@ -127,9 +127,13 @@ def _derive_audio(
         if mapped and mapped not in codecs:
             codecs.append(mapped)
 
-    if audio_profile and "master audio" in audio_profile.lower() and "dts" not in codecs:
-        if any("dts" in t.lower() for t in tokens):
-            codecs.append("dts")
+    if (
+        audio_profile
+        and "master audio" in audio_profile.lower()
+        and "dts" not in codecs
+        and any("dts" in t.lower() for t in tokens)
+    ):
+        codecs.append("dts")
 
     if has_atmos:
         codecs.append("atmos")

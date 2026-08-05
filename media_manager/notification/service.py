@@ -37,4 +37,3 @@ class NotificationService:
 
         internal_notification = Notification(message=f"{title}: {message}", read=False)
         await self.save_notification(internal_notification)
-        return

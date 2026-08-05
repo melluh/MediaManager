@@ -307,7 +307,6 @@ async def set_library(
     Set the library path for a Show.
     """
     await tv_service.set_show_library(show=show, library=library)
-    return
 
 
 @router.get(

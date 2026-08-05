@@ -298,7 +298,6 @@ async def set_library(
     Set the library path for a Movie.
     """
     await movie_service.set_movie_library(movie=movie, library=library)
-    return
 
 
 @router.get(

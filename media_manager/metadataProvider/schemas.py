@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
@@ -6,7 +6,7 @@ from media_manager.movies.schemas import MovieId
 from media_manager.tv.schemas import ShowId
 
 
-class MediaType(str, Enum):
+class MediaType(StrEnum):
     """
     The media types a metadata provider (or the local search index) can
     return. Add a member here when a new media type becomes searchable.

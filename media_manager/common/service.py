@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -253,7 +253,7 @@ class BaseMetadataService[T, S]:
 
         refetch_interval_hours = MediaManagerConfig().metadata.refetch_interval_hours
         min_age = timedelta(hours=refetch_interval_hours)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         media_list = [
             item
             for item in media_list

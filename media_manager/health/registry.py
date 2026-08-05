@@ -1,5 +1,5 @@
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from media_manager.health.schemas import ServiceHealth, ServiceStatus, SystemHealth
 
@@ -24,7 +24,7 @@ class HealthRegistry:
             display_name=display_name,
             status=status,
             message=message,
-            last_checked=datetime.now(timezone.utc),
+            last_checked=datetime.now(UTC),
         )
         with self._lock:
             self._services[key] = entry

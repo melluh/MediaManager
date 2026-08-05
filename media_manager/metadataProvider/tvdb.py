@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import override
 
 import httpx
@@ -142,7 +142,7 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
             seasons=seasons,
             ended=False,
             imdb_id=imdb_id,
-            metadata_updated_at=datetime.now(timezone.utc),
+            metadata_updated_at=datetime.now(UTC),
         )
 
     @override
@@ -372,5 +372,5 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
             external_id=movie["id"],
             metadata_provider=self.name,
             imdb_id=imdb_id,
-            metadata_updated_at=datetime.now(timezone.utc),
+            metadata_updated_at=datetime.now(UTC),
         )

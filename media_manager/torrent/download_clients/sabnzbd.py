@@ -130,9 +130,10 @@ class SabnzbdDownloadClient(AbstractDownloadClient):
     def ping(self) -> bool:
         try:
             self.client.version()
-            return True
-        except Exception:
+        except Exception:  # noqa: BLE001 # ping should report failure for any reason
             return False
+        else:
+            return True
 
     def _map_status(self, sabnzbd_status: str) -> TorrentStatus:
         """

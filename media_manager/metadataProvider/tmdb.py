@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import override
 
 import httpx
@@ -297,7 +297,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         def is_stale() -> bool:
             return (
                 _genre_maps_fetched_at is None
-                or datetime.now(timezone.utc) - _genre_maps_fetched_at
+                or datetime.now(UTC) - _genre_maps_fetched_at
                 > GENRE_MAP_MAX_AGE
             )
 
@@ -320,7 +320,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                 _tv_genre_map = {
                     genre["id"]: genre["name"] for genre in data.get("tv", [])
                 }
-                _genre_maps_fetched_at = datetime.now(timezone.utc)
+                _genre_maps_fetched_at = datetime.now(UTC)
             except httpx.HTTPError:
                 log.warning("Failed to fetch TMDB genre lists", exc_info=True)
 
@@ -436,7 +436,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             ),
             runtime=episode_run_times[0] if episode_run_times else None,
             release_date=show_metadata.get("first_air_date") or None,
-            metadata_updated_at=datetime.now(timezone.utc),
+            metadata_updated_at=datetime.now(UTC),
         )
 
     @override
@@ -550,7 +550,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             ),
             runtime=movie_metadata.get("runtime"),
             release_date=movie_metadata.get("release_date") or None,
-            metadata_updated_at=datetime.now(timezone.utc),
+            metadata_updated_at=datetime.now(UTC),
         )
 
     @override

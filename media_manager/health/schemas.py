@@ -1,10 +1,10 @@
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class ServiceStatus(str, Enum):
+class ServiceStatus(StrEnum):
     healthy = "healthy"
     unavailable = "unavailable"
     unknown = "unknown"

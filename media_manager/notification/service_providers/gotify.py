@@ -24,6 +24,4 @@ class GotifyNotificationServiceProvider(AbstractNotificationServiceProvider):
                     "title": message.title,
                 },
             )
-        if response.status_code not in range(200, 300):
-            return False
-        return True
+        return response.status_code in range(200, 300)

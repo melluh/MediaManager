@@ -105,7 +105,7 @@ class TvService(BaseMediaService[Show, Show]):
                         await self.torrent_service.cancel_download(torrent, delete_files=True)
                         await self.torrent_service.delete_torrent(torrent_id=torrent.id)
                         log.info(f"Deleted torrent: {torrent.hash}")
-                    except Exception:
+                    except Exception:  # noqa: BLE001 # best-effort cleanup, continue on any failure
                         log.warning(
                             f"Failed to delete torrent {torrent.hash}", exc_info=True
                         )

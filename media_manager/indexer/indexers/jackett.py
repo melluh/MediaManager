@@ -216,6 +216,7 @@ class Jackett(GenericIndexer, TorznabMixin):
                     params={"apikey": self.api_key, "t": "caps"},
                     timeout=5,
                 )
-            return response.ok
-        except Exception:
+        except Exception:  # noqa: BLE001 # ping should report failure for any reason
             return False
+        else:
+            return response.ok

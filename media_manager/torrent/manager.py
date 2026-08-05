@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from media_manager.config import MediaManagerConfig
 from media_manager.indexer.schemas import IndexerQueryResult
@@ -43,42 +43,45 @@ class DownloadManager:
 
     def _try_init_torrent(self) -> None:
         """Try to initialize the torrent client. Updates internal state."""
-        self._torrent_last_attempt = datetime.now(timezone.utc)
+        self._torrent_last_attempt = datetime.now(UTC)
 
         if self.config.qbittorrent.enabled:
             try:
                 self._torrent_client = QbittorrentDownloadClient()
-                self._torrent_error = None
-                log.info("qBittorrent client connected")
-                return
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 # downgrade any init failure to a warning
                 self._torrent_client = None
                 self._torrent_error = str(e)
                 log.warning("Failed to initialize qBittorrent: %s", e)
+            else:
+                self._torrent_error = None
+                log.info("qBittorrent client connected")
+                return
 
         if self.config.transmission.enabled:
             try:
                 self._torrent_client = TransmissionDownloadClient()
-                self._torrent_error = None
-                log.info("Transmission client connected")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 # downgrade any init failure to a warning
                 self._torrent_client = None
                 self._torrent_error = str(e)
                 log.warning("Failed to initialize Transmission: %s", e)
+            else:
+                self._torrent_error = None
+                log.info("Transmission client connected")
 
     def _try_init_usenet(self) -> None:
         """Try to initialize the usenet client. Updates internal state."""
-        self._usenet_last_attempt = datetime.now(timezone.utc)
+        self._usenet_last_attempt = datetime.now(UTC)
 
         if self.config.sabnzbd.enabled:
             try:
                 self._usenet_client = SabnzbdDownloadClient()
-                self._usenet_error = None
-                log.info("SABnzbd client connected")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 # downgrade any init failure to a warning
                 self._usenet_client = None
                 self._usenet_error = str(e)
                 log.warning("Failed to initialize SABnzbd: %s", e)
+            else:
+                self._usenet_error = None
+                log.info("SABnzbd client connected")
 
     def _initialize_clients(self) -> None:
         self._try_init_torrent()

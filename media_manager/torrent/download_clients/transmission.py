@@ -161,6 +161,7 @@ class TransmissionDownloadClient(AbstractDownloadClient):
     def ping(self) -> bool:
         try:
             self._client.session_stats()
-            return True
-        except Exception:
+        except Exception:  # noqa: BLE001 # ping should report failure for any reason
             return False
+        else:
+            return True
