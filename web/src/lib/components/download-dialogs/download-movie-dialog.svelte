@@ -6,17 +6,13 @@
 		ArrowLeft,
 		Download,
 		List,
-		LoaderCircle,
-		RefreshCw,
-		SlidersHorizontal,
-		MoreVertical
+		LoaderCircle
 	} from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 	import { untrack } from 'svelte';
 
 	import * as Table from '$lib/components/ui/table';
 	import * as Carousel from '$lib/components/ui/carousel';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Skeleton } from '$lib/components/ui/skeleton';
@@ -114,15 +110,16 @@
 		torrentsData = await torrentsPromise;
 	}
 
-	function searchAgain() {
-		customSearchOpen = false;
-		queryOverride = '';
-		search();
-	}
+	// TODO: reimplement
+	// function searchAgain() {
+	// 	customSearchOpen = false;
+	// 	queryOverride = '';
+	// 	search();
+	// }
 
-	function openCustomSearch() {
-		customSearchOpen = true;
-	}
+	// function openCustomSearch() {
+	// 	customSearchOpen = true;
+	// }
 
 	$effect(() => {
 		if (dialogueState) {

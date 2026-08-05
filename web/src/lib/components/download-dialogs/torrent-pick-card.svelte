@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import {
 		Captions,
@@ -9,14 +8,12 @@
 		Film,
 		Gauge,
 		HardDrive,
-		Star,
 		Tag,
 		Users
 	} from 'lucide-svelte';
 	import TorrentStat from '$lib/components/download-dialogs/torrent-stat.svelte';
 	import TorrentBadges from '$lib/components/download-dialogs/torrent-badges.svelte';
 	import TorrentIndexerLink from '$lib/components/download-dialogs/torrent-indexer-link.svelte';
-	import TorrentScoreValue from '$lib/components/download-dialogs/torrent-score-value.svelte';
 	import {
 		formatCodec,
 		formatGroup,
