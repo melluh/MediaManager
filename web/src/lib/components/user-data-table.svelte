@@ -37,14 +37,14 @@
 	let deleteDialogOpen = $state(false);
 	let createDialogOpen = $state(false);
 	let createEmail: string = $state('');
-	let createUsername: string = $state('');
+	let createDisplayName: string = $state('');
 	let createPassword: string = $state('');
 	let createIsSuperuser: boolean = $state(false);
 	let isCreating: boolean = $state(false);
 
 	function resetCreateForm() {
 		createEmail = '';
-		createUsername = '';
+		createDisplayName = '';
 		createPassword = '';
 		createIsSuperuser = false;
 	}
@@ -56,7 +56,7 @@
 			const { error } = await client.POST('/api/v1/users/', {
 				body: {
 					email: createEmail,
-					username: createUsername || null,
+					display_name: createDisplayName || null,
 					password: createPassword || null,
 					is_superuser: createIsSuperuser,
 					is_verified: true
@@ -74,18 +74,18 @@
 		}
 	}
 
-	async function saveUsername(newUsername: string): Promise<boolean> {
+	async function saveDisplayName(newDisplayName: string): Promise<boolean> {
 		if (!selectedUser) return false;
 		const { error } = await client.PATCH('/api/v1/users/{id}', {
 			params: { path: { id: selectedUser.id } },
-			body: { username: newUsername }
+			body: { display_name: newDisplayName }
 		});
 		if (error) {
-			toast.error('Failed to update username');
+			toast.error('Failed to update display name');
 			return false;
 		}
-		toast.success('Username updated successfully.');
-		selectedUser.username = newUsername;
+		toast.success('Display name updated successfully.');
+		selectedUser.display_name = newDisplayName;
 		await invalidateAll();
 		return true;
 	}
@@ -154,7 +154,7 @@
 	<Table.Caption>A list of all users.</Table.Caption>
 	<Table.Header>
 		<Table.Row>
-			<Table.Head>Username</Table.Head>
+			<Table.Head>Display Name</Table.Head>
 			<Table.Head>Email</Table.Head>
 			<Table.Head>Verified</Table.Head>
 			<Table.Head>Active</Table.Head>
@@ -165,7 +165,7 @@
 		{#each sortedUsers as user (user.id)}
 			<Table.Row>
 				<Table.Cell class="font-medium">
-					{user.username || '—'}
+					{user.display_name || '—'}
 				</Table.Cell>
 				<Table.Cell class="font-medium">
 					{user.email}
@@ -226,10 +226,10 @@
 		{#if selectedUser}
 			<div class="space-y-6">
 				<InlineEditField
-					id="edit-username"
-					label="Username"
-					onSave={saveUsername}
-					value={selectedUser.username ?? ''}
+					id="edit-display-name"
+					label="Display Name"
+					onSave={saveDisplayName}
+					value={selectedUser.display_name ?? ''}
 				/>
 				<InlineEditField
 					id="edit-email"
@@ -313,11 +313,11 @@
 		</Dialog.Header>
 		<div class="space-y-4">
 			<div>
-				<Label class="mb-1 block text-sm font-medium" for="create-username">Username</Label>
+				<Label class="mb-1 block text-sm font-medium" for="create-display-name">Display Name</Label>
 				<Input
-					bind:value={createUsername}
+					bind:value={createDisplayName}
 					class="w-full"
-					id="create-username"
+					id="create-display-name"
 					placeholder="Optional"
 					type="text"
 				/>

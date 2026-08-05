@@ -17,15 +17,15 @@
 	const disabledEditMessage =
 		"You can't edit your own account details. Contact a superuser for assistance.";
 
-	async function saveUsername(newUsername: string): Promise<boolean> {
+	async function saveDisplayName(newDisplayName: string): Promise<boolean> {
 		const { error } = await client.PATCH('/api/v1/users/me', {
-			body: { username: newUsername }
+			body: { display_name: newDisplayName }
 		});
 		if (error) {
-			toast.error('Failed to update username');
+			toast.error('Failed to update display name');
 			return false;
 		}
-		toast.success('Username updated successfully.');
+		toast.success('Display name updated successfully.');
 		await invalidateAll();
 		return true;
 	}
@@ -46,10 +46,10 @@
 
 <div class="space-y-6">
 	<InlineEditField
-		id="username"
-		label="Username"
-		onSave={saveUsername}
-		value={currentUser().username ?? ''}
+		id="display-name"
+		label="Display Name"
+		onSave={saveDisplayName}
+		value={currentUser().display_name ?? ''}
 		editable={canEditAccount}
 		disabledMessage={disabledEditMessage}
 	/>

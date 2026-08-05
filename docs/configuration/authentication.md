@@ -22,11 +22,11 @@ All authentication settings are configured in the `[auth]` section of your `conf
 * `registration_enabled`\
   Allows new users to sign up for an account. Default is `false`.
 * `allow_self_account_edit`\
-  Allows non-superusers to edit their own username and email on the settings page. Default is `true`.
+  Allows non-superusers to edit their own display name and email on the settings page. Default is `true`.
 * `allow_self_password_change`\
   Allows non-superusers to change their own password on the settings page. Default is `true`.
 * `password_login_enabled`\
-  Allows logging in with a username/password. Set to `false` to require OpenID Connect for all logins. Default is `true`.
+  Allows logging in with an email/password. Set to `false` to require OpenID Connect for all logins. Default is `true`.
 
 !!! info To use email password resets, you must also configure SMTP settings in the `[notifications.smtp_config]` section.
 
@@ -56,6 +56,11 @@ OpenID Connect allows you to integrate with external identity providers like Goo
   OpenID Connect configuration endpoint URL. Do not include a trailing slash. Usually ends with `/.well-known/openid-configuration`.
 * `name`\
   Display name for the OpenID Connect provider shown on the login page.
+* `display_name_sync`\
+  Controls whether a user's display name is synced from the OIDC provider's `preferred_username` or `name` claim (requires the `profile` scope, which is always requested). One of:
+    * `never` — never sync; users manage their own display name. This is the default.
+    * `if_empty` — sync only when the user doesn't already have a display name set (e.g. on first sign-in via OIDC).
+    * `always` — overwrite the display name with the OIDC provider's value on every login.
 
 ### Configuration for your OpenID Connect Provider
 
@@ -96,4 +101,5 @@ client_id = "mediamanager-client"
 client_secret = "your-secret-key-here"
 configuration_endpoint = "https://auth.example.com/.well-known/openid-configuration"
 name = "Authentik"
+display_name_sync = "if_empty"
 ```

@@ -1,4 +1,5 @@
 import secrets
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -10,6 +11,11 @@ class OpenIdConfig(BaseSettings):
     configuration_endpoint: str = ""
     enabled: bool = False
     name: str = "OAuth2"
+    # "never": never sync the display name from the OIDC provider.
+    # "if_empty": only sync when the user doesn't have a display name yet
+    # (set on account creation, or once for existing users who never set one).
+    # "always": overwrite the display name with the OIDC provider's value on every login.
+    display_name_sync: Literal["never", "if_empty", "always"] = "never"
 
 
 class AuthConfig(BaseSettings):

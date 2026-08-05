@@ -1305,8 +1305,8 @@ export interface components {
 			 * Format: email
 			 */
 			email: string;
-			/** Username */
-			username?: string | null;
+			/** Display Name */
+			display_name?: string | null;
 			/** Password */
 			password?: string | null;
 			/**
@@ -2111,8 +2111,8 @@ export interface components {
 			 * @default false
 			 */
 			is_verified: boolean | null;
-			/** Username */
-			username?: string | null;
+			/** Display Name */
+			display_name?: string | null;
 		};
 		/** UserPermissions */
 		UserPermissions: {
@@ -2148,8 +2148,8 @@ export interface components {
 			 * @default false
 			 */
 			is_verified: boolean;
-			/** Username */
-			username?: string | null;
+			/** Display Name */
+			display_name?: string | null;
 		};
 		/** UserReadWithPermissions */
 		UserReadWithPermissions: {
@@ -2178,8 +2178,8 @@ export interface components {
 			 * @default false
 			 */
 			is_verified: boolean;
-			/** Username */
-			username?: string | null;
+			/** Display Name */
+			display_name?: string | null;
 			permissions: components['schemas']['UserPermissions'];
 		};
 		/** UserUpdate */
@@ -2194,8 +2194,8 @@ export interface components {
 			is_superuser?: boolean | null;
 			/** Is Verified */
 			is_verified?: boolean | null;
-			/** Username */
-			username?: string | null;
+			/** Display Name */
+			display_name?: string | null;
 		};
 		/** ValidationError */
 		ValidationError: {

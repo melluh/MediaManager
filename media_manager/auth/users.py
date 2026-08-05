@@ -65,7 +65,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                     detail="Changing your own password is disabled. Contact a superuser for assistance.",
                 )
             if (
-                "email" in changed_fields or "username" in changed_fields
+                "email" in changed_fields or "display_name" in changed_fields
             ) and not config.allow_self_account_edit:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -117,7 +117,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail="User registration is disabled.",
                     ) from None
-        return await super().oauth_callback(
+        user = await super().oauth_callback(
             oauth_name,
             access_token,
             account_id,
@@ -128,6 +128,27 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             associate_by_email=associate_by_email,
             is_verified_by_default=is_verified_by_default,
         )
+        return await self._sync_oidc_display_name(user, access_token)
+
+    async def _sync_oidc_display_name(self, user: User, access_token: str) -> User:
+        sync_mode = config.openid_connect.display_name_sync
+        if sync_mode == "never" or openid_client is None:
+            return user
+        if sync_mode == "if_empty" and user.display_name:
+            return user
+        try:
+            profile = await openid_client.get_profile(access_token)
+            display_name = profile.get("name") or profile.get("preferred_username")
+            if display_name:
+                display_name = display_name[:320]
+            if display_name and display_name != user.display_name:
+                user = await self.user_db.update(user, {"display_name": display_name})
+        except Exception:
+            # Log a warning, but don't let the login fail because of this.
+            log.warning(
+                f"Could not sync OIDC display name for user {user.id}.", exc_info=True
+            )
+        return user
 
     @override
     async def on_after_register(

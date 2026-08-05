@@ -102,7 +102,7 @@ async def admin_create_user(
         user = await user_manager.create(
             UserCreate(
                 email=payload.email,
-                username=payload.username,
+                display_name=payload.display_name,
                 password=password,
                 is_superuser=payload.is_superuser,
                 is_verified=payload.is_verified,
