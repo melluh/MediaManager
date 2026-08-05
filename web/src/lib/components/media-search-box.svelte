@@ -129,7 +129,7 @@
 			const highlighted = results[highlightedIndex];
 			if (highlighted) {
 				const href = hrefForResult(highlighted);
-				cancelPendingSearch();
+				clearSearch();
 				isOpen = false;
 				// eslint-disable-next-line svelte/no-navigation-without-resolve -- href is built from resolve() in getMediaTypeHref
 				if (href) goto(href);
