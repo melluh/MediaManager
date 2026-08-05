@@ -33,7 +33,7 @@
 	let updateAvailable: boolean = $state(false);
 
 	onMount(async () => {
-		let health = await client.GET('/api/v1/health');
+		let health = await client.GET('/api/v1/version');
 		if (health.data) {
 			installedVersion = health.data.version;
 			newestVersion = health.data.latest_version ?? null;

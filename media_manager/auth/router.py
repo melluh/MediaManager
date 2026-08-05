@@ -14,11 +14,14 @@ from media_manager.auth.schemas import (
     AdminUserCreate,
     AuthMetadata,
     UserCreate,
+    UserPermissions,
     UserRead,
+    UserReadWithPermissions,
 )
 from media_manager.auth.users import (
     SECRET,
     create_default_admin_user,
+    current_active_user,
     current_superuser,
     fastapi_users,
     get_user_manager,
@@ -126,7 +129,30 @@ def get_auth_metadata() -> AuthMetadata:
         oauth_providers=providers,
         registration_enabled=auth_config.registration_enabled
         and auth_config.password_login_enabled,
-        allow_self_account_edit=auth_config.allow_self_account_edit,
-        allow_self_password_change=auth_config.allow_self_password_change,
         password_login_enabled=auth_config.password_login_enabled,
+    )
+
+
+# Overrides fastapi_users' generic GET /users/me route (registered further below)
+# so we can additionally report the caller's own edit permissions. These depend
+# on both instance config and superuser status, so they belong on the
+# authenticated user resource rather than on the public /auth/metadata endpoint.
+@users_router.get(
+    "/users/me",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Missing token or inactive user.",
+        },
+    },
+)
+async def get_current_user(
+    user: Annotated[User, Depends(current_active_user)],
+) -> UserReadWithPermissions:
+    permissions = UserPermissions(
+        can_edit_account=user.is_superuser or auth_config.allow_self_account_edit,
+        can_change_password=user.is_superuser or auth_config.allow_self_password_change,
+    )
+    return UserReadWithPermissions(
+        **UserRead.model_validate(user).model_dump(), permissions=permissions
     )

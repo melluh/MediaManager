@@ -39,6 +39,7 @@ from media_manager.auth.schemas import UserCreate, UserRead, UserUpdate
 from media_manager.auth.users import (
     bearer_auth_backend,
     cookie_auth_backend,
+    current_active_user,
     fastapi_users,
 )
 from media_manager.config import MediaManagerConfig
@@ -205,11 +206,15 @@ app.add_middleware(CorrelationIdMiddleware, header_name="X-Correlation-ID")
 api_app = APIRouter(prefix="/api/v1")
 
 
-@api_app.get("/health")
+@api_app.get("/health", description="Unauthenticated liveness probe used by the container healthcheck")
+async def liveness() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@api_app.get("/version", dependencies=[Depends(current_active_user)])
 async def hello_world() -> HealthResponse:
     checker = get_version_checker()
     return HealthResponse(
-        message="Hello World!",
         version=checker.current_version,
         latest_version=checker.latest_version,
         update_available=checker.update_available,
@@ -278,8 +283,16 @@ api_app.include_router(
     fastapi_users.get_verify_router(UserRead), prefix="/auth", tags=["auth"]
 )
 api_app.include_router(custom_users_router, tags=["users"])
+users_crud_router = fastapi_users.get_users_router(UserRead, UserUpdate)
+for route in users_crud_router.routes:
+    # custom_users_router's GET /users/me (registered above, so it wins at
+    # request time) reports the caller's own edit permissions alongside their
+    # profile. Hide this generic one from the OpenAPI schema so the generated
+    # frontend client picks up that richer response type instead.
+    if route.path == "/me" and "GET" in route.methods:
+        route.include_in_schema = False
 api_app.include_router(
-    fastapi_users.get_users_router(UserRead, UserUpdate),
+    users_crud_router,
     prefix="/users",
     tags=["users"],
 )

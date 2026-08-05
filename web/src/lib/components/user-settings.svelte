@@ -3,18 +3,14 @@
 	import client from '$lib/api';
 	import { invalidateAll } from '$app/navigation';
 	import { getContext } from 'svelte';
-	import type { AuthMetadata, UserRead } from '$lib/api/api';
+	import type { UserReadWithPermissions } from '$lib/api/api';
 	import InlineEditField from '$lib/components/inline-edit-field.svelte';
 	import ChangePasswordDialog from '$lib/components/change-password-dialog.svelte';
 
-	let { authMetadata }: { authMetadata: AuthMetadata } = $props();
+	let currentUser: () => UserReadWithPermissions = getContext('user');
 
-	let currentUser: () => UserRead = getContext('user');
-
-	let canEditAccount = $derived(currentUser().is_superuser || authMetadata.allow_self_account_edit);
-	let canChangePassword = $derived(
-		currentUser().is_superuser || authMetadata.allow_self_password_change
-	);
+	let canEditAccount = $derived(currentUser().permissions.can_edit_account);
+	let canChangePassword = $derived(currentUser().permissions.can_change_password);
 
 	const disabledEditMessage =
 		"You can't edit your own account details. Contact a superuser for assistance.";

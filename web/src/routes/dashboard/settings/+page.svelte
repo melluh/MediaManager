@@ -4,13 +4,13 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { getContext } from 'svelte';
 	import UserSettings from '$lib/components/user-settings.svelte';
-	import type { UserRead } from '$lib/api/api';
+	import type { UserReadWithPermissions } from '$lib/api/api';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Settings' }]);
 
-	let currentUser: () => UserRead = getContext('user');
+	let currentUser: () => UserReadWithPermissions = getContext('user');
 </script>
 
 <svelte:head>
@@ -27,7 +27,7 @@
 			<Card.Title>Your account</Card.Title>
 		</Card.Header>
 		<Card.Content>
-			<UserSettings authMetadata={page.data.authMetadata} />
+			<UserSettings />
 		</Card.Content>
 	</Card.Root>
 	{#if currentUser().is_superuser}

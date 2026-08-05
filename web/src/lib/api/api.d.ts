@@ -11,8 +11,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
+		/**
+		 * Liveness
+		 * @description Unauthenticated liveness probe used by the container healthcheck
+		 */
+		get: operations['liveness_api_v1_health_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/version': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
 		/** Hello World */
-		get: operations['hello_world_api_v1_health_get'];
+		get: operations['hello_world_api_v1_version_get'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -215,8 +235,8 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Users:Current User */
-		get: operations['users_current_user_api_v1_users_me_get'];
+		/** Get Current User */
+		get: operations['get_current_user_api_v1_users_me_get'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1306,10 +1326,6 @@ export interface components {
 			oauth_providers: string[];
 			/** Registration Enabled */
 			registration_enabled: boolean;
-			/** Allow Self Account Edit */
-			allow_self_account_edit: boolean;
-			/** Allow Self Password Change */
-			allow_self_password_change: boolean;
 			/** Password Login Enabled */
 			password_login_enabled: boolean;
 		};
@@ -1437,8 +1453,6 @@ export interface components {
 		};
 		/** HealthResponse */
 		HealthResponse: {
-			/** Message */
-			message: string;
 			/** Version */
 			version: string;
 			/** Latest Version */
@@ -2100,6 +2114,13 @@ export interface components {
 			/** Username */
 			username?: string | null;
 		};
+		/** UserPermissions */
+		UserPermissions: {
+			/** Can Edit Account */
+			can_edit_account: boolean;
+			/** Can Change Password */
+			can_change_password: boolean;
+		};
 		/** UserRead */
 		UserRead: {
 			/**
@@ -2129,6 +2150,37 @@ export interface components {
 			is_verified: boolean;
 			/** Username */
 			username?: string | null;
+		};
+		/** UserReadWithPermissions */
+		UserReadWithPermissions: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			/**
+			 * Email
+			 * Format: email
+			 */
+			email: string;
+			/**
+			 * Is Active
+			 * @default true
+			 */
+			is_active: boolean;
+			/**
+			 * Is Superuser
+			 * @default false
+			 */
+			is_superuser: boolean;
+			/**
+			 * Is Verified
+			 * @default false
+			 */
+			is_verified: boolean;
+			/** Username */
+			username?: string | null;
+			permissions: components['schemas']['UserPermissions'];
 		};
 		/** UserUpdate */
 		UserUpdate: {
@@ -2216,12 +2268,36 @@ export type Torrent = components['schemas']['Torrent'];
 export type TorrentAttributes = components['schemas']['TorrentAttributes'];
 export type TorrentStatus = components['schemas']['TorrentStatus'];
 export type UserCreate = components['schemas']['UserCreate'];
+export type UserPermissions = components['schemas']['UserPermissions'];
 export type UserRead = components['schemas']['UserRead'];
+export type UserReadWithPermissions = components['schemas']['UserReadWithPermissions'];
 export type UserUpdate = components['schemas']['UserUpdate'];
 export type ValidationError = components['schemas']['ValidationError'];
 export type $defs = Record<string, never>;
 export interface operations {
-	hello_world_api_v1_health_get: {
+	liveness_api_v1_health_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': {
+						[key: string]: string;
+					};
+				};
+			};
+		};
+	};
+	hello_world_api_v1_version_get: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2644,7 +2720,7 @@ export interface operations {
 			};
 		};
 	};
-	users_current_user_api_v1_users_me_get: {
+	get_current_user_api_v1_users_me_get: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2659,7 +2735,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['UserRead'];
+					'application/json': components['schemas']['UserReadWithPermissions'];
 				};
 			};
 			/** @description Missing token or inactive user. */

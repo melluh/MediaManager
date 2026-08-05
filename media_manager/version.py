@@ -15,7 +15,6 @@ _SEMVER_RE = re.compile(
 
 
 class HealthResponse(BaseModel):
-    message: str
     version: str
     latest_version: str | None = None
     update_available: bool = False
