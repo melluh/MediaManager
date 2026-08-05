@@ -1574,10 +1574,14 @@
   Allows non-superusers to edit their own username and email on the settings page. Default is <code>true</code>.</li>
 <li><code>allow_self_password_change</code>\
   Allows non-superusers to change their own password on the settings page. Default is <code>true</code>.</li>
+<li><code>password_login_enabled</code>\
+  Allows logging in with a username/password. Set to <code>false</code> to require OpenID Connect for all logins. Default is <code>true</code>.</li>
 </ul>
 <p>!!! info To use email password resets, you must also configure SMTP settings in the <code>[notifications.smtp_config]</code> section.</p>
 <p>!!! info Superusers can always edit their own account details and change their own password, regardless of <code>allow_self_account_edit</code> and <code>allow_self_password_change</code>. These settings only restrict non-superusers.</p>
+<p>!!! warning Before setting <code>password_login_enabled</code> to <code>false</code>, make sure <code>[auth.openid_connect]</code> <code>enabled</code> is <code>true</code> and at least one admin account is linked to your OIDC provider (matched by email) — otherwise nobody will be able to log in. The <code>/auth/jwt/login</code> and <code>/auth/cookie/login</code> endpoints return 403 while this is disabled; existing sessions and logout are unaffected.</p>
 <p>!!! info When <code>registration_enabled</code> is <code>false</code>, the sign-up page is hidden, <code>/auth/register</code> returns 403, and OIDC rejects unknown users (existing users keep working). The bootstrap admin (see <code>admin_emails</code>) is unaffected.</p>
+<p>!!! info Sign-up (<code>/auth/register</code>) also requires <code>password_login_enabled</code> to be <code>true</code>, since it creates a password-based account — setting <code>password_login_enabled</code> to <code>false</code> hides the sign-up page and disables <code>/auth/register</code> regardless of <code>registration_enabled</code>. New-user creation via OIDC on first sign-in is unaffected and still follows <code>registration_enabled</code> alone.</p>
 <p>!!! tip "Adding users when registration is disabled" Administrators can add users at any time from the <strong>Settings → Users</strong> page via the "Add User" button. For OIDC-only users, leave the password field blank — a random password is generated and the user is matched to their OIDC account by email on first sign-in.</p>
 <p>!!! info When setting up MediaManager for the first time, you should add your email to <code>admin_emails</code> in the <code>[auth]</code> config section. MediaManager will then use this email instead of the default admin email. Your account will automatically be created as an admin account, allowing you to manage other users, media and settings.</p>
 <h2 id="openid-connect-settings-authopenid_connect">OpenID Connect Settings (<code>[auth.openid_connect]</code>)</h2>
@@ -1613,6 +1617,7 @@
 <span class="n">registration_enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 <span class="n">allow_self_account_edit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 <span class="n">allow_self_password_change</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">password_login_enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 
 <span class="k">[auth.openid_connect]</span>
 <span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
