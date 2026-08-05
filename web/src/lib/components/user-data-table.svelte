@@ -19,7 +19,11 @@
 	import X from '@lucide/svelte/icons/x';
 	import Check from '@lucide/svelte/icons/check';
 
-	let { users, currentUserId }: { users: UserRead[]; currentUserId: string } = $props();
+	let {
+		users,
+		currentUserId,
+		passwordLoginEnabled = true
+	}: { users: UserRead[]; currentUserId: string; passwordLoginEnabled?: boolean } = $props();
 	let sortedUsers = $derived(
 		[...users].sort((a, b) => {
 			if (a.id === currentUserId) return -1;
@@ -234,10 +238,12 @@
 					type="email"
 					value={selectedUser.email}
 				/>
-				<div>
-					<span class="mb-1 block text-sm font-medium">Password</span>
-					<ChangePasswordDialog userId={selectedUser.id} />
-				</div>
+				{#if passwordLoginEnabled}
+					<div>
+						<span class="mb-1 block text-sm font-medium">Password</span>
+						<ChangePasswordDialog userId={selectedUser.id} />
+					</div>
+				{/if}
 				<hr />
 				<ToggleField
 					checked={selectedUser.is_verified}
@@ -327,20 +333,22 @@
 					type="email"
 				/>
 			</div>
-			<div>
-				<Label class="mb-1 block text-sm font-medium" for="create-password">Password</Label>
-				<Input
-					bind:value={createPassword}
-					class="w-full"
-					id="create-password"
-					placeholder="Optional"
-					type="password"
-				/>
-				<p class="mt-1 text-sm text-muted-foreground">
-					Leave blank to randomly generate the password. This may be useful when the user will only
-					sign in via OIDC.
-				</p>
-			</div>
+			{#if passwordLoginEnabled}
+				<div>
+					<Label class="mb-1 block text-sm font-medium" for="create-password">Password</Label>
+					<Input
+						bind:value={createPassword}
+						class="w-full"
+						id="create-password"
+						placeholder="Optional"
+						type="password"
+					/>
+					<p class="mt-1 text-sm text-muted-foreground">
+						Leave blank to randomly generate the password. This may be useful when the user will
+						only sign in via OIDC.
+					</p>
+				</div>
+			{/if}
 			<hr />
 			<ToggleField
 				checked={createIsSuperuser}

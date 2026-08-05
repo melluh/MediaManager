@@ -7,6 +7,8 @@
 	import InlineEditField from '$lib/components/inline-edit-field.svelte';
 	import ChangePasswordDialog from '$lib/components/change-password-dialog.svelte';
 
+	let { passwordLoginEnabled = true }: { passwordLoginEnabled?: boolean } = $props();
+
 	let currentUser: () => UserReadWithPermissions = getContext('user');
 
 	let canEditAccount = $derived(currentUser().permissions.can_edit_account);
@@ -60,14 +62,16 @@
 		editable={canEditAccount}
 		disabledMessage={disabledEditMessage}
 	/>
-	<div>
-		<span class="mb-1 block text-sm font-medium">Password</span>
-		{#if canChangePassword}
-			<ChangePasswordDialog />
-		{:else}
-			<p class="text-sm text-muted-foreground">
-				You can't change your own password. Contact a superuser for assistance.
-			</p>
-		{/if}
-	</div>
+	{#if passwordLoginEnabled}
+		<div>
+			<span class="mb-1 block text-sm font-medium">Password</span>
+			{#if canChangePassword}
+				<ChangePasswordDialog />
+			{:else}
+				<p class="text-sm text-muted-foreground">
+					You can't change your own password. Contact a superuser for assistance.
+				</p>
+			{/if}
+		</div>
+	{/if}
 </div>

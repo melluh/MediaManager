@@ -27,7 +27,7 @@
 			<Card.Title>Your account</Card.Title>
 		</Card.Header>
 		<Card.Content>
-			<UserSettings />
+			<UserSettings passwordLoginEnabled={page.data.passwordLoginEnabled} />
 		</Card.Content>
 	</Card.Root>
 	{#if currentUser().is_superuser}
@@ -37,7 +37,11 @@
 				<Card.Description>Edit, delete or change the permissions of other users</Card.Description>
 			</Card.Header>
 			<Card.Content>
-				<UserTable currentUserId={currentUser().id} users={page.data.users} />
+				<UserTable
+					currentUserId={currentUser().id}
+					passwordLoginEnabled={page.data.passwordLoginEnabled}
+					users={page.data.users}
+				/>
 			</Card.Content>
 		</Card.Root>
 	{/if}
