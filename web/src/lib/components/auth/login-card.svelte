@@ -4,13 +4,15 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { goto } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import * as Alert from '$lib/components/ui/alert';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-	import LoadingBar from '$lib/components/loading-bar.svelte';
+	import LogInIcon from '@lucide/svelte/icons/log-in';
+	import UserPlusIcon from '@lucide/svelte/icons/user-plus';
 	import client from '$lib/api';
 	import { handleOauth } from '$lib/utils.ts';
 	import { resolve } from '$app/paths';
+	import { CheckIcon } from 'lucide-svelte';
+	import Spinner from '../ui/spinner/spinner.svelte';
 
 	let {
 		oauthProviderNames,
@@ -24,16 +26,14 @@
 
 	let email = $state('');
 	let password = $state('');
-	let errorMessage = $state('');
-	let successMessage = $state('');
-	let isLoading = $state(false);
+	let status = $state<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+	let singleOauthOnly = $derived(!passwordLoginEnabled && oauthProviderNames.length === 1);
 
 	async function handleLogin(event: Event) {
 		event.preventDefault();
 
-		isLoading = true;
-		errorMessage = '';
-		successMessage = '';
+		status = 'loading';
 
 		const { error, response } = await client.POST('/api/v1/auth/cookie/login', {
 			body: {
@@ -45,17 +45,14 @@
 				'Content-Type': 'application/x-www-form-urlencoded'
 			}
 		});
-		isLoading = false;
 
 		if (!error) {
 			console.log('Login successful!');
 			console.log('Received User Data: ', response);
-			successMessage = 'Login successful! Redirecting...';
-			toast.success(successMessage);
+			status = 'success';
 			await goto(resolve('/dashboard', {}));
 		} else {
-			toast.error('Login failed!');
-			errorMessage = `Login failed! Please check your credentials and try again.`;
+			status = 'error';
 		}
 	}
 </script>
@@ -64,7 +61,11 @@
 	<Card.Header>
 		<Card.Title class="text-2xl">Login</Card.Title>
 		{#if passwordLoginEnabled}
-		<Card.Description>Enter your details below to log in to your account.</Card.Description>
+			<Card.Description>Enter your details below to log in to your account.</Card.Description>
+		{:else if oauthProviderNames.length == 1}
+			<Card.Description
+				>Continue with {oauthProviderNames[0]} to access your account.</Card.Description
+			>
 		{/if}
 	</Card.Header>
 	<Card.Content>
@@ -79,6 +80,14 @@
 		{:else}
 			{#if passwordLoginEnabled}
 				<form class="grid gap-4" onsubmit={handleLogin}>
+					{#if status === 'error'}
+						<Alert.Root variant="destructive">
+							<AlertCircleIcon class="size-4" />
+							<Alert.Title>Login failed</Alert.Title>
+							<Alert.Description>Please check your credentials and try again.</Alert.Description>
+						</Alert.Root>
+					{/if}
+
 					<div class="grid gap-2">
 						<Label for="email">Email</Label>
 						<Input
@@ -109,46 +118,50 @@
 						/>
 					</div>
 
-					{#if errorMessage}
-						<Alert.Root variant="destructive">
-							<AlertCircleIcon class="size-4" />
-							<Alert.Title>Error</Alert.Title>
-							<Alert.Description>{errorMessage}</Alert.Description>
-						</Alert.Root>
-					{/if}
-
-					{#if successMessage}
-						<Alert.Root variant="default">
-							<Alert.Title>Success</Alert.Title>
-							<Alert.Description>{successMessage}</Alert.Description>
-						</Alert.Root>
-					{/if}
-
-					{#if isLoading}
-						<LoadingBar />
-					{/if}
-					<Button class="w-full" disabled={isLoading} type="submit">Login</Button>
+					<Button
+						class="w-full"
+						disabled={status === 'loading' || status === 'success'}
+						type="submit"
+					>
+						{#if status === 'success'}
+							<CheckIcon />
+						{:else if status === 'loading'}
+							<Spinner />
+						{:else}
+							<LogInIcon class="size-4" />
+						{/if}
+						Login
+					</Button>
 				</form>
 			{/if}
-			{#each oauthProviderNames as name (name)}
-				{#if passwordLoginEnabled}
-					<div
-						class="relative mt-2 text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border"
-					>
-						<span class="relative z-10 bg-background px-2 text-muted-foreground">
-							Or continue with
-						</span>
-					</div>
-				{/if}
-				<Button class="mt-2 w-full" onclick={() => handleOauth()} variant="outline"
-					>Login with {name}</Button
+
+			{#if passwordLoginEnabled}
+				<div
+					class="relative mt-4 text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border"
 				>
+					<span class="relative z-10 bg-background px-2 text-muted-foreground">
+						Or continue with
+					</span>
+				</div>
+			{/if}
+
+			{#each oauthProviderNames as name, i (name)}
+				<Button
+					class={passwordLoginEnabled || i > 0 ? 'mt-2 w-full' : 'w-full'}
+					onclick={() => handleOauth()}
+					variant={singleOauthOnly ? 'default' : 'outline'}
+				>
+					{#if singleOauthOnly}<LogInIcon class="size-4" />{/if}
+					Login with {name}
+				</Button>
 			{/each}
-			{#if registrationEnabled && passwordLoginEnabled}
-				<div class="mt-4 text-center text-sm">
-					<Button href={resolve('/login/signup/', {})} variant="link"
-						>Don't have an account? Sign up</Button
-					>
+
+			{#if registrationEnabled}
+				<div class="mt-6 text-center text-sm">
+					<Button href={resolve('/login/signup/', {})} variant="link">
+						<UserPlusIcon class="size-4" />
+						Don't have an account? Sign up
+					</Button>
 				</div>
 			{/if}
 		{/if}
