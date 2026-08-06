@@ -1571,11 +1571,11 @@
 <li><code>registration_enabled</code>\
   Allows new users to sign up for an account. Default is <code>false</code>.</li>
 <li><code>allow_self_account_edit</code>\
-  Allows non-superusers to edit their own username and email on the settings page. Default is <code>true</code>.</li>
+  Allows non-superusers to edit their own display name and email on the settings page. Default is <code>true</code>.</li>
 <li><code>allow_self_password_change</code>\
   Allows non-superusers to change their own password on the settings page. Default is <code>true</code>.</li>
 <li><code>password_login_enabled</code>\
-  Allows logging in with a username/password. Set to <code>false</code> to require OpenID Connect for all logins. Default is <code>true</code>.</li>
+  Allows logging in with an email/password. Set to <code>false</code> to require OpenID Connect for all logins. Default is <code>true</code>.</li>
 </ul>
 <p>!!! info To use email password resets, you must also configure SMTP settings in the <code>[notifications.smtp_config]</code> section.</p>
 <p>!!! info Superusers can always edit their own account details and change their own password, regardless of <code>allow_self_account_edit</code> and <code>allow_self_password_change</code>. These settings only restrict non-superusers.</p>
@@ -1597,6 +1597,13 @@
   OpenID Connect configuration endpoint URL. Do not include a trailing slash. Usually ends with <code>/.well-known/openid-configuration</code>.</li>
 <li><code>name</code>\
   Display name for the OpenID Connect provider shown on the login page.</li>
+<li><code>display_name_sync</code>\
+  Controls whether a user's display name is synced from the OIDC provider's <code>preferred_username</code> or <code>name</code> claim (requires the <code>profile</code> scope, which is always requested). One of:<ul>
+<li><code>never</code> — never sync; users manage their own display name. This is the default.</li>
+<li><code>if_empty</code> — sync only when the user doesn't already have a display name set (e.g. on first sign-in via OIDC).</li>
+<li><code>always</code> — overwrite the display name with the OIDC provider's value on every login.</li>
+</ul>
+</li>
 </ul>
 <h3 id="configuration-for-your-openid-connect-provider">Configuration for your OpenID Connect Provider</h3>
 <h4 id="redirect-uri">Redirect URI</h4>
@@ -1625,6 +1632,7 @@
 <span class="n">client_secret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;your-secret-key-here&quot;</span>
 <span class="n">configuration_endpoint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://auth.example.com/.well-known/openid-configuration&quot;</span>
 <span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Authentik&quot;</span>
+<span class="n">display_name_sync</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;if_empty&quot;</span>
 </code></pre></div>
 
 
