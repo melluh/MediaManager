@@ -1,8 +1,5 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card/index.js';
-	import { getFullyQualifiedMediaName } from '$lib/utils';
-	import MediaPicture from '$lib/components/media-picture.svelte';
-	import { resolve } from '$app/paths';
+	import LibraryMediaCard from '$lib/components/library-media-card.svelte';
 	import type { MediaImportSuggestion, UserRead } from '$lib/api/api';
 	import ImportCandidatesDialog from '$lib/components/import-media/import-candidates-dialog.svelte';
 	import DetectedMediaCard from '$lib/components/import-media/detected-media-card.svelte';
@@ -61,17 +58,7 @@
 			class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
 		>
 			{#each movies as movie (movie.id)}
-				<a href={resolve('/dashboard/movies/[movieId]', { movieId: movie.slug! })}>
-					<Card.Root class="col-span-full max-w-[90vw] ">
-						<Card.Header>
-							<Card.Title class="h-6 truncate">{getFullyQualifiedMediaName(movie)}</Card.Title>
-							<Card.Description class="truncate">{movie.overview}</Card.Description>
-						</Card.Header>
-						<Card.Content>
-							<MediaPicture media={movie} />
-						</Card.Content>
-					</Card.Root>
-				</a>
+				<LibraryMediaCard media={movie} isShow={false} />
 			{:else}
 				<div class="col-span-full text-center text-muted-foreground">No movies added yet.</div>
 			{/each}
