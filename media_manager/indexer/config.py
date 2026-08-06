@@ -97,3 +97,4 @@ class IndexerConfig(BaseSettings):
     preferred_subtitle_languages: list[str] = []
     min_seeders: int = 5
     legacy_rule_score_clamp: int = 20
+    search_cache_ttl_minutes: float = 8

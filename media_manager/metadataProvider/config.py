@@ -16,3 +16,10 @@ class MetadataProviderConfig(BaseSettings):
     tmdb: TmdbConfig = TmdbConfig()
     # Minimum time between metadata refetches for a movie/show, in hours
     refetch_interval_hours: int = 24
+    # How long to cache external show/movie detail + external_ids lookups
+    # (external/{id} views, add-media, weekly refetch), in hours
+    detail_cache_ttl_hours: float = 6
+    # How long to cache per-season metadata lookups, in hours
+    season_cache_ttl_hours: float = 12
+    # How long to cache trending/"recommended" lists, in hours
+    trending_cache_ttl_hours: float = 4

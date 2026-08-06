@@ -3,6 +3,7 @@ import logging
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from urllib.parse import parse_qs
 
 import uvicorn
 from asgi_correlation_id import CorrelationIdMiddleware
@@ -20,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from psycopg.errors import UniqueViolation
 from sqlalchemy.exc import IntegrityError
 from starlette.responses import FileResponse, RedirectResponse
+from starlette.types import Scope
 from taskiq.receiver import Receiver
 from taskiq_fastapi import populate_dependency_context
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
@@ -71,6 +73,31 @@ from media_manager.scheduler import (
 )
 from media_manager.torrent.manager import get_download_manager, init_download_manager
 from media_manager.version import HealthResponse, get_version_checker
+
+
+class ImmutableStaticFiles(StaticFiles):
+    """
+    Serves static files with immutable, 1y Cache-Control headers, but only
+    if a ?v= parameter is specified.
+
+    Used for poster images; these are stored at a fixed path keyed by the
+    media's UUID and are overwritten in-place on metadata refresh. Thus
+    the frontend appends ?v={metadata_last_updated}.
+    """
+
+    def file_response(
+        self,
+        full_path: str | os.PathLike[str],
+        stat_result: os.stat_result,
+        scope: Scope,
+        status_code: int = 200,
+    ) -> Response:
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        query_params = parse_qs(scope.get("query_string", b"").decode())
+        if "v" in query_params:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
 
 setup_logging()
 
@@ -313,7 +340,7 @@ api_app.include_router(search_router.router, prefix="/search", tags=["search"])
 # serve static image files
 app.mount(
     "/api/v1/static/image",
-    StaticFiles(directory=config.misc.image_directory),
+    ImmutableStaticFiles(directory=config.misc.image_directory),
     name="static-images",
 )
 app.include_router(api_app)

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+from media_manager.common.cache import AsyncTTLCache
 from media_manager.config import MediaManagerConfig
 from media_manager.indexer.indexers.generic import GenericIndexer
 from media_manager.indexer.indexers.jackett import Jackett
@@ -13,6 +14,13 @@ from media_manager.tv.schemas import Show
 
 log = logging.getLogger(__name__)
 
+# Module-level because IndexerService is instantiated fresh per request.
+_search_cache: AsyncTTLCache[tuple[object, ...], list[IndexerQueryResult]] = (
+    AsyncTTLCache(
+        ttl_seconds=MediaManagerConfig().indexers.search_cache_ttl_minutes * 60,
+        max_size=2000,
+    )
+)
 
 class IndexerService:
     def __init__(self, indexer_repository: IndexerRepository) -> None:
@@ -37,72 +45,89 @@ class IndexerService:
         :return: A list of search results.
         """
         log.debug(f"Searching for: {query}")
-        results = []
+        normalized_query = query.strip().lower()
+        cache_key = ("adhoc", normalized_query, is_tv)
 
-        for indexer in self.indexers:
-            try:
-                indexer_results = await asyncio.to_thread(
-                    indexer.search, query, is_tv=is_tv
-                )
-                results.extend(indexer_results)
-                log.debug(
-                    f"Indexer {indexer.__class__.__name__} returned {len(indexer_results)} results for query: {query}"
-                )
-            except Exception:
-                log.exception(
-                    f"Indexer {indexer.__class__.__name__} failed for query '{query}'"
-                )
+        async def factory() -> list[IndexerQueryResult]:
+            results = []
 
-        for result in results:
-            await self.repository.save_result(result=result)
+            for indexer in self.indexers:
+                try:
+                    indexer_results = await asyncio.to_thread(
+                        indexer.search, normalized_query, is_tv=is_tv
+                    )
+                    results.extend(indexer_results)
+                    log.debug(
+                        f"Indexer {indexer.__class__.__name__} returned {len(indexer_results)} results for query: {normalized_query}"
+                    )
+                except Exception:
+                    log.exception(
+                        f"Indexer {indexer.__class__.__name__} failed for query '{normalized_query}'"
+                    )
 
-        return results
+            for result in results:
+                await self.repository.save_result(result=result)
+
+            return results
+
+        cached_results = await _search_cache.get_or_set(cache_key, factory)
+        return [result.model_copy() for result in cached_results]
 
     async def search_movie(self, movie: Movie) -> list[IndexerQueryResult]:
         query = f"{movie.name} {movie.year}"
         query = remove_special_chars_and_parentheses(query)
+        cache_key = ("movie", query)
 
-        results = []
-        for indexer in self.indexers:
-            try:
-                indexer_results = await asyncio.to_thread(
-                    indexer.search_movie, query=query, movie=movie
-                )
-                if indexer_results:
-                    results.extend(indexer_results)
-            except Exception:
-                log.exception(
-                    f"Indexer {indexer.__class__.__name__} failed for movie search '{query}'"
-                )
+        async def factory() -> list[IndexerQueryResult]:
+            results = []
+            for indexer in self.indexers:
+                try:
+                    indexer_results = await asyncio.to_thread(
+                        indexer.search_movie, query=query, movie=movie
+                    )
+                    if indexer_results:
+                        results.extend(indexer_results)
+                except Exception:
+                    log.exception(
+                        f"Indexer {indexer.__class__.__name__} failed for movie search '{query}'"
+                    )
 
-        for result in results:
-            await self.repository.save_result(result=result)
+            for result in results:
+                await self.repository.save_result(result=result)
 
-        return results
+            return results
+
+        cached_results = await _search_cache.get_or_set(cache_key, factory)
+        return [result.model_copy() for result in cached_results]
 
     async def search_season(
         self, show: Show, season_number: int
     ) -> list[IndexerQueryResult]:
         query = f"{show.name} {show.year} S{season_number:02d}"
         query = remove_special_chars_and_parentheses(query)
+        cache_key = ("season", query)
 
-        results = []
-        for indexer in self.indexers:
-            try:
-                indexer_results = await asyncio.to_thread(
-                    indexer.search_season,
-                    query=query,
-                    show=show,
-                    season_number=season_number,
-                )
-                if indexer_results:
-                    results.extend(indexer_results)
-            except Exception:
-                log.exception(
-                    f"Indexer {indexer.__class__.__name__} failed for season search '{query}'"
-                )
+        async def factory() -> list[IndexerQueryResult]:
+            results = []
+            for indexer in self.indexers:
+                try:
+                    indexer_results = await asyncio.to_thread(
+                        indexer.search_season,
+                        query=query,
+                        show=show,
+                        season_number=season_number,
+                    )
+                    if indexer_results:
+                        results.extend(indexer_results)
+                except Exception:
+                    log.exception(
+                        f"Indexer {indexer.__class__.__name__} failed for season search '{query}'"
+                    )
 
-        for result in results:
-            await self.repository.save_result(result=result)
+            for result in results:
+                await self.repository.save_result(result=result)
 
-        return results
+            return results
+
+        cached_results = await _search_cache.get_or_set(cache_key, factory)
+        return [result.model_copy() for result in cached_results]

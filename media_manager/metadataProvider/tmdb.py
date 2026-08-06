@@ -6,6 +6,7 @@ from typing import override
 import httpx
 
 import media_manager.metadataProvider.utils
+from media_manager.common.cache import AsyncTTLCache
 from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
@@ -35,6 +36,20 @@ _movie_genre_map: dict[int, str] | None = None
 _tv_genre_map: dict[int, str] | None = None
 _genre_maps_fetched_at: datetime | None = None
 _genre_map_lock = asyncio.Lock()
+
+# These are module-level because TmdbMetadataProvider is instantiated fresh per
+# request.
+_metadata_config = MediaManagerConfig().metadata
+_detail_cache: AsyncTTLCache[tuple, dict] = AsyncTTLCache(
+    ttl_seconds=_metadata_config.detail_cache_ttl_hours * 3600, max_size=5000
+)
+_season_cache: AsyncTTLCache[tuple, dict] = AsyncTTLCache(
+    ttl_seconds=_metadata_config.season_cache_ttl_hours * 3600, max_size=5000
+)
+_trending_cache: AsyncTTLCache[tuple, dict] = AsyncTTLCache(
+    ttl_seconds=_metadata_config.trending_cache_ttl_hours * 3600, max_size=50
+)
+
 
 class TmdbMetadataProvider(AbstractMetadataProvider):
     name = "tmdb"
@@ -89,68 +104,55 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             ExternalPosterImage(url=f"{TMDB_POSTER_BASE_URL}/original{backdrop_path}"),
         ]
 
+    async def __cached_get(
+        self,
+        cache: AsyncTTLCache,
+        key: tuple,
+        url: str,
+        params: dict,
+        label: str,
+    ) -> dict:
+        async def factory() -> dict:
+            try:
+                response = await _client.get(url=url, params=params, timeout=60)
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPError as e:
+                log.exception(f"TMDB API error getting {label}")
+                if notification_manager.is_configured():
+                    await notification_manager.send_notification(
+                        title="TMDB API Error",
+                        message=f"Failed to fetch {label} from TMDB. Error: {e}",
+                    )
+                raise
+
+        return await cache.get_or_set(key, factory)
+
     async def __get_show_metadata(
         self, show_id: int, language: str | None = None
     ) -> dict:
         if language is None:
             language = self.default_language
-        try:
-            response = await _client.get(
-                url=f"{self.url}/tv/shows/{show_id}",
-                params={"language": language},
-                timeout=60,
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            log.exception(f"TMDB API error getting show metadata for ID {show_id}")
-            if notification_manager.is_configured():
-                await notification_manager.send_notification(
-                    title="TMDB API Error",
-                    message=f"Failed to fetch show metadata for ID {show_id} from TMDB. Error: {e}",
-                )
-            raise
-
-    async def __get_show_external_ids(self, show_id: int) -> dict:
-        try:
-            response = await _client.get(
-                url=f"{self.url}/tv/shows/{show_id}/external_ids",
-                timeout=60,
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            log.exception(f"TMDB API error getting show external IDs for ID {show_id}")
-            if notification_manager.is_configured():
-                await notification_manager.send_notification(
-                    title="TMDB API Error",
-                    message=f"Failed to fetch show external IDs for ID {show_id} from TMDB. Error: {e}",
-                )
-            raise
+        return await self.__cached_get(
+            _detail_cache,
+            ("show_meta", show_id, language),
+            url=f"{self.url}/tv/shows/{show_id}",
+            params={"language": language},
+            label=f"show metadata for ID {show_id}",
+        )
 
     async def __get_season_metadata(
         self, show_id: int, season_number: int, language: str | None = None
     ) -> dict:
         if language is None:
             language = self.default_language
-        try:
-            response = await _client.get(
-                url=f"{self.url}/tv/shows/{show_id}/{season_number}",
-                params={"language": language},
-                timeout=60,
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            log.exception(
-                f"TMDB API error getting season {season_number} metadata for show ID {show_id}"
-            )
-            if notification_manager.is_configured():
-                await notification_manager.send_notification(
-                    title="TMDB API Error",
-                    message=f"Failed to fetch season {season_number} metadata for show ID {show_id} from TMDB. Error: {e}",
-                )
-            raise
+        return await self.__cached_get(
+            _season_cache,
+            ("season", show_id, season_number, language),
+            url=f"{self.url}/tv/shows/{show_id}/{season_number}",
+            params={"language": language},
+            label=f"season {season_number} metadata for show ID {show_id}",
+        )
 
     async def __search_tv(self, query: str, page: int) -> dict:
         try:
@@ -174,62 +176,26 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             raise
 
     async def __get_trending_tv(self) -> dict:
-        try:
-            response = await _client.get(
-                url=f"{self.url}/tv/trending",
-                params={"language": self.default_language},
-                timeout=60,
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            log.exception("TMDB API error getting trending TV")
-            if notification_manager.is_configured():
-                await notification_manager.send_notification(
-                    title="TMDB API Error",
-                    message=f"Failed to fetch trending TV shows from TMDB. Error: {e}",
-                )
-            raise
+        return await self.__cached_get(
+            _trending_cache,
+            ("trending_tv", self.default_language),
+            url=f"{self.url}/tv/trending",
+            params={"language": self.default_language},
+            label="trending TV shows",
+        )
 
     async def __get_movie_metadata(
         self, movie_id: int, language: str | None = None
     ) -> dict:
         if language is None:
             language = self.default_language
-        try:
-            response = await _client.get(
-                url=f"{self.url}/movies/{movie_id}",
-                params={"language": language},
-                timeout=60,
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            log.exception(f"TMDB API error getting movie metadata for ID {movie_id}")
-            if notification_manager.is_configured():
-                await notification_manager.send_notification(
-                    title="TMDB API Error",
-                    message=f"Failed to fetch movie metadata for ID {movie_id} from TMDB. Error: {e}",
-                )
-            raise
-
-    async def __get_movie_external_ids(self, movie_id: int) -> dict:
-        try:
-            response = await _client.get(
-                url=f"{self.url}/movies/{movie_id}/external_ids", timeout=60
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            log.exception(
-                f"TMDB API error getting movie external IDs for ID {movie_id}"
-            )
-            if notification_manager.is_configured():
-                await notification_manager.send_notification(
-                    title="TMDB API Error",
-                    message=f"Failed to fetch movie external IDs for ID {movie_id} from TMDB. Error: {e}",
-                )
-            raise
+        return await self.__cached_get(
+            _detail_cache,
+            ("movie_meta", movie_id, language),
+            url=f"{self.url}/movies/{movie_id}",
+            params={"language": language},
+            label=f"movie metadata for ID {movie_id}",
+        )
 
     async def __search_movie(self, query: str, page: int) -> dict:
         try:
@@ -274,22 +240,13 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             raise
 
     async def __get_trending_movies(self) -> dict:
-        try:
-            response = await _client.get(
-                url=f"{self.url}/movies/trending",
-                params={"language": self.default_language},
-                timeout=60,
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            log.exception("TMDB API error getting trending movies")
-            if notification_manager.is_configured():
-                await notification_manager.send_notification(
-                    title="TMDB API Error",
-                    message=f"Failed to fetch trending movies from TMDB. Error: {e}",
-                )
-            raise
+        return await self.__cached_get(
+            _trending_cache,
+            ("trending_movies", self.default_language),
+            url=f"{self.url}/movies/trending",
+            params={"language": self.default_language},
+            label="trending movies",
+        )
 
     async def __refresh_genre_maps_if_stale(self) -> None:
         global _movie_genre_map, _tv_genre_map, _genre_maps_fetched_at
@@ -384,9 +341,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         # Fetch show metadata in the appropriate language
         show_metadata = await self.__get_show_metadata(show_id, language=language)
 
-        # get imdb id
-        external_ids = await self.__get_show_external_ids(show_id=show_id)
-        imdb_id = external_ids.get("imdb_id")
+        imdb_id = show_metadata.get("external_ids", {}).get("imdb_id")
 
         season_metadata_list = [
             await self.__get_season_metadata(
@@ -528,9 +483,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             movie_id=movie_id, language=language
         )
 
-        # get imdb id
-        external_ids = await self.__get_movie_external_ids(movie_id=movie_id)
-        imdb_id = external_ids.get("imdb_id")
+        imdb_id = movie_metadata.get("external_ids", {}).get("imdb_id")
 
         year = media_manager.metadataProvider.utils.get_year_from_date(
             movie_metadata["release_date"]

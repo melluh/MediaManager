@@ -5,6 +5,7 @@ from typing import override
 import httpx
 
 import media_manager.metadataProvider.utils
+from media_manager.common.cache import AsyncTTLCache
 from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
@@ -15,11 +16,25 @@ from media_manager.metadataProvider.schemas import (
     MetaDataProviderSearchResult,
 )
 from media_manager.movies.schemas import Movie
+from media_manager.notification.manager import notification_manager
 from media_manager.tv.schemas import Episode, Season, SeasonNumber, Show
 
 log = logging.getLogger(__name__)
 
 _client = httpx.AsyncClient(timeout=30.0)
+
+# These are module-level because TvdbMetadataProvider is instantiated fresh per
+# request.
+_metadata_config = MediaManagerConfig().metadata
+_detail_cache: AsyncTTLCache[tuple, dict] = AsyncTTLCache(
+    ttl_seconds=_metadata_config.detail_cache_ttl_hours * 3600, max_size=5000
+)
+_season_cache: AsyncTTLCache[tuple, dict] = AsyncTTLCache(
+    ttl_seconds=_metadata_config.season_cache_ttl_hours * 3600, max_size=5000
+)
+_trending_cache: AsyncTTLCache[tuple, dict] = AsyncTTLCache(
+    ttl_seconds=_metadata_config.trending_cache_ttl_hours * 3600, max_size=50
+)
 
 
 class TvdbMetadataProvider(AbstractMetadataProvider):
@@ -35,39 +50,101 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
             return []
         return [ExternalPosterImage(url=poster_url)]
 
+    async def __cached_get(
+        self,
+        cache: AsyncTTLCache,
+        key: tuple,
+        url: str,
+        label: str,
+        params: dict | None = None,
+    ) -> dict:
+        async def factory() -> dict:
+            try:
+                response = await _client.get(url=url, params=params, timeout=60)
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPError as e:
+                log.exception(f"TVDB API error getting {label}")
+                if notification_manager.is_configured():
+                    await notification_manager.send_notification(
+                        title="TVDB API Error",
+                        message=f"Failed to fetch {label} from TVDB. Error: {e}",
+                    )
+                raise
+
+        return await cache.get_or_set(key, factory)
+
     async def __get_show(self, show_id: int) -> dict:
-        response = await _client.get(url=f"{self.url}/tv/shows/{show_id}", timeout=60)
-        return response.json()
+        return await self.__cached_get(
+            _detail_cache,
+            ("show", show_id),
+            url=f"{self.url}/tv/shows/{show_id}",
+            label=f"show metadata for ID {show_id}",
+        )
 
     async def __get_season(self, show_id: int) -> dict:
-        response = await _client.get(
-            url=f"{self.url}/tv/seasons/{show_id}", timeout=60
+        return await self.__cached_get(
+            _season_cache,
+            ("season", show_id),
+            url=f"{self.url}/tv/seasons/{show_id}",
+            label=f"season metadata for show ID {show_id}",
         )
-        return response.json()
 
     async def __search_tv(self, query: str) -> dict:
-        response = await _client.get(
-            url=f"{self.url}/tv/search", params={"query": query}, timeout=60
-        )
-        return response.json()
+        try:
+            response = await _client.get(
+                url=f"{self.url}/tv/search", params={"query": query}, timeout=60
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            log.exception(f"TVDB API error searching TV shows with query '{query}'")
+            if notification_manager.is_configured():
+                await notification_manager.send_notification(
+                    title="TVDB API Error",
+                    message=f"Failed to search TV shows with query '{query}' on TVDB. Error: {e}",
+                )
+            raise
 
     async def __get_trending_tv(self) -> dict:
-        response = await _client.get(url=f"{self.url}/tv/trending", timeout=60)
-        return response.json()
+        return await self.__cached_get(
+            _trending_cache,
+            ("trending_tv",),
+            url=f"{self.url}/tv/trending",
+            label="trending TV shows",
+        )
 
     async def __get_movie(self, movie_id: int) -> dict:
-        response = await _client.get(url=f"{self.url}/movies/{movie_id}", timeout=60)
-        return response.json()
+        return await self.__cached_get(
+            _detail_cache,
+            ("movie", movie_id),
+            url=f"{self.url}/movies/{movie_id}",
+            label=f"movie metadata for ID {movie_id}",
+        )
 
     async def __search_movie(self, query: str) -> dict:
-        response = await _client.get(
-            url=f"{self.url}/movies/search", params={"query": query}, timeout=60
-        )
-        return response.json()
+        try:
+            response = await _client.get(
+                url=f"{self.url}/movies/search", params={"query": query}, timeout=60
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            log.exception(f"TVDB API error searching movies with query '{query}'")
+            if notification_manager.is_configured():
+                await notification_manager.send_notification(
+                    title="TVDB API Error",
+                    message=f"Failed to search movies with query '{query}' on TVDB. Error: {e}",
+                )
+            raise
 
     async def __get_trending_movies(self) -> dict:
-        response = await _client.get(url=f"{self.url}/movies/trending", timeout=60)
-        return response.json()
+        return await self.__cached_get(
+            _trending_cache,
+            ("trending_movies",),
+            url=f"{self.url}/movies/trending",
+            label="trending movies",
+        )
 
     @override
     async def download_show_poster_image(self, show: Show) -> bool:

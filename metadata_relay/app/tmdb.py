@@ -10,6 +10,8 @@ log = logging.getLogger(__name__)
 tmdb_api_key = os.getenv("TMDB_API_KEY")
 router = APIRouter(prefix="/tmdb", tags=["TMDB"])
 
+APPEND_TO_RESPONSE = "external_ids,videos"
+
 if tmdb_api_key is None:
     log.warning("TMDB_API_KEY environment variable is not set.")
 else:
@@ -31,8 +33,9 @@ else:
 
     @router.get("/tv/shows/{show_id}")
     async def get_tmdb_show(show_id: int, language: str = "en") -> dict:
-        return TV(show_id).info(language=language)
+        return TV(show_id).info(language=language, append_to_response=APPEND_TO_RESPONSE)
 
+    # External IDs are already returned from the endpoint above, we only keep this for backwards compatibility
     @router.get("/tv/shows/{show_id}/external_ids")
     async def get_tmdb_show_external_ids(show_id: int) -> dict:
         return TV(show_id).external_ids()
@@ -57,8 +60,9 @@ else:
 
     @router.get("/movies/{movie_id}")
     async def get_tmdb_movie(movie_id: int, language: str = "en") -> dict:
-        return Movies(movie_id).info(language=language)
+        return Movies(movie_id).info(language=language, append_to_response=APPEND_TO_RESPONSE)
 
+    # External IDs are already returned from the endpoint above, we only keep this for backwards compatibility
     @router.get("/movies/{movie_id}/external_ids")
     async def get_tmdb_movie_external_ids(movie_id: int) -> dict:
         return Movies(movie_id).external_ids()
