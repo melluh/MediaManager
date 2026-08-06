@@ -1,6 +1,7 @@
 <script lang="ts">
-	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import LogOut from '@lucide/svelte/icons/log-out';
+	import Wrench from '@lucide/svelte/icons/wrench';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Sidebar from '$lib/components/ui/sidebar';
@@ -24,7 +25,6 @@
 						class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
 					>
 						<Avatar.Root class="h-8 w-8 rounded-lg">
-							<!--<Avatar.Image src={user.avatar} alt={user.name} />-->
 							<Avatar.Fallback class="rounded-lg">
 								<UserRound />
 							</Avatar.Fallback>
@@ -32,7 +32,7 @@
 						<div class="grid flex-1 text-left text-sm leading-tight">
 							<UserDetails />
 						</div>
-						<ChevronsUpDown class="ml-auto size-4" />
+						<EllipsisVertical class="ml-auto size-4" />
 					</Sidebar.MenuButton>
 				{/snippet}
 			</DropdownMenu.Trigger>
@@ -42,24 +42,10 @@
 				side={sidebar.isMobile ? 'bottom' : 'right'}
 				sideOffset={4}
 			>
-				<DropdownMenu.Label class="p-0 font-normal">
-					<div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-						<Avatar.Root class="h-8 w-8 rounded-lg">
-							<!--<Avatar.Image src={user.avatar} alt={user.name} />-->
-							<Avatar.Fallback class="rounded-lg">
-								<UserRound />
-							</Avatar.Fallback>
-						</Avatar.Root>
-						<div class="grid flex-1 text-left text-sm leading-tight">
-							<UserDetails />
-						</div>
-					</div>
-				</DropdownMenu.Label>
-				<DropdownMenu.Separator />
 				<DropdownMenu.Item onclick={() => goto(resolve('/dashboard/settings#me', {}))}>
+					<Wrench />
 					My Account
 				</DropdownMenu.Item>
-				<DropdownMenu.Separator />
 				<DropdownMenu.Item onclick={() => handleLogout()}>
 					<LogOut />
 					Log out
