@@ -1,69 +1,15 @@
 <script lang="ts">
-	import LibraryMediaCard from '$lib/components/library-media-card.svelte';
-	import ImportCandidatesDialog from '$lib/components/import-media/import-candidates-dialog.svelte';
-	import DetectedMediaCard from '$lib/components/import-media/detected-media-card.svelte';
-	import type { MediaImportSuggestion, UserRead } from '$lib/api/api';
-	import { getContext, onMount } from 'svelte';
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
+	import MediaLibraryPage from '$lib/components/media-library-page.svelte';
 	import type { PageProps } from './$types';
-	import LoadingBar from '$lib/components/loading-bar.svelte';
-	import client from '$lib/api';
-
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
-	setCrumbs([{ label: 'Shows' }]);
 
 	let { data }: PageProps = $props();
-	let user: () => UserRead = getContext('user');
-	let importableShows: MediaImportSuggestion[] = $state([]);
-
-	onMount(() => {
-		if (user()?.is_superuser) {
-			client.GET('/api/v1/tv/importable').then(({ data, error }) => {
-				if (!error) {
-					importableShows = data;
-				}
-			});
-		}
-	});
 </script>
 
-<svelte:head>
-	<title>TV Shows - MediaManager</title>
-	<meta content="Browse and manage your TV show collection in MediaManager" name="description" />
-</svelte:head>
-
-<main class="flex w-full flex-col gap-4 p-4 pt-0">
-	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
-		TV Shows
-	</h1>
-	{#if importableShows.length > 0}
-		<div
-			class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4"
-		>
-			{#each importableShows as importable (importable.directory)}
-				<DetectedMediaCard isTv={true} directory={importable.directory}>
-					<ImportCandidatesDialog
-						isTv={true}
-						name={importable.directory}
-						candidates={importable.candidates}
-					>
-						Import TV show
-					</ImportCandidatesDialog>
-				</DetectedMediaCard>
-			{/each}
-		</div>
-	{/if}
-	{#await data.tvShows}
-		<LoadingBar />
-	{:then tvShows}
-		<div
-			class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-		>
-			{#each tvShows as show (show.id)}
-				<LibraryMediaCard media={show} isShow={true} />
-			{:else}
-				<div class="col-span-full text-center text-muted-foreground">No TV shows added yet.</div>
-			{/each}
-		</div>
-	{/await}
-</main>
+<MediaLibraryPage
+	isShow={true}
+	title="TV Shows"
+	crumb="Shows"
+	description="Browse and manage your TV show collection in MediaManager"
+	items={data.tvShows}
+	emptyMessage="No TV shows added yet."
+/>

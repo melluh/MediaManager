@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AddMediaCard from '$lib/components/add-media-card.svelte';
-	import { Skeleton } from '$lib/components/ui/skeleton';
+	import MediaCardSkeleton from '$lib/components/media-card-skeleton.svelte';
 	import * as Carousel from '$lib/components/ui/carousel/index.js';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
@@ -30,7 +30,7 @@
 		{#if isLoading}
 			{#each { length: 5 }}
 				<Carousel.Item class="basis-2/5 lg:basis-1/5">
-					<Skeleton class="aspect-2/3 w-full" />
+					<MediaCardSkeleton />
 				</Carousel.Item>
 			{/each}
 		{:else}
