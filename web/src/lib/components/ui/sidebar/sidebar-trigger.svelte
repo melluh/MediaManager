@@ -2,6 +2,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
 	import PanelLeft from '@lucide/svelte/icons/panel-left';
+	import Menu from '@lucide/svelte/icons/menu';
 	import type { ComponentProps } from 'svelte';
 	import { useSidebar } from './context.svelte.js';
 
@@ -29,6 +30,10 @@
 	class={cn('h-7 w-7', className)}
 	{...restProps}
 >
-	<PanelLeft />
+	{#if sidebar.isMobile}
+		<Menu />
+	{:else}
+		<PanelLeft />
+	{/if}
 	<span class="sr-only">Toggle Sidebar</span>
 </Button>

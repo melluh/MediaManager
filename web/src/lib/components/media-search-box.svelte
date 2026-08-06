@@ -8,12 +8,25 @@
 	import { page } from '$app/state';
 	import client from '$lib/api';
 	import type { SearchResult } from '$lib/api/api.d.ts';
-	import { cn, getFullyQualifiedMediaName, withoutTrailingSlash } from '$lib/utils.js';
+	import { cn, getFullyQualifiedMediaName, isSearchPage } from '$lib/utils.js';
 	import { getMediaTypeHref } from '$lib/media-types.ts';
 
-	let { class: className = '' }: { class?: string } = $props();
+	let {
+		class: className = '',
+		autofocus = false,
+		initialValue = '',
+		onResultSelect
+	}: {
+		class?: string;
+		autofocus?: boolean;
+		initialValue?: string;
+		onResultSelect?: () => void;
+	} = $props();
 
-	let searchTerm = $state('');
+	// Writable $derived: overridden by typing, but resyncs whenever initialValue
+	// changes (e.g. the desktop search box persists across client-side
+	// navigations, including back/forward).
+	let searchTerm = $derived(initialValue);
 	let results: SearchResult[] = $state([]);
 	let hasSearched = $state(false);
 	let isOpen = $state(false);
@@ -22,6 +35,7 @@
 	let highlightedIndex = $state(-1);
 	let posterLoaded: Record<string, boolean> = $state({});
 	let containerRef: HTMLDivElement | undefined = $state();
+	let inputRef: HTMLInputElement | null = $state(null);
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 	let searchAbortController: AbortController | undefined;
 
@@ -46,11 +60,15 @@
 	}
 
 	$effect(() => {
-		const onSearchPage =
-			withoutTrailingSlash(page.url.pathname) ===
-			withoutTrailingSlash(resolve('/dashboard/search', {}));
-		if (!onSearchPage) {
+		if (!isSearchPage(page.url.pathname)) {
 			clearSearch();
+		}
+	});
+
+	$effect(() => {
+		if (autofocus) {
+			inputRef?.focus();
+			inputRef?.select();
 		}
 	});
 
@@ -109,8 +127,13 @@
 		if (query.length === 0) return;
 		cancelPendingSearch();
 		isOpen = false;
+		// Refining an already-open search replaces the current history entry
+		// instead of pushing a new one, so the search page never piles up
+		// multiple entries a "back" button would have to unwind.
 		// eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve() result, with a query string appended
-		goto(`${resolve('/dashboard/search', {})}?q=${encodeURIComponent(query)}`);
+		goto(`${resolve('/dashboard/search', {})}?q=${encodeURIComponent(query)}`, {
+			replaceState: isSearchPage(page.url.pathname)
+		});
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -130,7 +153,7 @@
 			if (highlighted) {
 				const href = hrefForResult(highlighted);
 				clearSearch();
-				isOpen = false;
+				onResultSelect?.();
 				// eslint-disable-next-line svelte/no-navigation-without-resolve -- href is built from resolve() in getMediaTypeHref
 				if (href) goto(href);
 			} else {
@@ -161,6 +184,7 @@
 		/>
 	{/if}
 	<Input
+		bind:ref={inputRef}
 		bind:value={searchTerm}
 		type="search"
 		placeholder="Search..."
@@ -191,8 +215,8 @@
 						)}
 						onmouseenter={() => (highlightedIndex = index)}
 						onclick={() => {
-							cancelPendingSearch();
-							isOpen = false;
+							clearSearch();
+							onResultSelect?.();
 						}}
 					>
 						<!-- eslint-enable svelte/no-navigation-without-resolve -->

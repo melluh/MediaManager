@@ -1,9 +1,8 @@
 <script lang="ts">
-	import logo from '$lib/images/logo.svg';
+	import AppBrand from '$lib/components/app-brand.svelte';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 
 	import background from '$lib/images/pawel-czerwinski-NTYYL9Eb9y8-unsplash.jpg?enhanced';
-	import { PUBLIC_VERSION } from '$env/static/public';
 	import { resolve } from '$app/paths';
 
 	let { children } = $props();
@@ -13,13 +12,7 @@
 	<div class="flex flex-col gap-4 p-6 md:p-10">
 		<header class="flex justify-center gap-2 md:justify-start">
 			<a class="flex items-center gap-2" href={resolve('/', {})}>
-				<div class="flex size-16 items-center justify-center rounded-md text-primary-foreground">
-					<img alt="MediaManager Logo" class="size-12" src={logo} />
-				</div>
-				<div>
-					<h1 class="text-2xl font-bold">Media Manager</h1>
-					<span class="truncate text-xs">{PUBLIC_VERSION}</span>
-				</div>
+				<AppBrand size="lg" />
 			</a>
 		</header>
 		<main class="flex flex-1 items-center justify-center">

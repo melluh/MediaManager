@@ -232,7 +232,7 @@
 	{/if}
 	<div class="relative z-10 flex shrink-0 flex-row gap-4 p-6 text-left">
 		{#if (result.poster_images?.length ?? 0) > 0}
-			<div class="relative -mt-16 h-44 w-32 shrink-0 sm:-mt-20 sm:h-56 sm:w-36">
+			<div class="relative -mt-16 hidden h-44 w-32 shrink-0 sm:-mt-20 sm:h-56 sm:w-36 md:block">
 				<ExternalPosterImage
 					className="h-full w-full rounded-lg object-cover shadow-lg ring-1 ring-border"
 					posterImages={result.poster_images ?? []}

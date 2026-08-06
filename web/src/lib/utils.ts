@@ -28,6 +28,10 @@ export function withoutTrailingSlash(pathname: string): string {
 	return pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
 }
 
+export function isSearchPage(pathname: string): boolean {
+	return withoutTrailingSlash(pathname) === withoutTrailingSlash(resolve('/dashboard/search', {}));
+}
+
 export function getTorrentQualityString(value: number): string {
 	return qualityMap[value] || 'unknown';
 }

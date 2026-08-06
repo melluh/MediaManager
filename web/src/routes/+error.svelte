@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import logo from '$lib/images/logo.svg';
+	import AppBrand from '$lib/components/app-brand.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import {
 		FileQuestion,
@@ -40,8 +40,7 @@
 <div class="relative min-h-svh">
 	<header class="absolute inset-x-0 top-0 flex justify-center p-6 md:justify-start md:p-10">
 		<a class="flex items-center gap-2" href={resolve('/', {})}>
-			<img alt="MediaManager Logo" class="size-10" src={logo} />
-			<span class="text-xl font-bold">Media Manager</span>
+			<AppBrand size="lg" />
 		</a>
 	</header>
 

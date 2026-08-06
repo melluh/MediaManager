@@ -35,6 +35,10 @@
 
 	setEmblaContext(carouselState);
 
+	$effect(() => {
+		carouselState.options = opts;
+	});
+
 	function scrollPrev() {
 		carouselState.api?.scrollPrev();
 	}

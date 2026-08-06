@@ -120,7 +120,9 @@
 </svelte:head>
 
 <main class="flex w-full flex-1 flex-col gap-8 p-4 pt-0">
-	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
+	<h1
+		class="hidden scroll-m-20 text-center text-4xl font-extrabold tracking-tight md:block lg:text-5xl"
+	>
 		{#if query}
 			Search results for &quot;{query}&quot;
 		{:else}

@@ -9,8 +9,6 @@
 	} from 'lucide-svelte';
 	import { resolve } from '$app/paths';
 
-	import { PUBLIC_VERSION } from '$env/static/public';
-
 	const data = {
 		navMain: [
 			{
@@ -78,29 +76,36 @@
 	import NavUser from '$lib/components/nav/nav-user.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import type { ComponentProps } from 'svelte';
-	import logo from '$lib/images/logo.svg';
+	import AppBrand from '$lib/components/app-brand.svelte';
+	import { afterNavigate } from '$app/navigation';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
+
+	const sidebar = Sidebar.useSidebar();
+
+	afterNavigate(() => {
+		if (sidebar.isMobile) {
+			sidebar.setOpenMobile(false);
+		}
+	});
 </script>
 
 <Sidebar.Root {...restProps} bind:ref variant="inset">
-	<Sidebar.Header>
-		<Sidebar.Menu>
-			<Sidebar.MenuItem>
-				<Sidebar.MenuButton size="lg">
-					{#snippet child({ props })}
-						<a href={resolve('/dashboard', {})} {...props}>
-							<img class="size-12" src={logo} alt="Media Manager Logo" />
-							<div class="grid flex-1 text-left text-sm leading-tight">
-								<span class="truncate font-semibold">Media Manager</span>
-								<span class="truncate text-xs">{PUBLIC_VERSION}</span>
-							</div>
-						</a>
-					{/snippet}
-				</Sidebar.MenuButton>
-			</Sidebar.MenuItem>
-		</Sidebar.Menu>
-	</Sidebar.Header>
+	{#if !sidebar.isMobile}
+		<Sidebar.Header>
+			<Sidebar.Menu>
+				<Sidebar.MenuItem>
+					<Sidebar.MenuButton size="lg">
+						{#snippet child({ props })}
+							<a href={resolve('/dashboard', {})} {...props}>
+								<AppBrand size="md" showVersion />
+							</a>
+						{/snippet}
+					</Sidebar.MenuButton>
+				</Sidebar.MenuItem>
+			</Sidebar.Menu>
+		</Sidebar.Header>
+	{/if}
 	<Sidebar.Content>
 		<NavMain items={data.navMain} />
 		<!--  <NavProjects projects={data.projects}/> -->
