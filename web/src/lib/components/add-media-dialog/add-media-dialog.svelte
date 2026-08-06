@@ -2,17 +2,15 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import {
-		ArrowLeft,
-		ArrowRight,
-		CalendarClock,
-		CircleCheck,
-		Download,
-		LoaderCircle,
-		Plus,
-		SearchX,
-		Film
-	} from 'lucide-svelte';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import ArrowRight from '@lucide/svelte/icons/arrow-right';
+	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import Download from '@lucide/svelte/icons/download';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+	import Plus from '@lucide/svelte/icons/plus';
+	import SearchX from '@lucide/svelte/icons/search-x';
+	import Film from '@lucide/svelte/icons/film';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { IndexerQueryResult, MetaDataProviderSearchResult, Movie, Show } from '$lib/api/api';

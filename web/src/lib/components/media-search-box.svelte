@@ -2,7 +2,8 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import MediaPicture from '$lib/components/media-picture.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { Search, LoaderCircle } from 'lucide-svelte';
+	import Search from '@lucide/svelte/icons/search';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';

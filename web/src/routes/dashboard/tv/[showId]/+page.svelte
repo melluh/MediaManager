@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ImageOff } from 'lucide-svelte';
-	import { Ellipsis } from 'lucide-svelte';
-	import { ChevronDown } from 'lucide-svelte';
+	import ImageOff from '@lucide/svelte/icons/image-off';
+	import Ellipsis from '@lucide/svelte/icons/ellipsis';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';

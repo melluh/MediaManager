@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { ImageOff } from 'lucide-svelte';
+	import ImageOff from '@lucide/svelte/icons/image-off';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
 	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
 

@@ -11,7 +11,7 @@
 	import client from '$lib/api';
 	import { handleOauth } from '$lib/utils.ts';
 	import { resolve } from '$app/paths';
-	import { CheckIcon } from 'lucide-svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import Spinner from '../ui/spinner/spinner.svelte';
 
 	let {

@@ -3,7 +3,8 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
-	import { ChevronDown, LoaderCircle } from 'lucide-svelte';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
 	import AddMediaCard from '$lib/components/add-media-card.svelte';

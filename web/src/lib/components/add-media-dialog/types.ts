@@ -1,4 +1,7 @@
-import { Signal, SignalHigh, SignalLow, SignalMedium } from 'lucide-svelte';
+import Signal from '@lucide/svelte/icons/signal';
+import SignalHigh from '@lucide/svelte/icons/signal-high';
+import SignalLow from '@lucide/svelte/icons/signal-low';
+import SignalMedium from '@lucide/svelte/icons/signal-medium';
 import type { IndexerQueryResult } from '$lib/api/api';
 
 // Ordered list of pages shown in the add-media dialog. Adding a page (e.g. a

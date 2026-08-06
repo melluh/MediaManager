@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ExternalLink } from 'lucide-svelte';
+	import ExternalLink from '@lucide/svelte/icons/external-link';
 
 	let { indexer, comments }: { indexer: string | null | undefined; comments?: string | null } =
 		$props();

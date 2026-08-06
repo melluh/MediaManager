@@ -1,7 +1,7 @@
 <script lang="ts">
 	import QualitySelector from './quality-selector.svelte';
 	import { Spinner } from '$lib/components/ui/spinner';
-	import { ExternalLink } from 'lucide-svelte';
+	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import type { MediaQuality, SelectedTorrents } from './types';
 
 	let {

@@ -2,7 +2,10 @@
 	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { toast } from 'svelte-sonner';
 	import { Badge } from '$lib/components/ui/badge';
-	import { ArrowLeft, Download, List, LoaderCircle } from 'lucide-svelte';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import Download from '@lucide/svelte/icons/download';
+	import List from '@lucide/svelte/icons/list';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { cn } from '$lib/utils';
 	import { untrack } from 'svelte';
 

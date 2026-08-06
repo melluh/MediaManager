@@ -4,7 +4,8 @@
 	import AppBrand from '$lib/components/app-brand.svelte';
 	import { resolve } from '$app/paths';
 	import { afterNavigate, goto } from '$app/navigation';
-	import { ArrowLeft, Search } from 'lucide-svelte';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import Search from '@lucide/svelte/icons/search';
 	import { cn } from '$lib/utils.js';
 
 	let {
@@ -55,7 +56,10 @@
 		/>
 	</div>
 {:else}
-	<a class="flex flex-1 items-center justify-center gap-2 md:hidden" href={resolve('/dashboard', {})}>
+	<a
+		class="flex flex-1 items-center justify-center gap-2 md:hidden"
+		href={resolve('/dashboard', {})}
+	>
 		<AppBrand size="sm" />
 	</a>
 {/if}

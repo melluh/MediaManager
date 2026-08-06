@@ -6,7 +6,8 @@
 	import * as Table from '$lib/components/ui/table';
 	import * as Collapsible from '$lib/components/ui/collapsible';
 	import { Badge } from '$lib/components/ui/badge';
-	import { ChevronDown, Download } from 'lucide-svelte';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import Download from '@lucide/svelte/icons/download';
 	import client from '$lib/api';
 	import type { IndexerQueryResult, Show } from '$lib/api/api';
 	import SelectFilePathSuffixDialog from '$lib/components/download-dialogs/select-file-path-suffix-dialog.svelte';

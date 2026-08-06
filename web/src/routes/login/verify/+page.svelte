@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { UserCheck } from 'lucide-svelte';
+	import UserCheck from '@lucide/svelte/icons/user-check';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { handleLogout } from '$lib/utils.ts';
 </script>

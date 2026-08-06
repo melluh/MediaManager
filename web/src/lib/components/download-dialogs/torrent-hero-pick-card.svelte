@@ -1,7 +1,14 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Captions, Download, Film, Gauge, HardDrive, Star, Tag, Users } from 'lucide-svelte';
+	import Captions from '@lucide/svelte/icons/captions';
+	import Download from '@lucide/svelte/icons/download';
+	import Film from '@lucide/svelte/icons/film';
+	import Gauge from '@lucide/svelte/icons/gauge';
+	import HardDrive from '@lucide/svelte/icons/hard-drive';
+	import Star from '@lucide/svelte/icons/star';
+	import Tag from '@lucide/svelte/icons/tag';
+	import Users from '@lucide/svelte/icons/users';
 	import SelectFilePathSuffixDialog from '$lib/components/download-dialogs/select-file-path-suffix-dialog.svelte';
 	import TorrentStat from '$lib/components/download-dialogs/torrent-stat.svelte';
 	import TorrentBadges from '$lib/components/download-dialogs/torrent-badges.svelte';

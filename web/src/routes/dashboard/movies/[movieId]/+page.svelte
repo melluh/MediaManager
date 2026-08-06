@@ -2,7 +2,8 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
-	import { ImageOff, ChevronDown } from 'lucide-svelte';
+	import ImageOff from '@lucide/svelte/icons/image-off';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import { getContext } from 'svelte';
 	import type { PublicMovie, PublicMovieFile, UserRead } from '$lib/api/api';
 	import {

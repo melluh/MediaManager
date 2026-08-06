@@ -3,14 +3,12 @@
 	import { resolve } from '$app/paths';
 	import AppBrand from '$lib/components/app-brand.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import {
-		FileQuestion,
-		Home,
-		ServerCrash,
-		ShieldAlert,
-		TriangleAlert,
-		Undo2
-	} from 'lucide-svelte';
+	import FileQuestion from '@lucide/svelte/icons/file-question';
+	import Home from '@lucide/svelte/icons/home';
+	import ServerCrash from '@lucide/svelte/icons/server-crash';
+	import ShieldAlert from '@lucide/svelte/icons/shield-alert';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+	import Undo2 from '@lucide/svelte/icons/undo-2';
 
 	const errorDisplayByStatus: Record<number, { icon: typeof FileQuestion; title: string }> = {
 		403: { icon: ShieldAlert, title: 'Access denied' },

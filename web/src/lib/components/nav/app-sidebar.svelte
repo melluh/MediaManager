@@ -1,12 +1,10 @@
 <script lang="ts" module>
-	import {
-		Bell,
-		Clapperboard,
-		Home,
-		Info,
-		Settings,
-		TvIcon
-	} from 'lucide-svelte';
+	import Bell from '@lucide/svelte/icons/bell';
+	import Clapperboard from '@lucide/svelte/icons/clapperboard';
+	import Home from '@lucide/svelte/icons/home';
+	import Info from '@lucide/svelte/icons/info';
+	import Settings from '@lucide/svelte/icons/settings';
+	import TvIcon from '@lucide/svelte/icons/tv';
 	import { resolve } from '$app/paths';
 
 	const data = {

@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { ArrowDown, ArrowUp, LoaderCircle } from 'lucide-svelte';
+	import ArrowDown from '@lucide/svelte/icons/arrow-down';
+	import ArrowUp from '@lucide/svelte/icons/arrow-up';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import * as Table from '$lib/components/ui/table';
 	import { type Snippet } from 'svelte';
 	import type { IndexerQueryResult } from '$lib/api/api';

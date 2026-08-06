@@ -1,7 +1,8 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { ChevronRight, ImageOff } from 'lucide-svelte';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ImageOff from '@lucide/svelte/icons/image-off';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
 	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
 	import AddMediaDialog from '$lib/components/add-media-dialog/add-media-dialog.svelte';

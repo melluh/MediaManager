@@ -4,7 +4,8 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { cn } from '$lib/utils.js';
 	import { tick } from 'svelte';
-	import { CheckIcon, ChevronsUpDownIcon } from 'lucide-svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import client from '$lib/api';
