@@ -342,6 +342,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         show_metadata = await self.__get_show_metadata(show_id, language=language)
 
         imdb_id = show_metadata.get("external_ids", {}).get("imdb_id")
+        trailer_url = get_first_trailer(show_metadata.get("videos", {"results": []}).get("results", []))
 
         season_metadata_list = [
             await self.__get_season_metadata(
@@ -385,6 +386,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             ended=show_metadata["status"] in ENDED_STATUS,
             original_language=show_metadata.get("original_language"),
             imdb_id=imdb_id,
+            trailer_url=trailer_url,
             tagline=show_metadata.get("tagline") or None,
             genres=media_manager.metadataProvider.utils.get_genre_names(
                 show_metadata.get("genres")
@@ -484,6 +486,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         )
 
         imdb_id = movie_metadata.get("external_ids", {}).get("imdb_id")
+        trailer_url = get_first_trailer(movie_metadata.get("videos", {"results": []}).get("results", []))
 
         year = media_manager.metadataProvider.utils.get_year_from_date(
             movie_metadata["release_date"]
@@ -497,6 +500,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             metadata_provider=self.name,
             original_language=movie_metadata.get("original_language"),
             imdb_id=imdb_id,
+            trailer_url=trailer_url,
             tagline=movie_metadata.get("tagline") or None,
             genres=media_manager.metadataProvider.utils.get_genre_names(
                 movie_metadata.get("genres")
@@ -667,3 +671,17 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             log.warning(f"image for movie {movie.name} could not be downloaded")
             return False
         return True
+
+def get_first_trailer(videos: list[dict]) -> str | None:
+    for video in videos:
+        if video["type"] == "Trailer":
+            url = get_video_url(video["site"], video["key"])
+            if not url:
+                continue
+            return url
+    return None
+
+def get_video_url(site: str, key: str) -> str | None:
+    if site == "YouTube":
+        return f"https://www.youtube.com/watch?v={key}"
+    return None

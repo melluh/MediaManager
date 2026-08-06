@@ -53,6 +53,7 @@ client_id = ""
 client_secret = ""
 configuration_endpoint = "https://openid.example.com/.well-known/openid-configuration"
 name = "OpenID"
+display_name_sync = "if_empty"
 
 [notifications]
 # SMTP settings for email notifications and email password resets

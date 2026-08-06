@@ -8,10 +8,10 @@
 		CalendarClock,
 		CircleCheck,
 		Download,
-		ExternalLink,
 		LoaderCircle,
 		Plus,
-		SearchX
+		SearchX,
+		Film
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -260,29 +260,42 @@
 				</h2>
 				<div class="flex shrink-0 items-center gap-2">
 					{#if !detailsLoaded}
-						<Skeleton class="h-8 w-16" />
-					{:else if imdbUrl}
-						<Button
-							variant="outline"
-							size="sm"
-							href={imdbUrl}
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							IMDb
-							<ExternalLink />
-						</Button>
+						<Skeleton class="h-8 w-20" />
+						<Skeleton class="h-8 w-20" />
+					{:else}
+						{#if details?.trailer_url}
+							<Button
+								variant="outline"
+								size="sm"
+								href={details?.trailer_url}
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								Trailer
+								<Film />
+							</Button>
+						{/if}
+						{#if imdbUrl}
+							<Button
+								variant="link"
+								size="sm"
+								href={imdbUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								IMDb
+							</Button>
+						{/if}
 					{/if}
 					{#if providerUrl}
 						<Button
-							variant="outline"
+							variant="link"
 							size="sm"
 							href={providerUrl}
 							target="_blank"
 							rel="noopener noreferrer"
 						>
 							{providerLabel}
-							<ExternalLink />
 						</Button>
 					{/if}
 				</div>

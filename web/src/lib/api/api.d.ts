@@ -1596,6 +1596,8 @@ export interface components {
 			original_language?: string | null;
 			/** Imdb Id */
 			imdb_id?: string | null;
+			/** Trailer Url */
+			trailer_url?: string | null;
 			/** Tagline */
 			tagline?: string | null;
 			/** Genres */
@@ -1723,6 +1725,8 @@ export interface components {
 			original_language?: string | null;
 			/** Imdb Id */
 			imdb_id?: string | null;
+			/** Trailer Url */
+			trailer_url?: string | null;
 			/** Tagline */
 			tagline?: string | null;
 			/** Genres */
@@ -1976,6 +1980,8 @@ export interface components {
 			original_language?: string | null;
 			/** Imdb Id */
 			imdb_id?: string | null;
+			/** Trailer Url */
+			trailer_url?: string | null;
 			/** Tagline */
 			tagline?: string | null;
 			/** Genres */

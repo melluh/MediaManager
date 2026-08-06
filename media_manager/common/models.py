@@ -23,6 +23,7 @@ class MediaMixin:
     library: Mapped[str] = mapped_column(default="Default")
     original_language: Mapped[str | None] = mapped_column(default=None)
     imdb_id: Mapped[str | None] = mapped_column(default=None)
+    trailer_url: Mapped[str | None] = mapped_column(default=None)
     tagline: Mapped[str | None] = mapped_column(default=None)
     genres = mapped_column(ARRAY(String), nullable=True, default=list)
     runtime: Mapped[int | None] = mapped_column(default=None)
