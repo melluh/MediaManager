@@ -1,11 +1,9 @@
 <script lang="ts" module>
 	import {
 		Bell,
-		CircleDollarSign,
 		Clapperboard,
 		Home,
 		Info,
-		LifeBuoy,
 		Settings,
 		TvIcon
 	} from 'lucide-svelte';
@@ -64,16 +62,6 @@
 				title: 'Settings',
 				url: resolve('/dashboard/settings', {}),
 				icon: Settings
-			},
-			{
-				title: 'Support',
-				url: 'https://github.com/maxdorninger/MediaManager/issues',
-				icon: LifeBuoy
-			},
-			{
-				title: 'Donate',
-				url: 'https://github.com/sponsors/maxdorninger',
-				icon: CircleDollarSign
 			},
 			{
 				title: 'About',
