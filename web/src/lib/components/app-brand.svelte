@@ -24,9 +24,9 @@
 <img alt="MediaManager Logo" class={classes.img} src={logo} />
 {#if showVersion}
 	<div class="grid flex-1 text-left leading-tight">
-		<span class="truncate {classes.name}">Media Manager</span>
+		<span class="truncate {classes.name}">MediaManager</span>
 		<span class="hidden truncate text-xs text-muted-foreground sm:block">{PUBLIC_VERSION}</span>
 	</div>
 {:else}
-	<span class={classes.name}>Media Manager</span>
+	<span class={classes.name}>MediaManager</span>
 {/if}

@@ -1,6 +1,6 @@
 ---
 description: >-
-  This section is for those who want to contribute to Media Manager or
+  This section is for those who want to contribute to MediaManager or
   understand its internals.
 ---
 
