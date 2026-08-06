@@ -1,11 +1,20 @@
 import uuid
 
 from fastapi_users import schemas
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+
+class OAuthAccountRead(BaseModel):
+    id: uuid.UUID
+    oauth_name: str
+    account_email: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
     display_name: str | None = None
+    oauth_accounts: list[OAuthAccountRead] = Field(default_factory=list)
 
 
 class UserCreate(schemas.BaseUserCreate):

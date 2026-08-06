@@ -6,6 +6,7 @@
 	import type { UserReadWithPermissions } from '$lib/api/api';
 	import InlineEditField from '$lib/components/inline-edit-field.svelte';
 	import ChangePasswordDialog from '$lib/components/change-password-dialog.svelte';
+	import { Badge } from '$lib/components/ui/badge';
 
 	let { passwordLoginEnabled = true }: { passwordLoginEnabled?: boolean } = $props();
 
@@ -13,6 +14,7 @@
 
 	let canEditAccount = $derived(currentUser().permissions.can_edit_account);
 	let canChangePassword = $derived(currentUser().permissions.can_change_password);
+	let oauthAccounts = $derived(currentUser().oauth_accounts ?? []);
 
 	const disabledEditMessage =
 		"You can't edit your own account details. Contact a superuser for assistance.";
@@ -74,4 +76,16 @@
 			{/if}
 		</div>
 	{/if}
+	<div>
+		<span class="mb-1 block text-sm font-medium">Linked Accounts</span>
+		{#if oauthAccounts.length > 0}
+			<div class="flex flex-wrap gap-2">
+				{#each oauthAccounts as account (account.id)}
+					<Badge variant="outline">{account.oauth_name}: {account.account_email}</Badge>
+				{/each}
+			</div>
+		{:else}
+			<p class="text-sm text-muted-foreground">No OAuth accounts are linked to your account.</p>
+		{/if}
+	</div>
 </div>

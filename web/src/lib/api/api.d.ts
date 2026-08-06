@@ -1658,6 +1658,18 @@ export interface components {
 			/** Authorization Url */
 			authorization_url: string;
 		};
+		/** OAuthAccountRead */
+		OAuthAccountRead: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			/** Oauth Name */
+			oauth_name: string;
+			/** Account Email */
+			account_email: string;
+		};
 		/** PublicEpisode */
 		PublicEpisode: {
 			/**
@@ -2156,6 +2168,8 @@ export interface components {
 			is_verified: boolean;
 			/** Display Name */
 			display_name?: string | null;
+			/** Oauth Accounts */
+			oauth_accounts?: components['schemas']['OAuthAccountRead'][];
 		};
 		/** UserReadWithPermissions */
 		UserReadWithPermissions: {
@@ -2186,6 +2200,8 @@ export interface components {
 			is_verified: boolean;
 			/** Display Name */
 			display_name?: string | null;
+			/** Oauth Accounts */
+			oauth_accounts?: components['schemas']['OAuthAccountRead'][];
 			permissions: components['schemas']['UserPermissions'];
 		};
 		/** UserUpdate */
@@ -2252,6 +2268,7 @@ export type Movie = components['schemas']['Movie'];
 export type MovieTorrent = components['schemas']['MovieTorrent'];
 export type Notification = components['schemas']['Notification'];
 export type OAuth2AuthorizeResponse = components['schemas']['OAuth2AuthorizeResponse'];
+export type OAuthAccountRead = components['schemas']['OAuthAccountRead'];
 export type PublicEpisode = components['schemas']['PublicEpisode'];
 export type PublicEpisodeFile = components['schemas']['PublicEpisodeFile'];
 export type PublicMovie = components['schemas']['PublicMovie'];
