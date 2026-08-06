@@ -133,37 +133,16 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             # selectinload so ShowSchema.seasons/episodes don't lazy-load.
             return await self.get_show_by_id(db_show.id)
 
-        # Custom insertion for nested seasons/episodes
+        # Scalar fields via model_dump() so new schema fields aren't silently
+        # dropped on insert (seasons/episodes still need explicit construction).
         db_show = Show(
-            id=show.id,
-            external_id=show.external_id,
-            metadata_provider=show.metadata_provider,
-            name=show.name,
-            slug=show.slug,
-            overview=show.overview,
-            year=show.year,
-            ended=show.ended,
-            original_language=show.original_language,
-            imdb_id=show.imdb_id,
-            continuous_download=show.continuous_download,
-            library=show.library,
+            **show.model_dump(exclude={"seasons"}),
             seasons=[
                 Season(
-                    id=season.id,
+                    **season.model_dump(exclude={"episodes"}),
                     show_id=show.id,
-                    number=season.number,
-                    external_id=season.external_id,
-                    name=season.name,
-                    overview=season.overview,
                     episodes=[
-                        Episode(
-                            id=episode.id,
-                            season_id=season.id,
-                            number=episode.number,
-                            external_id=episode.external_id,
-                            title=episode.title,
-                            overview=episode.overview,
-                        )
+                        Episode(**episode.model_dump(), season_id=season.id)
                         for episode in season.episodes
                     ],
                 )
