@@ -451,7 +451,7 @@ export interface paths {
 		};
 		/**
 		 * Get All Shows
-		 * @description Get all shows in the library.
+		 * @description Get all shows in the library, without their seasons/episodes.
 		 */
 		get: operations['get_all_shows_api_v1_tv_shows_get'];
 		put?: never;
@@ -1965,7 +1965,6 @@ export interface components {
 			 * Format: uuid
 			 */
 			id: string;
-			media_type: components['schemas']['MediaType'];
 			/** Name */
 			name: string;
 			/** Slug */
@@ -1974,6 +1973,32 @@ export interface components {
 			overview: string;
 			/** Year */
 			year: number | null;
+			/** External Id */
+			external_id: number;
+			/** Metadata Provider */
+			metadata_provider: string;
+			/**
+			 * Library
+			 * @default Default
+			 */
+			library: string;
+			/** Original Language */
+			original_language?: string | null;
+			/** Imdb Id */
+			imdb_id?: string | null;
+			/** Trailer Url */
+			trailer_url?: string | null;
+			/** Tagline */
+			tagline?: string | null;
+			/** Genres */
+			genres?: string[];
+			/** Runtime */
+			runtime?: number | null;
+			/** Release Date */
+			release_date?: string | null;
+			/** Metadata Updated At */
+			metadata_updated_at?: string | null;
+			media_type: components['schemas']['MediaType'];
 		};
 		/** Season */
 		Season: {
@@ -2062,6 +2087,57 @@ export interface components {
 			continuous_download: boolean;
 			/** Seasons */
 			seasons: components['schemas']['Season'][];
+		};
+		/** ShowSummary */
+		ShowSummary: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id?: string;
+			/** Name */
+			name: string;
+			/** Slug */
+			slug?: string | null;
+			/** Overview */
+			overview: string;
+			/** Year */
+			year: number | null;
+			/** External Id */
+			external_id: number;
+			/** Metadata Provider */
+			metadata_provider: string;
+			/**
+			 * Library
+			 * @default Default
+			 */
+			library: string;
+			/** Original Language */
+			original_language?: string | null;
+			/** Imdb Id */
+			imdb_id?: string | null;
+			/** Trailer Url */
+			trailer_url?: string | null;
+			/** Tagline */
+			tagline?: string | null;
+			/** Genres */
+			genres?: string[];
+			/** Runtime */
+			runtime?: number | null;
+			/** Release Date */
+			release_date?: string | null;
+			/** Metadata Updated At */
+			metadata_updated_at?: string | null;
+			/**
+			 * Ended
+			 * @default false
+			 */
+			ended: boolean;
+			/**
+			 * Continuous Download
+			 * @default false
+			 */
+			continuous_download: boolean;
 		};
 		/** SubtitleInfo */
 		SubtitleInfo: {
@@ -2331,6 +2407,7 @@ export type Season = components['schemas']['Season'];
 export type ServiceHealth = components['schemas']['ServiceHealth'];
 export type ServiceStatus = components['schemas']['ServiceStatus'];
 export type Show = components['schemas']['Show'];
+export type ShowSummary = components['schemas']['ShowSummary'];
 export type SubtitleInfo = components['schemas']['SubtitleInfo'];
 export type SystemHealth = components['schemas']['SystemHealth'];
 export type Torrent = components['schemas']['Torrent'];
@@ -3310,7 +3387,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['Show'][];
+					'application/json': components['schemas']['ShowSummary'][];
 				};
 			};
 		};

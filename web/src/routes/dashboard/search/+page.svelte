@@ -1,14 +1,11 @@
 <script lang="ts">
 	import { Separator } from '$lib/components/ui/separator/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-	import MediaPicture from '$lib/components/media-picture.svelte';
+	import LibraryMediaCard from '$lib/components/library-media-card.svelte';
 	import AddMediaCard from '$lib/components/add-media-card.svelte';
 	import LoadingBar from '$lib/components/loading-bar.svelte';
-	import { getFullyQualifiedMediaName } from '$lib/utils.js';
-	import { getMediaTypeHref, getMediaTypeLabel } from '$lib/media-types.ts';
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
 	import { getContext } from 'svelte';
@@ -75,12 +72,6 @@
 			});
 	});
 
-	// Queries the metadata provider's combined multi-search for new
-	// movies/shows to add - a single call ranked by the provider itself
-	// (matching e.g. TMDB's own website), rather than stitching together
-	// two separately-ranked per-type searches. Re-runs whenever the query
-	// or the chosen provider changes, clearing stale results up front so
-	// the loading state is shown rather than a stale list.
 	$effect(() => {
 		const currentQuery = query;
 		const currentMetadataProvider = metadataProvider;
@@ -150,20 +141,7 @@
 					class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
 				>
 					{#each localResults as result (result.id)}
-						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href is built from resolve() in getMediaTypeHref -->
-						<a href={getMediaTypeHref(result.media_type, result.slug)}>
-							<Card.Root class="col-span-full max-w-[90vw]">
-								<Card.Header>
-									<Card.Title class="h-6 truncate">{getFullyQualifiedMediaName(result)}</Card.Title>
-									<Card.Description class="truncate">
-										{getMediaTypeLabel(result.media_type)} &middot; {result.overview}
-									</Card.Description>
-								</Card.Header>
-								<Card.Content>
-									<MediaPicture media={result} />
-								</Card.Content>
-							</Card.Root>
-						</a>
+						<LibraryMediaCard media={result} isShow={result.media_type === 'tv'} />
 					{/each}
 				</div>
 			{/if}

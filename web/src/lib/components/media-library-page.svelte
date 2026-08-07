@@ -1,7 +1,7 @@
 <script lang="ts">
 	import LibraryMediaCard from '$lib/components/library-media-card.svelte';
 	import MediaCardSkeleton from '$lib/components/media-card-skeleton.svelte';
-	import type { MediaImportSuggestion, Movie, Show, UserRead } from '$lib/api/api';
+	import type { MediaImportSuggestion, Movie, ShowSummary, UserRead } from '$lib/api/api';
 	import { getContext } from 'svelte';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import { importablePath, rescanImportableMedia } from '$lib/api/importable';
@@ -26,7 +26,7 @@
 		title: string;
 		crumb: string;
 		description: string;
-		items: Promise<(Show | Movie)[] | undefined>;
+		items: Promise<(ShowSummary | Movie)[] | undefined>;
 		importable: Promise<MediaImportSuggestion[]>;
 		emptyMessage: string;
 	} = $props();

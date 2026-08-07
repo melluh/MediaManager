@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from datetime import datetime
 
 from sqlalchemy import distinct, func, select
@@ -23,6 +24,7 @@ from media_manager.tv.schemas import (
 )
 from media_manager.tv.schemas import Season as SeasonSchema
 from media_manager.tv.schemas import Show as ShowSchema
+from media_manager.tv.schemas import ShowSummary as ShowSummarySchema
 
 
 def _load_show_tree():  # noqa: ANN202
@@ -36,7 +38,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
     """
 
     def __init__(self, db: AsyncSession) -> None:
-        super().__init__(db, Show, ShowSchema)
+        super().__init__(db, Show, ShowSchema, search_schema=ShowSummarySchema)
 
     async def get_show_by_id(self, show_id: ShowId) -> ShowSchema:
         try:
@@ -90,15 +92,30 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         else:
             return ShowSchema.model_validate(result)
 
-    async def get_shows(self) -> list[ShowSchema]:
+    async def _get_all_shows(self, *, with_seasons: bool) -> Sequence[Show]:
         try:
-            stmt = select(Show).options(_load_show_tree())
+            stmt = select(Show)
+            if with_seasons:
+                stmt = stmt.options(_load_show_tree())
             results = (await self.db.execute(stmt)).scalars().unique().all()
         except SQLAlchemyError:
             log.exception("Database error while retrieving all shows")
             raise
         else:
-            return [ShowSchema.model_validate(show) for show in results]
+            return results
+
+    async def get_shows(self) -> list[ShowSchema]:
+        shows = await self._get_all_shows(with_seasons=True)
+        return [ShowSchema.model_validate(show) for show in shows]
+
+    async def get_shows_summary(self) -> list[ShowSummarySchema]:
+        """
+        Get all shows without their seasons/episodes. Skips the
+        seasons/episodes eager-load entirely since ShowSummary doesn't
+        declare those fields, so validation never touches the relationship.
+        """
+        shows = await self._get_all_shows(with_seasons=False)
+        return [ShowSummarySchema.model_validate(show) for show in shows]
 
     async def delete_show(self, entity_id: EntityId) -> None:
         await self.delete(entity_id)

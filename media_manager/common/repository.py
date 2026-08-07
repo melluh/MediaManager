@@ -21,10 +21,21 @@ class BaseRepository[T, S]:
     Base repository providing common CRUD operations for media models.
     """
 
-    def __init__(self, db: AsyncSession, model: type[T], schema: type[S]) -> None:
+    def __init__(
+        self,
+        db: AsyncSession,
+        model: type[T],
+        schema: type[S],
+        search_schema: type[Any] | None = None,
+    ) -> None:
         self.db = db
         self.model = model
         self.schema = schema
+        # The schema used to shape `search_by_name` results. Defaults to
+        # `schema`, but repositories whose schema has relationship-backed
+        # fields not covered by a plain column select (e.g. Show.seasons)
+        # must pass a flatter schema here instead (e.g. ShowSummary).
+        self.search_schema = search_schema or schema
 
     async def get_by_id(self, entity_id: EntityId) -> S:
         result = await self.db.get(self.model, entity_id)
@@ -73,24 +84,25 @@ class BaseRepository[T, S]:
         """
         Search for media by (partial, case-insensitive) name match.
 
-        Selects only the columns defined on `MediaMixin` rather than loading
-        full ORM instances, so this works for any model using that mixin
-        (e.g. Movie, Show) without tripping over relationship-backed schema
-        fields that aren't eagerly loaded (see Show.seasons).
+        Selects only the columns backing `search_schema`'s fields (assumed to
+        map 1:1 onto plain columns on `model`, e.g. via `MediaMixin`) rather
+        than loading full ORM instances, so this works for any model without
+        tripping over relationship-backed schema fields that aren't eagerly
+        loaded (see Show.seasons, which is why TvRepository passes a
+        `search_schema` without a `seasons` field).
         """
+        columns = [
+            getattr(self.model, field_name)
+            for field_name in self.search_schema.model_fields
+        ]
         stmt = (
-            select(
-                self.model.id,
-                self.model.name,
-                self.model.slug,
-                self.model.overview,
-                self.model.year,
-            )
+            select(*columns)
             .where(self.model.name.ilike(f"%{query}%"))
             .order_by(self.model.name)
             .limit(limit)
         )
-        return (await self.db.execute(stmt)).all()
+        rows = (await self.db.execute(stmt)).all()
+        return [self.search_schema.model_validate(row) for row in rows]
 
     async def delete(self, entity_id: EntityId) -> None:
         obj = await self.db.get(self.model, entity_id)

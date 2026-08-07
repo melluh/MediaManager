@@ -35,6 +35,7 @@ from media_manager.tv.schemas import (
     Season,
     Show,
     ShowId,
+    ShowSummary,
 )
 
 router = APIRouter()
@@ -161,9 +162,9 @@ async def import_detected_show(
     "/shows",
     dependencies=[Depends(current_active_user)],
 )
-async def get_all_shows(tv_service: tv_service_dep) -> list[Show]:
+async def get_all_shows(tv_service: tv_service_dep) -> list[ShowSummary]:
     """
-    Get all shows in the library.
+    Get all shows in the library, without their seasons/episodes.
     """
     return await tv_service.get_all_shows()
 

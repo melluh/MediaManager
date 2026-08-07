@@ -33,15 +33,7 @@ class SearchService:
                 query=query, limit=results_per_media_type
             )
             results.extend(
-                SearchResult(
-                    id=row.id,
-                    media_type=media_type,
-                    name=row.name,
-                    slug=row.slug,
-                    overview=row.overview,
-                    year=row.year,
-                )
-                for row in rows
+                SearchResult(**row.model_dump(), media_type=media_type) for row in rows
             )
         return results
 

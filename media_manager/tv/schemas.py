@@ -41,12 +41,14 @@ class Season(BaseModel):
     episodes: list[Episode]
 
 
-class Show(BaseMedia):
+class ShowSummary(BaseMedia):
     id: ShowId = Field(default_factory=lambda: ShowId(uuid.uuid4()))
 
     ended: bool = False
     continuous_download: bool = False
 
+
+class Show(ShowSummary):
     seasons: list[Season]
 
 

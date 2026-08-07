@@ -33,6 +33,7 @@ from media_manager.tv.schemas import (
     SeasonId,
     Show,
     ShowId,
+    ShowSummary,
 )
 
 
@@ -66,13 +67,11 @@ class TvService(BaseMediaService[Show, Show]):
     async def set_show_library(self, show: Show, library: str) -> None:
         await self.tv_repository.set_show_library(show.id, library)
 
-    async def get_all_shows(self) -> list[Show]:
+    async def get_all_shows(self) -> list[ShowSummary]:
         """
-        Get all shows in the library.
+        Get all shows in the library, without their seasons/episodes.
         """
-        # Use the TV-specific eager-loaded query so ShowSchema validation
-        # doesn't trigger lazy loads on seasons/episodes under AsyncSession.
-        return await self.tv_repository.get_shows()
+        return await self.tv_repository.get_shows_summary()
 
     async def delete_show(
         self,

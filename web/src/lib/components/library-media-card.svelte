@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Movie, Show } from '$lib/api/api';
 	import { resolve } from '$app/paths';
 	import MediaCard from '$lib/components/media-card.svelte';
 	import MediaPicture from '$lib/components/media-picture.svelte';
+	import type { Movie, SearchResult, ShowSummary } from '$lib/api/api';
 	import type { Snippet } from 'svelte';
 
 	let posterLoaded = $state(false);
@@ -10,7 +10,11 @@
 		media,
 		isShow,
 		indicators
-	}: { media: Show | Movie; isShow: boolean; indicators?: Snippet } = $props();
+	}: {
+		media: Movie | ShowSummary | SearchResult;
+		isShow: boolean;
+		indicators?: Snippet;
+	} = $props();
 
 	let slugOrId = $derived(media.slug ?? media.id ?? '');
 	let href = $derived(
