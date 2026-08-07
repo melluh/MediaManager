@@ -5,11 +5,16 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from media_manager.common.import_scan_cache import (
+    ImportScanMediaType,
+    set_cached_importable_media,
+)
 from media_manager.common.service import BaseMediaService
 from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
+from media_manager.metadataProvider.dependencies import get_metadata_provider
 from media_manager.notification.service import NotificationService
 from media_manager.schemas import MediaImportSuggestion
 from media_manager.torrent.schemas import Quality, Torrent
@@ -90,7 +95,9 @@ class TvImportService(BaseMediaService[Show, Show]):
 
                 # Update DB
                 try:
-                    season = await self.tv_repository.get_season_by_number(s_num, show.id)
+                    season = await self.tv_repository.get_season_by_number(
+                        s_num, show.id
+                    )
                     episode = next(
                         (e for e in season.episodes if e.number == e_num), None
                     )
@@ -130,7 +137,9 @@ class TvImportService(BaseMediaService[Show, Show]):
             search_func=self.tv_metadata_service.search_for_show,
         )
 
-    async def import_existing_tv_show(self, tv_show: Show, source_directory: Path) -> bool:
+    async def import_existing_tv_show(
+        self, tv_show: Show, source_directory: Path
+    ) -> bool:
         async def _logic(s: Show, path: Path, _: Callable[[Any], Any]) -> bool:
             return await self.import_tv_show(s, path, file_path_suffix="IMPORTED")
 
@@ -152,6 +161,18 @@ class TvImportService(BaseMediaService[Show, Show]):
             metadata_provider=metadata_provider,
             get_candidates_func=self.get_import_candidates,
         )
+
+    async def rescan_importable_tv_shows(self) -> list[MediaImportSuggestion]:
+        """
+        Re-scans the TV directory for importable shows and refreshes the
+        cache read by the `/importable` endpoint. Always scans with the
+        default (tmdb) metadata provider, matching what the frontend requests.
+        """
+        suggestions = await self.get_importable_tv_shows(
+            metadata_provider=get_metadata_provider()
+        )
+        set_cached_importable_media(ImportScanMediaType.tv, suggestions)
+        return suggestions
 
     async def import_all_torrents(self) -> None:
         await self.import_all_torrents_base(

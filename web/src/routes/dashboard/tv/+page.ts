@@ -1,8 +1,11 @@
 import type { PageLoad } from './$types';
 import client from '$lib/api';
+import { getImportableMedia } from '$lib/api/importable';
 
-export const load: PageLoad = async ({ fetch }) => {
+export const load: PageLoad = async ({ fetch, parent }) => {
+	const { user } = await parent();
 	return {
-		tvShows: client.GET('/api/v1/tv/shows', { fetch: fetch }).then((res) => res.data)
+		tvShows: client.GET('/api/v1/tv/shows', { fetch: fetch }).then((res) => res.data),
+		importable: user?.is_superuser ? getImportableMedia(true, fetch) : Promise.resolve([])
 	};
 };

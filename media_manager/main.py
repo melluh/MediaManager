@@ -68,6 +68,8 @@ from media_manager.scheduler import (
     build_scheduler_loop,
     import_all_movie_torrents_task,
     import_all_show_torrents_task,
+    scan_importable_movies_task,
+    scan_importable_shows_task,
     update_all_movies_metadata_task,
     update_all_non_ended_shows_metadata_task,
 )
@@ -133,17 +135,21 @@ async def _health_check_loop() -> None:
             indexer_config = config.indexers
             if indexer_config.prowlarr.enabled:
                 from media_manager.indexer.indexers.prowlarr import Prowlarr
+
                 ok = await asyncio.to_thread(Prowlarr().ping)
                 registry.update(
-                    "prowlarr", "Prowlarr",
+                    "prowlarr",
+                    "Prowlarr",
                     ServiceStatus.healthy if ok else ServiceStatus.unavailable,
                     None if ok else "Ping failed",
                 )
             if indexer_config.jackett.enabled:
                 from media_manager.indexer.indexers.jackett import Jackett
+
                 ok = await asyncio.to_thread(Jackett().ping)
                 registry.update(
-                    "jackett", "Jackett",
+                    "jackett",
+                    "Jackett",
                     ServiceStatus.healthy if ok else ServiceStatus.unavailable,
                     None if ok else "Ping failed",
                 )
@@ -188,6 +194,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
                 import_all_show_torrents_task.kiq(),
                 update_all_movies_metadata_task.kiq(),
                 update_all_non_ended_shows_metadata_task.kiq(),
+                scan_importable_movies_task.kiq(),
+                scan_importable_shows_task.kiq(),
             )
         except Exception:
             log.exception("Failed to submit initial background tasks during startup.")
@@ -233,7 +241,10 @@ app.add_middleware(CorrelationIdMiddleware, header_name="X-Correlation-ID")
 api_app = APIRouter(prefix="/api/v1")
 
 
-@api_app.get("/health", description="Unauthenticated liveness probe used by the container healthcheck")
+@api_app.get(
+    "/health",
+    description="Unauthenticated liveness probe used by the container healthcheck",
+)
 async def liveness() -> dict[str, str]:
     return {"status": "ok"}
 

@@ -4,11 +4,16 @@ import re
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
+from media_manager.common.import_scan_cache import (
+    ImportScanMediaType,
+    set_cached_importable_media,
+)
 from media_manager.common.service import BaseMediaService
 from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
+from media_manager.metadataProvider.dependencies import get_metadata_provider
 from media_manager.movies.metadata import MovieMetadataService
 from media_manager.movies.repository import MovieRepository
 from media_manager.movies.schemas import Movie, MovieFile
@@ -74,7 +79,9 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
                     movie_root_path / f"{movie_file_name}{video_files[0].suffix}"
                 )
                 await asyncio.to_thread(
-                    import_file, target_file=target_video_file, source_file=video_files[0]
+                    import_file,
+                    target_file=target_video_file,
+                    source_file=video_files[0],
                 )
                 imported_any = True
 
@@ -108,7 +115,9 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             )
             return
 
-        movie_files = await self.torrent_service.get_movie_files_of_torrent(torrent=torrent)
+        movie_files = await self.torrent_service.get_movie_files_of_torrent(
+            torrent=torrent
+        )
         if not movie_files:
             torrent.imported = False
             await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
@@ -116,7 +125,9 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             return
 
         success = [
-            await self.import_movie(movie, video_files, subtitle_files, mf.file_path_suffix)
+            await self.import_movie(
+                movie, video_files, subtitle_files, mf.file_path_suffix
+            )
             for mf in movie_files
         ]
 
@@ -168,6 +179,18 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             metadata_provider=metadata_provider,
             get_candidates_func=self.get_import_candidates,
         )
+
+    async def rescan_importable_movies(self) -> list[MediaImportSuggestion]:
+        """
+        Re-scans the movie directory for importable movies and refreshes the
+        cache read by the `/importable` endpoint. Always scans with the
+        default (tmdb) metadata provider, matching what the frontend requests.
+        """
+        suggestions = await self.get_importable_movies(
+            metadata_provider=get_metadata_provider()
+        )
+        set_cached_importable_media(ImportScanMediaType.movie, suggestions)
+        return suggestions
 
     async def import_all_torrents(self) -> None:
         await self.import_all_torrents_base(

@@ -5,6 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from media_manager.auth.db import User
 from media_manager.auth.users import current_active_user, current_superuser
+from media_manager.common.import_scan_cache import (
+    ImportScanMediaType,
+    get_cached_importable_media,
+)
 from media_manager.config import LibraryItem, MediaManagerConfig
 from media_manager.exceptions import MediaAlreadyExistsError, NotFoundError
 from media_manager.indexer.schemas import (
@@ -103,15 +107,28 @@ async def get_external_show_details(
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(current_superuser)],
 )
-async def get_all_importable_shows(
-    tv_import_service: tv_import_service_dep, metadata_provider: metadata_provider_dep
+async def get_all_importable_shows() -> list[MediaImportSuggestion]:
+    """
+    Get the last-scanned list of unknown shows detected in the TV directory
+    that are importable. Backed by a periodically refreshed cache; use
+    POST /importable/rescan to force an immediate re-scan.
+    """
+    return get_cached_importable_media(ImportScanMediaType.tv)
+
+
+@router.post(
+    "/importable/rescan",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(current_superuser)],
+)
+async def rescan_importable_shows(
+    tv_import_service: tv_import_service_dep,
 ) -> list[MediaImportSuggestion]:
     """
-    Get a list of unknown shows that were detected in the TV directory and are importable.
+    Immediately re-scans the TV directory for importable shows and refreshes
+    the cache used by GET /importable.
     """
-    return await tv_import_service.get_importable_tv_shows(
-        metadata_provider=metadata_provider
-    )
+    return await tv_import_service.rescan_importable_tv_shows()
 
 
 @router.post(

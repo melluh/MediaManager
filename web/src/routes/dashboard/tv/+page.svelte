@@ -11,5 +11,6 @@
 	crumb="Shows"
 	description="Browse and manage your TV show collection in MediaManager"
 	items={data.tvShows}
+	importable={data.importable}
 	emptyMessage="No TV shows added yet."
 />

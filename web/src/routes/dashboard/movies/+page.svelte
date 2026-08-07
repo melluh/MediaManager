@@ -11,5 +11,6 @@
 	crumb="Movies"
 	description="Browse and manage your movie collection in MediaManager"
 	items={data.movies}
+	importable={data.importable}
 	emptyMessage="No movies added yet."
 />

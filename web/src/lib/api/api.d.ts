@@ -388,11 +388,34 @@ export interface paths {
 		};
 		/**
 		 * Get All Importable Shows
-		 * @description Get a list of unknown shows that were detected in the TV directory and are importable.
+		 * @description Get the last-scanned list of unknown shows detected in the TV directory
+		 *     that are importable. Backed by a periodically refreshed cache; use
+		 *     POST /importable/rescan to force an immediate re-scan.
 		 */
 		get: operations['get_all_importable_shows_api_v1_tv_importable_get'];
 		put?: never;
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/tv/importable/rescan': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Rescan Importable Shows
+		 * @description Immediately re-scans the TV directory for importable shows and refreshes
+		 *     the cache used by GET /importable.
+		 */
+		post: operations['rescan_importable_shows_api_v1_tv_importable_rescan_post'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -871,11 +894,34 @@ export interface paths {
 		};
 		/**
 		 * Get All Importable Movies
-		 * @description Get a list of unknown movies that were detected in the movie directory and are importable.
+		 * @description Get the last-scanned list of unknown movies detected in the movie
+		 *     directory that are importable. Backed by a periodically refreshed cache;
+		 *     use POST /importable/rescan to force an immediate re-scan.
 		 */
 		get: operations['get_all_importable_movies_api_v1_movies_importable_get'];
 		put?: never;
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/movies/importable/rescan': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Rescan Importable Movies
+		 * @description Immediately re-scans the movie directory for importable movies and
+		 *     refreshes the cache used by GET /importable.
+		 */
+		post: operations['rescan_importable_movies_api_v1_movies_importable_rescan_post'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3179,9 +3225,7 @@ export interface operations {
 	};
 	get_all_importable_shows_api_v1_tv_importable_get: {
 		parameters: {
-			query?: {
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
+			query?: never;
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -3197,13 +3241,24 @@ export interface operations {
 					'application/json': components['schemas']['MediaImportSuggestion'][];
 				};
 			};
-			/** @description Validation Error */
-			422: {
+		};
+	};
+	rescan_importable_shows_api_v1_tv_importable_rescan_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
+					'application/json': components['schemas']['MediaImportSuggestion'][];
 				};
 			};
 		};
@@ -4014,9 +4069,7 @@ export interface operations {
 	};
 	get_all_importable_movies_api_v1_movies_importable_get: {
 		parameters: {
-			query?: {
-				metadata_provider?: 'tmdb' | 'tvdb';
-			};
+			query?: never;
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -4032,13 +4085,24 @@ export interface operations {
 					'application/json': components['schemas']['MediaImportSuggestion'][];
 				};
 			};
-			/** @description Validation Error */
-			422: {
+		};
+	};
+	rescan_importable_movies_api_v1_movies_importable_rescan_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
+					'application/json': components['schemas']['MediaImportSuggestion'][];
 				};
 			};
 		};

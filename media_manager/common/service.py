@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
@@ -119,10 +120,14 @@ class BaseMediaService[T, S]:
         ],
     ) -> list[MediaImportSuggestion]:
         importable_dirs = get_importable_media_directories(root_path)
-        return [
-            await get_candidates_func(directory, metadata_provider)
-            for directory in importable_dirs
-        ]
+        return list(
+            await asyncio.gather(
+                *(
+                    get_candidates_func(directory, metadata_provider)
+                    for directory in importable_dirs
+                )
+            )
+        )
 
     async def import_existing_media(
         self,

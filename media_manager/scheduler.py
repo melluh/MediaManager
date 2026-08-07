@@ -12,9 +12,14 @@ from taskiq_postgresql.scheduler_source import PostgresqlSchedulerSource
 
 from media_manager.database import get_async_session
 from media_manager.indexer.models import IndexerQueryResult
-from media_manager.movies.dependencies import get_movie_service
+from media_manager.movies.dependencies import (
+    get_movie_import_service,
+    get_movie_service,
+)
+from media_manager.movies.importer import MovieImportService
 from media_manager.movies.service import MovieService
-from media_manager.tv.dependencies import get_tv_service
+from media_manager.tv.dependencies import get_tv_import_service, get_tv_service
+from media_manager.tv.importer import TvImportService
 from media_manager.tv.service import TvService
 
 INDEXER_QUERY_RESULT_EXPIRY = timedelta(hours=6)
@@ -76,6 +81,22 @@ async def update_all_non_ended_shows_metadata_task(
 
 
 @broker.task
+async def scan_importable_movies_task(
+    movie_import_service: MovieImportService = TaskiqDepends(get_movie_import_service),
+) -> None:
+    log.info("Scanning for importable movies")
+    await movie_import_service.rescan_importable_movies()
+
+
+@broker.task
+async def scan_importable_shows_task(
+    tv_import_service: TvImportService = TaskiqDepends(get_tv_import_service),
+) -> None:
+    log.info("Scanning for importable shows")
+    await tv_import_service.rescan_importable_tv_shows()
+
+
+@broker.task
 async def delete_expired_indexer_query_results_task(
     db: AsyncSession = TaskiqDepends(get_async_session),
 ) -> None:
@@ -94,6 +115,8 @@ _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
     import_all_show_torrents_task.task_name: [{"cron": "*/2 * * * *"}],
     update_all_movies_metadata_task.task_name: [{"cron": "0 0 * * 1"}],
     update_all_non_ended_shows_metadata_task.task_name: [{"cron": "0 0 * * 1"}],
+    scan_importable_movies_task.task_name: [{"cron": "*/5 * * * *"}],
+    scan_importable_shows_task.task_name: [{"cron": "*/5 * * * *"}],
     delete_expired_indexer_query_results_task.task_name: [{"cron": "*/30 * * * *"}],
 }
 

@@ -1,12 +1,17 @@
 <script lang="ts">
 	import LibraryMediaCard from '$lib/components/library-media-card.svelte';
-	import ImportCandidatesDialog from '$lib/components/import-media/import-candidates-dialog.svelte';
-	import DetectedMediaCard from '$lib/components/import-media/detected-media-card.svelte';
 	import MediaCardSkeleton from '$lib/components/media-card-skeleton.svelte';
 	import type { MediaImportSuggestion, Movie, Show, UserRead } from '$lib/api/api';
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
-	import client from '$lib/api';
+	import { importablePath, rescanImportableMedia } from '$lib/api/importable';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import FolderInput from '@lucide/svelte/icons/folder-input';
+	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
+	import { toast } from 'svelte-sonner';
 
 	let {
 		isShow,
@@ -14,6 +19,7 @@
 		crumb,
 		description,
 		items,
+		importable,
 		emptyMessage
 	}: {
 		isShow: boolean;
@@ -21,6 +27,7 @@
 		crumb: string;
 		description: string;
 		items: Promise<(Show | Movie)[] | undefined>;
+		importable: Promise<MediaImportSuggestion[]>;
 		emptyMessage: string;
 	} = $props();
 
@@ -28,19 +35,21 @@
 	setCrumbs([{ label: crumb }]);
 
 	let user: () => UserRead = getContext('user');
-	let importableMedia: MediaImportSuggestion[] = $state([]);
+	let isRescanning = $state(false);
 
-	onMount(() => {
-		if (!user()?.is_superuser) return;
-		const promise = isShow
-			? client.GET('/api/v1/tv/importable')
-			: client.GET('/api/v1/movies/importable');
-		promise.then(({ data, error }) => {
-			if (!error) {
-				importableMedia = data;
-			}
-		});
-	});
+	function importableLabel(count: number): string {
+		const noun = isShow ? 'show' : 'movie';
+		return `${count} importable ${noun}${count === 1 ? '' : 's'}`;
+	}
+
+	async function rescan() {
+		isRescanning = true;
+		const failed = await rescanImportableMedia(isShow);
+		if (failed) {
+			toast.error('Failed to rescan for importable media');
+		}
+		isRescanning = false;
+	}
 </script>
 
 <svelte:head>
@@ -52,21 +61,53 @@
 	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
 		{title}
 	</h1>
-	{#if importableMedia.length > 0}
-		<div
-			class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4"
-		>
-			{#each importableMedia as importable (importable.directory)}
-				<DetectedMediaCard isTv={isShow} directory={importable.directory}>
-					<ImportCandidatesDialog
-						isTv={isShow}
-						name={importable.directory}
-						candidates={importable.candidates}
+	{#if user()?.is_superuser}
+		{#snippet noImportableDropdown()}
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger
+					class={buttonVariants({ variant: 'outline', size: 'icon' })}
+					disabled={isRescanning}
+				>
+					{#if isRescanning}
+						<Spinner class="size-4" />
+					{:else}
+						<EllipsisVertical class="size-4" />
+					{/if}
+					<span class="sr-only">Importable media options</span>
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end">
+					<DropdownMenu.Item disabled>
+						<FolderInput class="text-muted-foreground" />
+						No importable {isShow ? 'shows' : 'movies'} found
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={rescan} disabled={isRescanning}>
+						<RefreshCw class="text-muted-foreground" />
+						Rescan
+					</DropdownMenu.Item>
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
+		{/snippet}
+		<div class="flex justify-end">
+			{#await importable}
+				{@render noImportableDropdown()}
+			{:then media}
+				{#if media.length > 0}
+					<Button
+						variant="default"
+						size="default"
+						href={importablePath(isShow)}
+						class="relative shadow-lg"
 					>
-						Import {isShow ? 'TV show' : 'movie'}
-					</ImportCandidatesDialog>
-				</DetectedMediaCard>
-			{/each}
+						<span
+							class="absolute -top-1 -right-1 size-3 rounded-full bg-red-500 ring-2 ring-background"
+						></span>
+						<FolderInput class="size-4" />
+						{importableLabel(media.length)}
+					</Button>
+				{:else}
+					{@render noImportableDropdown()}
+				{/if}
+			{/await}
 		</div>
 	{/if}
 	<div
