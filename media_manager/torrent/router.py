@@ -11,7 +11,7 @@ from media_manager.torrent.dependencies import (
     torrent_repository_dep,
     torrent_service_dep,
 )
-from media_manager.torrent.schemas import Torrent, TorrentStatus
+from media_manager.torrent.schemas import Torrent, TorrentStatus, TorrentWithProgress
 
 router = APIRouter()
 
@@ -33,7 +33,7 @@ async def get_all_torrents(service: torrent_service_dep) -> list[Torrent]:
 async def get_own_torrents(
     service: torrent_service_dep,
     user: Annotated[User, Depends(current_active_user)],
-) -> list[Torrent]:
+) -> list[TorrentWithProgress]:
     """
     Get the torrents initiated by the current user that are still downloading,
     along with their current status.

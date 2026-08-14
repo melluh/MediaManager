@@ -1,12 +1,20 @@
 <script lang="ts">
 	import * as Table from '$lib/components/ui/table/index.js';
+	import { Progress } from '$lib/components/ui/progress/index.js';
 	import RecommendedMediaCarousel from '$lib/components/recommended-media-carousel.svelte';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
-	import { getTorrentQualityString, getTorrentStatusString } from '$lib/utils';
-	import { getContext, onMount } from 'svelte';
+	import {
+		formatBytes,
+		getDownloadStateString,
+		getTorrentQualityString,
+		getTorrentStatusString
+	} from '$lib/utils';
+	import { getContext, onDestroy, onMount } from 'svelte';
 	import client from '$lib/api';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api.d.ts';
 	import type { PageProps } from './$types';
+
+	const OWN_TORRENTS_POLL_INTERVAL_MS = 7000;
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Dashboard' }]);
@@ -20,9 +28,30 @@
 	let moviesLoading = $state(true);
 	let moviesError = $state(false);
 
-	let ownTorrents = $derived(data.ownTorrents ?? []);
+	let ownTorrents = $state(data.ownTorrents ?? []);
+	let ownTorrentsPollHandle: ReturnType<typeof setInterval> | undefined;
+	let ownTorrentsRefreshing = false;
+
+	function refreshOwnTorrents() {
+		if (document.hidden || ownTorrentsRefreshing) return;
+		ownTorrentsRefreshing = true;
+		client
+			.GET('/api/v1/torrent/mine')
+			.then((res) => {
+				if (res.data) ownTorrents = res.data;
+			})
+			.catch(() => {
+				// keep showing the last known state; the next tick will retry
+			})
+			.finally(() => {
+				ownTorrentsRefreshing = false;
+			});
+	}
 
 	onMount(() => {
+		if (ownTorrents.length > 0) {
+			ownTorrentsPollHandle = setInterval(refreshOwnTorrents, OWN_TORRENTS_POLL_INTERVAL_MS);
+		}
 		client
 			.GET('/api/v1/tv/recommended')
 			.then((res) => {
@@ -55,6 +84,10 @@
 				moviesLoading = false;
 			});
 	});
+
+	onDestroy(() => {
+		clearInterval(ownTorrentsPollHandle);
+	});
 </script>
 
 <svelte:head>
@@ -76,6 +109,8 @@
 						<Table.Row>
 							<Table.Head>Name</Table.Head>
 							<Table.Head>Download Status</Table.Head>
+							<Table.Head>Progress</Table.Head>
+							<Table.Head>Size</Table.Head>
 							<Table.Head>Quality</Table.Head>
 						</Table.Row>
 					</Table.Header>
@@ -83,7 +118,26 @@
 						{#each ownTorrents as torrent (torrent.id)}
 							<Table.Row>
 								<Table.Cell class="font-medium">{torrent.title}</Table.Cell>
-								<Table.Cell>{getTorrentStatusString(torrent.status)}</Table.Cell>
+								<Table.Cell>
+									{torrent.download_progress
+										? getDownloadStateString(torrent.download_progress.state)
+										: getTorrentStatusString(torrent.status)}
+								</Table.Cell>
+								<Table.Cell>
+									{#if torrent.download_progress}
+										<div class="flex items-center gap-2">
+											<Progress value={torrent.download_progress.progress} class="w-32" />
+											<span class="text-sm text-muted-foreground"
+												>{torrent.download_progress.progress}%</span
+											>
+										</div>
+									{:else}
+										<span class="text-muted-foreground">—</span>
+									{/if}
+								</Table.Cell>
+								<Table.Cell>
+									{formatBytes(torrent.download_progress?.total_bytes) ?? '—'}
+								</Table.Cell>
 								<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
 							</Table.Row>
 						{/each}

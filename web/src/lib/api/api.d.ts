@@ -1458,6 +1458,31 @@ export interface components {
 			/** Token */
 			token: string;
 		};
+		/** DownloadProgress */
+		DownloadProgress: {
+			state: components['schemas']['DownloadState'];
+			/** Progress */
+			progress: number;
+			/** Total Bytes */
+			total_bytes?: number | null;
+		};
+		/**
+		 * DownloadState
+		 * @description Fine-grained, client-neutral download-client state, distinct from the
+		 *     persisted TorrentStatus. Live-only (never stored) so new client-specific
+		 *     states can be added without a migration.
+		 * @enum {string}
+		 */
+		DownloadState:
+			| 'downloading'
+			| 'queued'
+			| 'stalled'
+			| 'checking'
+			| 'stopped'
+			| 'seeding'
+			| 'finished'
+			| 'error'
+			| 'unknown';
 		/** Episode */
 		Episode: {
 			/**
@@ -2296,6 +2321,32 @@ export interface components {
 		 * @enum {integer}
 		 */
 		TorrentStatus: 1 | 2 | 3 | 4;
+		/** TorrentWithProgress */
+		TorrentWithProgress: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id?: string;
+			status: components['schemas']['TorrentStatus'];
+			/** Title */
+			title: string;
+			quality: components['schemas']['Quality'];
+			/** Imported */
+			imported: boolean;
+			/** Hash */
+			hash: string;
+			/**
+			 * Usenet
+			 * @default false
+			 */
+			usenet: boolean;
+			/** Initiated By User Id */
+			initiated_by_user_id?: string | null;
+			/** Initiated At */
+			initiated_at?: string | null;
+			download_progress?: components['schemas']['DownloadProgress'] | null;
+		};
 		/** UserCreate */
 		UserCreate: {
 			/**
@@ -2445,6 +2496,8 @@ export type BodyVerifyRequestTokenApiV1AuthRequestVerifyTokenPost =
 	components['schemas']['Body_verify_request_token_api_v1_auth_request_verify_token_post'];
 export type BodyVerifyVerifyApiV1AuthVerifyPost =
 	components['schemas']['Body_verify_verify_api_v1_auth_verify_post'];
+export type DownloadProgress = components['schemas']['DownloadProgress'];
+export type DownloadState = components['schemas']['DownloadState'];
 export type Episode = components['schemas']['Episode'];
 export type ErrorModel = components['schemas']['ErrorModel'];
 export type ExternalPosterImage = components['schemas']['ExternalPosterImage'];
@@ -2482,6 +2535,7 @@ export type SystemHealth = components['schemas']['SystemHealth'];
 export type Torrent = components['schemas']['Torrent'];
 export type TorrentAttributes = components['schemas']['TorrentAttributes'];
 export type TorrentStatus = components['schemas']['TorrentStatus'];
+export type TorrentWithProgress = components['schemas']['TorrentWithProgress'];
 export type UserCreate = components['schemas']['UserCreate'];
 export type UserPermissions = components['schemas']['UserPermissions'];
 export type UserRead = components['schemas']['UserRead'];
@@ -3952,7 +4006,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['Torrent'][];
+					'application/json': components['schemas']['TorrentWithProgress'][];
 				};
 			};
 		};

@@ -7,7 +7,14 @@ from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.movies.schemas import Movie, MovieFile
 from media_manager.torrent.manager import DownloadManager, get_download_manager
 from media_manager.torrent.repository import TorrentRepository
-from media_manager.torrent.schemas import Torrent, TorrentId, TorrentStatus
+from media_manager.torrent.schemas import (
+    DownloadProgress,
+    Torrent,
+    TorrentId,
+    TorrentStatus,
+    TorrentWithProgress,
+    download_state_to_torrent_status,
+)
 from media_manager.tv.schemas import EpisodeFile, Show
 
 log = logging.getLogger(__name__)
@@ -139,19 +146,49 @@ class TorrentService:
             torrent_id=torrent.id
         )
 
-    async def get_own_torrents(self, user_id: UUID) -> list[Torrent]:
+    async def get_own_torrents(self, user_id: UUID) -> list[TorrentWithProgress]:
         """
         Returns the torrents initiated by a user that are still downloading
-        (i.e. not yet imported), with their current download status.
+        (i.e. not yet imported), with their current download status and, if the
+        download client supports it, live progress.
         """
         own = await self.torrent_repository.get_active_torrents_initiated_by_user(
             user_id=user_id
         )
+
+        progress_by_hash: dict[str, DownloadProgress] = {}
+        try:
+            progress_by_hash = await asyncio.to_thread(
+                self.download_manager.get_download_progress_bulk, own
+            )
+        except Exception:
+            log.exception("Error fetching download progress")
+
         torrents: list[Torrent] = []
         for t in own:
-            try:
-                torrents.append(await self.get_torrent_status(t))
-            except Exception:
-                log.exception(f"Error fetching status for torrent {t.title}")
-                torrents.append(t)
-        return torrents
+            progress = progress_by_hash.get(t.hash)
+            if progress is None:
+                # Client doesn't support bulk progress (or is unavailable) for
+                # this torrent; fall back to the per-torrent status check.
+                try:
+                    torrents.append(await self.get_torrent_status(t))
+                except Exception:
+                    log.exception(f"Error fetching status for torrent {t.title}")
+                    torrents.append(t)
+                continue
+
+            derived_status = download_state_to_torrent_status(progress.state)
+            if derived_status != t.status:
+                t.status = derived_status
+                try:
+                    await self.torrent_repository.save_torrent(torrent=t)
+                except Exception:
+                    log.exception(f"Error saving status for torrent {t.title}")
+            torrents.append(t)
+
+        return [
+            TorrentWithProgress(
+                **t.model_dump(), download_progress=progress_by_hash.get(t.hash)
+            )
+            for t in torrents
+        ]

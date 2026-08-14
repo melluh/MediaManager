@@ -19,6 +19,17 @@ export const torrentStatusMap: { [key: number]: string } = {
 	3: 'error',
 	4: 'unknown'
 };
+export const downloadStateMap: { [key: string]: string } = {
+	downloading: 'Downloading',
+	queued: 'Queued',
+	stalled: 'Stalled',
+	checking: 'Checking',
+	stopped: 'Stopped',
+	seeding: 'Seeding',
+	finished: 'Finished',
+	error: 'Error',
+	unknown: 'Unknown'
+};
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -38,6 +49,19 @@ export function getTorrentQualityString(value: number): string {
 
 export function getTorrentStatusString(value: number): string {
 	return torrentStatusMap[value] || 'unknown';
+}
+
+export function getDownloadStateString(value: string): string {
+	return downloadStateMap[value] || 'Unknown';
+}
+
+export function formatBytes(bytes: number | null | undefined): string | null {
+	if (bytes == null || bytes < 0) return null;
+	if (bytes === 0) return '0 B';
+	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+	const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+	const value = bytes / 1024 ** exponent;
+	return `${exponent === 0 ? value : value.toFixed(1)} ${units[exponent]}`;
 }
 
 export function getFullyQualifiedMediaName(media: { name: string; year: number | null }): string {

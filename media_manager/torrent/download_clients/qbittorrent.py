@@ -1,4 +1,5 @@
 import logging
+from typing import ClassVar
 
 import qbittorrentapi
 from qbittorrentapi import Conflict409Error
@@ -8,7 +9,12 @@ from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.torrent.download_clients.abstract_download_client import (
     AbstractDownloadClient,
 )
-from media_manager.torrent.schemas import Torrent, TorrentStatus
+from media_manager.torrent.schemas import (
+    DownloadProgress,
+    DownloadState,
+    Torrent,
+    TorrentStatus,
+)
 from media_manager.torrent.utils import get_torrent_hash
 
 log = logging.getLogger(__name__)
@@ -43,6 +49,35 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
     )
     ERROR_STATE = ("missingFiles", "error", "checkingResumeData")
     UNKNOWN_STATE = ("unknown",)
+
+    # Maps qBittorrent's raw `state` field to a client-neutral DownloadState.
+    # See https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
+    # for the full list of states (both legacy "paused*" and current "stopped*"
+    # names are handled since they vary by qBittorrent version).
+    DOWNLOAD_STATE_MAP: ClassVar[dict[str, DownloadState]] = {
+        "downloading": DownloadState.downloading,
+        "forcedDL": DownloadState.downloading,
+        "metaDL": DownloadState.downloading,
+        "forcedMetaDL": DownloadState.downloading,
+        "allocating": DownloadState.downloading,
+        "moving": DownloadState.downloading,
+        "queuedDL": DownloadState.queued,
+        "queuedUP": DownloadState.queued,
+        "stalledDL": DownloadState.stalled,
+        "checkingDL": DownloadState.checking,
+        "checkingUP": DownloadState.checking,
+        "checkingResumeData": DownloadState.checking,
+        "pausedDL": DownloadState.stopped,
+        "stoppedDL": DownloadState.stopped,
+        "uploading": DownloadState.seeding,
+        "forcedUP": DownloadState.seeding,
+        "stalledUP": DownloadState.seeding,
+        "pausedUP": DownloadState.finished,
+        "stoppedUP": DownloadState.finished,
+        "missingFiles": DownloadState.error,
+        "error": DownloadState.error,
+        "unknown": DownloadState.unknown,
+    }
 
     def __init__(self) -> None:
         self.config = MediaManagerConfig().torrents.qbittorrent
@@ -189,6 +224,39 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
         if state in self.UNKNOWN_STATE:
             return TorrentStatus.unknown
         return TorrentStatus.error
+
+    def get_download_progress_bulk(
+        self, torrents: list[Torrent]
+    ) -> dict[str, DownloadProgress]:
+        """
+        Get live progress for the given torrents in a single request to qBittorrent,
+        rather than one request per torrent.
+
+        :param torrents: The torrents to look up.
+        :return: A dict mapping torrent hash to its progress, for torrents qBittorrent
+            currently knows about.
+        """
+        # Match case-insensitively: qBittorrent is expected to report lowercase
+        # hex hashes, same as get_torrent_hash(), but nothing guarantees that
+        # across versions, so don't rely on exact casing lining up.
+        wanted_hashes = {torrent.hash.lower(): torrent.hash for torrent in torrents}
+        try:
+            self.api_client.auth_log_in()
+            info = self.api_client.torrents_info()
+        finally:
+            self.api_client.auth_log_out()
+
+        progress: dict[str, DownloadProgress] = {}
+        for t in info:
+            original_hash = wanted_hashes.get(t["hash"].lower())
+            if original_hash is None:
+                continue
+            progress[original_hash] = DownloadProgress(
+                state=self.DOWNLOAD_STATE_MAP.get(t["state"], DownloadState.unknown),
+                progress=round(t.get("progress", 0.0) * 100, 1),
+                total_bytes=t.get("size"),
+            )
+        return progress
 
     def pause_torrent(self, torrent: Torrent) -> None:
         """

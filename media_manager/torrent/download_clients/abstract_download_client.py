@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from media_manager.indexer.schemas import IndexerQueryResult
-from media_manager.torrent.schemas import Torrent, TorrentStatus
+from media_manager.torrent.schemas import DownloadProgress, Torrent, TorrentStatus
 
 
 class AbstractDownloadClient(ABC):
@@ -70,3 +70,21 @@ class AbstractDownloadClient(ABC):
 
         :return: True if the client responds successfully, False otherwise.
         """
+
+    def get_download_progress_bulk(
+        self,
+        torrents: list[Torrent],  # noqa: ARG002 # unused in this default implementation
+    ) -> dict[str, DownloadProgress]:
+        """
+        Get live progress (state, percentage, size) for the given torrents in as
+        few round-trips to the client as possible.
+
+        Optional: clients that don't support detailed progress reporting can
+        leave this unimplemented; callers must treat a missing hash as
+        "no detailed progress available", not an error.
+
+        :param torrents: The torrents to look up.
+        :return: A dict mapping torrent hash to its progress, for torrents the
+            client has information on.
+        """
+        return {}

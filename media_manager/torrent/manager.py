@@ -13,7 +13,7 @@ from media_manager.torrent.download_clients.sabnzbd import SabnzbdDownloadClient
 from media_manager.torrent.download_clients.transmission import (
     TransmissionDownloadClient,
 )
-from media_manager.torrent.schemas import Torrent, TorrentStatus
+from media_manager.torrent.schemas import DownloadProgress, Torrent, TorrentStatus
 
 log = logging.getLogger(__name__)
 
@@ -217,6 +217,27 @@ class DownloadManager:
         log.info("Resuming torrent: %s", torrent.title)
         client = self._get_appropriate_client(torrent)
         client.resume_torrent(torrent)
+
+    def get_download_progress_bulk(
+        self, torrents: list[Torrent]
+    ) -> dict[str, DownloadProgress]:
+        """
+        Get live progress for the given torrents, split across whichever
+        clients (torrent/usenet) are responsible for them.
+        """
+        torrent_client_items = [t for t in torrents if not t.usenet]
+        usenet_client_items = [t for t in torrents if t.usenet]
+
+        progress: dict[str, DownloadProgress] = {}
+        if torrent_client_items and self._torrent_client is not None:
+            progress.update(
+                self._torrent_client.get_download_progress_bulk(torrent_client_items)
+            )
+        if usenet_client_items and self._usenet_client is not None:
+            progress.update(
+                self._usenet_client.get_download_progress_bulk(usenet_client_items)
+            )
+        return progress
 
 
 # ------------------------------------------------------------------
