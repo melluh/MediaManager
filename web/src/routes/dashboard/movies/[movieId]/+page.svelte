@@ -2,7 +2,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
-	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import { getContext } from 'svelte';
 	import type { PublicMovie, PublicMovieFile, UserRead } from '$lib/api/api';
 	import { getFullyQualifiedMediaName, getTorrentQualityString } from '$lib/utils';
@@ -33,19 +33,16 @@
 <MediaHeroHeader media={movie} isShow={false}>
 	{#snippet actions()}
 		{#if user().is_superuser}
-			<div class="mt-4 flex items-center gap-2">
-				<DownloadMovieDialog {movie} />
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline' })}>
-						Administrator Actions
-						<ChevronDown />
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="end" class="flex w-56 flex-col gap-2 p-3">
-						<LibraryCombobox media={movie} mediaType="movie" />
-						<DeleteMediaDialog isShow={false} media={movie} />
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
-			</div>
+			<DownloadMovieDialog {movie} />
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'icon' })}>
+					<EllipsisVertical class="size-4" />
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end" class="flex w-56 flex-col gap-2 p-3">
+					<LibraryCombobox media={movie} mediaType="movie" />
+					<DeleteMediaDialog isShow={false} media={movie} />
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
 		{/if}
 	{/snippet}
 

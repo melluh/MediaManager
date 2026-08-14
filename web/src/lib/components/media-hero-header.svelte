@@ -2,7 +2,9 @@
 	import { getContext, type Snippet } from 'svelte';
 	import MediaImage from '$lib/components/media-image.svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import Film from '@lucide/svelte/icons/film';
 	import {
 		cn,
 		getFullyQualifiedMediaName,
@@ -26,6 +28,8 @@
 		external_id: number;
 		metadata_updated_at?: string | null;
 		images?: Record<string, string> | null;
+		trailer_url?: string | null;
+		imdb_id?: string | null;
 	};
 
 	let {
@@ -37,7 +41,7 @@
 		media: HeroMedia;
 		/** Whether to build metadata-provider links/labels as a TV show rather than a movie. */
 		isShow: boolean;
-		/** Download/admin controls, rendered under the release date/runtime/genres row. */
+		/** Download/admin controls, rendered next to the title, right-aligned. */
 		actions?: Snippet;
 		/** Additional cards, rendered below the Overview card inside the same layout. */
 		children?: Snippet;
@@ -50,6 +54,8 @@
 	let providerUrl = $derived(
 		getMetadataProviderUrl(media.metadata_provider, media.external_id, isShow)
 	);
+	let providerLabel = $derived(getMetadataProviderLabel(media.metadata_provider));
+	let imdbUrl = $derived(media.imdb_id ? `https://www.imdb.com/title/${media.imdb_id}/` : null);
 
 	// Drives both the header's white-text-on-image styling and hiding the
 	// mobile logo: both only make sense while a backdrop is actually showing.
@@ -90,15 +96,24 @@
 		>
 			<MediaImage {media} />
 		</div>
-		<div class="mt-4 flex min-w-0 flex-col gap-2">
-			<h1 class="mb-4 scroll-m-20 text-left text-4xl font-extrabold tracking-tight lg:text-5xl">
-				{media.name}
-				{#if media.year != null}
-					<span class="font-light">
-						({media.year})
-					</span>
+		<div class="mt-4 flex min-w-0 flex-1 flex-col gap-2">
+			<div class="flex items-start gap-x-8">
+				<h1
+					class="min-w-0 flex-1 scroll-m-20 text-left text-4xl font-extrabold tracking-tight lg:text-5xl"
+				>
+					{media.name}
+					{#if media.year != null}
+						<span class="font-light">
+							({media.year})
+						</span>
+					{/if}
+				</h1>
+				{#if actions}
+					<div class="flex h-10 shrink-0 items-center gap-2 lg:h-12">
+						{@render actions()}
+					</div>
 				{/if}
-			</h1>
+			</div>
 			{#if media.tagline}
 				<p class="text-medium text-lg text-muted-foreground italic">{media.tagline}</p>
 			{/if}
@@ -117,7 +132,44 @@
 					</div>
 				{/if}
 			</div>
-			{@render actions?.()}
+			{#if media.trailer_url || imdbUrl || providerUrl}
+				<div class="flex flex-wrap items-center gap-2">
+					{#if media.trailer_url}
+						<Button
+							variant="outline"
+							size="sm"
+							href={media.trailer_url}
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							Trailer
+							<Film />
+						</Button>
+					{/if}
+					{#if imdbUrl}
+						<Button
+							variant="link"
+							size="sm"
+							href={imdbUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							IMDb
+						</Button>
+					{/if}
+					{#if providerUrl}
+						<Button
+							variant="link"
+							size="sm"
+							href={providerUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							{providerLabel}
+						</Button>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	</div>
 </div>

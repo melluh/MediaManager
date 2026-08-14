@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Ellipsis from '@lucide/svelte/icons/ellipsis';
-	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
@@ -139,47 +139,44 @@
 <MediaHeroHeader media={show} isShow={true}>
 	{#snippet actions()}
 		{#if user().is_superuser}
-			<div class="mt-4 flex items-center gap-2">
-				{#if selectedSeasonNumbers.length > 0}
-					<DownloadSelectedSeasonsDialog
-						{show}
-						{selectedSeasonNumbers}
-						triggerText={downloadButtonLabel}
-					/>
-				{/if}
-				{#if selectedEpisodeNumbers.length > 0}
-					<DownloadSelectedEpisodesDialog
-						{show}
-						{selectedEpisodeNumbers}
-						triggerText={episodeDownloadLabel}
-					/>
-				{/if}
-				{#if selectedSeasonNumbers.length === 0 && selectedEpisodeNumbers.length === 0}
-					<DownloadCustomDialog {show} />
-				{/if}
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline' })}>
-						Administrator Actions
-						<ChevronDown />
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="end" class="flex w-56 flex-col gap-2 p-3">
-						{#if !show.ended}
-							<div class="flex items-center gap-3 px-1 py-1">
-								<Switch
-									bind:checked={() => continuousDownloadEnabled, toggle_continuous_download}
-									id="continuous-download-checkbox"
-								/>
-								<Label for="continuous-download-checkbox" class="text-xs">
-									Enable automatic download of future seasons
-								</Label>
-							</div>
-							<DropdownMenu.Separator />
-						{/if}
-						<LibraryCombobox media={show} mediaType="tv" />
-						<DeleteMediaDialog isShow={true} media={show} />
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
-			</div>
+			{#if selectedSeasonNumbers.length > 0}
+				<DownloadSelectedSeasonsDialog
+					{show}
+					{selectedSeasonNumbers}
+					triggerText={downloadButtonLabel}
+				/>
+			{/if}
+			{#if selectedEpisodeNumbers.length > 0}
+				<DownloadSelectedEpisodesDialog
+					{show}
+					{selectedEpisodeNumbers}
+					triggerText={episodeDownloadLabel}
+				/>
+			{/if}
+			{#if selectedSeasonNumbers.length === 0 && selectedEpisodeNumbers.length === 0}
+				<DownloadCustomDialog {show} />
+			{/if}
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'icon' })}>
+					<EllipsisVertical class="size-4" />
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end" class="flex w-56 flex-col gap-2 p-3">
+					{#if !show.ended}
+						<div class="flex items-center gap-3 px-1 py-1">
+							<Switch
+								bind:checked={() => continuousDownloadEnabled, toggle_continuous_download}
+								id="continuous-download-checkbox"
+							/>
+							<Label for="continuous-download-checkbox" class="text-xs">
+								Enable automatic download of future seasons
+							</Label>
+						</div>
+						<DropdownMenu.Separator />
+					{/if}
+					<LibraryCombobox media={show} mediaType="tv" />
+					<DeleteMediaDialog isShow={true} media={show} />
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
 		{/if}
 	{/snippet}
 

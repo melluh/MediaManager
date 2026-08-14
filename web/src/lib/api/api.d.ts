@@ -1896,6 +1896,10 @@ export interface components {
 			continuous_download: boolean;
 			/** Library */
 			library: string;
+			/** Imdb Id */
+			imdb_id?: string | null;
+			/** Trailer Url */
+			trailer_url?: string | null;
 			/** Tagline */
 			tagline?: string | null;
 			/** Genres */

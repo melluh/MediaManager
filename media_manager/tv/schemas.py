@@ -134,6 +134,8 @@ class PublicShow(BaseModel):
     continuous_download: bool = False
     library: str
 
+    imdb_id: str | None = None
+    trailer_url: str | None = None
     tagline: str | None = None
     genres: list[str] = Field(default_factory=list)
     runtime: int | None = None
