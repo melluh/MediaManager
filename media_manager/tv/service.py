@@ -1,12 +1,19 @@
 import asyncio
 import shutil
+from collections.abc import Sequence
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
+from media_manager.common.downloaded_status_cache import (
+    DownloadedMediaType,
+    get_cached_downloaded,
+    set_cached_downloaded_statuses,
+)
 from media_manager.common.service import BaseMediaService
-from media_manager.config import MediaManagerConfig
+from media_manager.config import get_config
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
 from media_manager.indexer.scoring import slot_and_score_results
 from media_manager.indexer.service import IndexerService
@@ -201,13 +208,10 @@ class TvService(BaseMediaService[Show, Show]):
 
             for episode in public_season.episodes:
                 episode.downloaded = await self.is_episode_downloaded(
-                    episode=episode,
-                    season=season,
-                    show=show,
+                    episode_id=episode.id
                 )
 
-            # A season is considered downloaded if it has episodes and all of them are downloaded,
-            # matching the behavior of is_season_downloaded.
+            # A season is considered downloaded if it has episodes and all of them are downloaded.
             public_season.downloaded = bool(public_season.episodes) and all(
                 episode.downloaded for episode in public_season.episodes
             )
@@ -234,72 +238,94 @@ class TvService(BaseMediaService[Show, Show]):
         """
         return await self.tv_repository.get_show_by_slug(slug=slug)
 
-    async def is_season_downloaded(self, season: Season, show: Show) -> bool:
-        """
-        Check if a season is downloaded.
-
-        :param season: The season object.
-        :param show: The show object.
-        :return: True if the season is downloaded, False otherwise.
-        """
-        episodes = season.episodes
-
-        if not episodes:
-            return False
-
-        for episode in episodes:
-            if not await self.is_episode_downloaded(
-                episode=episode, season=season, show=show
-            ):
-                return False
-        return True
-
-    async def is_episode_downloaded(
-        self, episode: Episode, season: Season, show: Show
-    ) -> bool:
+    async def is_episode_downloaded(self, episode_id: EpisodeId) -> bool:
         """
         Check if an episode is downloaded and imported (file exists on disk).
 
-        An episode is considered downloaded if:
-        - There is at least one EpisodeFile in the database AND
-        - A matching episode file exists in the season directory on disk.
+        Reads the shared cache populated by the periodic
+        `rescan_downloaded_episodes` scan, so this never touches the
+        filesystem or the database on the request path. If the scan hasn't
+        run yet (e.g. briefly after startup), falls back to a cheap DB-only
+        signal (does the episode have any file record, and is it imported).
 
-        :param episode: The episode object.
-        :param season: The season object.
-        :param show: The show object.
+        :param episode_id: The ID of the episode.
         :return: True if the episode is downloaded and imported, False otherwise.
         """
+        cached = get_cached_downloaded(DownloadedMediaType.episode, episode_id)
+        if cached is not None:
+            return cached
+
         episode_files = await self.tv_repository.get_episode_files_by_episode_id(
-            episode_id=episode.id
+            episode_id=episode_id
         )
+        for episode_file in episode_files:
+            if await self.episode_file_exists_on_file(episode_file=episode_file):
+                return True
+        return False
 
-        if not episode_files:
-            return False
+    async def rescan_downloaded_episodes(self) -> None:
+        """
+        Recompute which episodes are downloaded by checking each season's
+        directory on disk once, and refresh the shared cache read by
+        `is_episode_downloaded`. Runs on a schedule so show-lookup endpoints
+        never scan the filesystem themselves.
+        """
+        rows = await self.tv_repository.get_episode_scan_rows()
+        episode_ids_with_files = await self.tv_repository.get_episode_ids_with_files()
+        statuses = await asyncio.to_thread(
+            self._scan_downloaded_episodes, rows, episode_ids_with_files
+        )
+        set_cached_downloaded_statuses(DownloadedMediaType.episode, statuses)
 
-        season_dir = self.get_root_season_directory(show, season.number)
-
-        if not season_dir.exists():
-            return False
-
-        episode_token = f"S{season.number:02d}E{episode.number:02d}"
-
+    def _scan_downloaded_episodes(
+        self,
+        rows: Sequence[tuple[ShowId, str, str | None, int, EpisodeId, int]],
+        episode_ids_with_files: set[EpisodeId],
+    ) -> dict[EpisodeId, bool]:
         video_extensions = {".mkv", ".mp4", ".avi", ".mov"}
+        statuses: dict[EpisodeId, bool] = {}
+        season_filenames_by_key: dict[tuple[ShowId, int], list[str]] = {}
 
-        try:
-            for file in season_dir.iterdir():
-                if (
-                    file.is_file()
-                    and episode_token.lower() in file.name.lower()
-                    and file.suffix.lower() in video_extensions
-                ):
-                    return True
+        for (
+            show_id,
+            show_name,
+            show_library,
+            season_number,
+            episode_id,
+            episode_number,
+        ) in rows:
+            if episode_id not in episode_ids_with_files:
+                statuses[episode_id] = False
+                continue
 
-        except OSError as e:
-            log.error(
-                f"Disk check failed for episode {episode.id} in {season_dir}: {e}"
+            season_key = (show_id, season_number)
+            filenames = season_filenames_by_key.get(season_key)
+            if filenames is None:
+                misc_config = get_config().misc
+                show_dir = self.get_root_directory(
+                    media=SimpleNamespace(name=show_name, library=show_library),
+                    default_dir=misc_config.tv_directory,
+                    libraries=misc_config.tv_libraries,
+                )
+                season_dir = show_dir / f"Season {season_number}"
+                try:
+                    filenames = (
+                        [f.name.lower() for f in season_dir.iterdir() if f.is_file()]
+                        if season_dir.exists()
+                        else []
+                    )
+                except OSError as e:
+                    log.error(f"Disk check failed for season directory {season_dir}: {e}")
+                    filenames = []
+                season_filenames_by_key[season_key] = filenames
+
+            episode_token = f"s{season_number:02d}e{episode_number:02d}"
+            statuses[episode_id] = any(
+                episode_token in name and Path(name).suffix in video_extensions
+                for name in filenames
             )
 
-        return False
+        return statuses
 
     async def episode_file_exists_on_file(self, episode_file: EpisodeFile) -> bool:
         """
@@ -497,15 +523,12 @@ class TvService(BaseMediaService[Show, Show]):
         return show_torrent
 
     def get_root_show_directory(self, show: Show) -> Path:
-        misc_config = MediaManagerConfig().misc
+        misc_config = get_config().misc
         return self.get_root_directory(
             media=show,
             default_dir=misc_config.tv_directory,
             libraries=misc_config.tv_libraries,
         )
-
-    def get_root_season_directory(self, show: Show, season_number: int) -> Path:
-        return self.get_root_show_directory(show) / Path(f"Season {season_number}")
 
     async def set_show_continuous_download(
         self, show: Show, continuous_download: bool

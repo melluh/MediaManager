@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from functools import lru_cache
 from pathlib import Path
 from uuid import UUID
 
@@ -64,6 +65,7 @@ async def _download_image(storage_path: Path, image_url: str, relative_path: str
     if res.status_code == 200:
         image_file_path = storage_path.joinpath(relative_path).with_suffix(".jpg")
         await asyncio.to_thread(_process_image, image_file_path, res.content)
+        _get_available_media_images_cached.cache_clear()
         return True
     return False
 
@@ -78,19 +80,28 @@ async def download_media_image(
     return await _download_image(storage_path, image_url, relative_path)
 
 
-def get_available_media_images(media_id: UUID | str) -> dict[str, str]:
-    """
-    Which image types have actually been downloaded to disk for this
-    media item, mapped to their static url (without extension or cache-
-    busting query string - callers append those, since format negotiation
-    between avif/webp/jpeg happens client-side).
-    """
+@lru_cache(maxsize=2048)
+def _get_available_media_images_cached(media_id: UUID | str) -> dict[str, str]:
     images: dict[str, str] = {}
     for image_type in MediaImageType:
         relative_path = media_image_relative_path(media_id, image_type)
         if _image_directory.joinpath(relative_path).with_suffix(".jpg").exists():
             images[image_type.value] = f"{STATIC_IMAGE_URL_PREFIX}/{relative_path}"
     return images
+
+
+def get_available_media_images(media_id: UUID | str) -> dict[str, str]:
+    """
+    Which image types have actually been downloaded to disk for this
+    media item, mapped to their static url (without extension or cache-
+    busting query string - callers append those, since format negotiation
+    between avif/webp/jpeg happens client-side).
+
+    Cached (per process) since this is called on every media-lookup
+    request; the cache is cleared whenever a new image is written to disk.
+    Returns a copy so callers can't mutate the cached dict.
+    """
+    return dict(_get_available_media_images_cached(media_id))
 
 
 def migrate_legacy_poster_images() -> None:

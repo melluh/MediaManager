@@ -88,6 +88,32 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             )
             raise
 
+    async def get_movie_downloaded_statuses(self) -> dict[MovieId, bool]:
+        """
+        A movie is downloaded if any of its MovieFiles is either not tied
+        to a torrent (manually imported) or tied to a torrent that has
+        finished importing - the same semantics as
+        `MovieService.movie_file_exists_on_file`, computed in bulk for the
+        downloaded-status scan instead of per movie/file at request time.
+
+        Seeds every movie (including ones with no files at all) to False
+        first, so the scan always produces a cache entry - otherwise movies
+        with zero files would never get one and would keep hitting the
+        request-path fallback query forever.
+        """
+        all_movie_ids = (await self.db.execute(select(Movie.id))).scalars().all()
+        statuses: dict[MovieId, bool] = dict.fromkeys(all_movie_ids, False)
+
+        stmt = select(
+            MovieFile.movie_id, MovieFile.torrent_id, Torrent.imported
+        ).select_from(MovieFile).outerjoin(Torrent, MovieFile.torrent_id == Torrent.id)
+        rows = (await self.db.execute(stmt)).all()
+
+        for movie_id, torrent_id, imported in rows:
+            downloaded = torrent_id is None or bool(imported)
+            statuses[movie_id] = statuses.get(movie_id, False) or downloaded
+        return statuses
+
     async def get_torrents_by_movie_id(
         self, movie_id: MovieId
     ) -> list[MovieTorrentSchema]:

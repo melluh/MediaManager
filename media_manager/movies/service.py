@@ -7,8 +7,13 @@ from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
+from media_manager.common.downloaded_status_cache import (
+    DownloadedMediaType,
+    get_cached_downloaded,
+    set_cached_downloaded_statuses,
+)
 from media_manager.common.service import BaseMediaService
-from media_manager.config import MediaManagerConfig
+from media_manager.config import get_config
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
 from media_manager.indexer.scoring import resolve_slot_label, slot_and_score_results
 from media_manager.indexer.service import IndexerService
@@ -185,7 +190,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
         """
         torrents = (await self.get_torrents_for_movie(movie=movie)).torrents
         public_movie = PublicMovie.model_validate(movie)
-        public_movie.downloaded = await self.is_movie_downloaded(movie=movie)
+        public_movie.downloaded = await self.is_movie_downloaded(movie_id=movie.id)
         public_movie.torrents = torrents
         return await self.attach_media_images(public_movie)
 
@@ -207,20 +212,39 @@ class MovieService(BaseMediaService[Movie, Movie]):
         """
         return await self.movie_repository.get_movie_by_slug(slug)
 
-    async def is_movie_downloaded(self, movie: Movie) -> bool:
+    async def is_movie_downloaded(self, movie_id: MovieId) -> bool:
         """
         Check if a movie is downloaded.
 
-        :param movie: The movie object.
+        Reads the shared cache populated by the periodic
+        `rescan_downloaded_movies` scan, so this never queries the torrent
+        for every movie file on the request path. If the scan hasn't run
+        yet (e.g. briefly after startup), falls back to querying directly.
+
+        :param movie_id: The ID of the movie.
         :return: True if the movie is downloaded, False otherwise.
         """
+        cached = get_cached_downloaded(DownloadedMediaType.movie, movie_id)
+        if cached is not None:
+            return cached
+
         movie_files = await self.movie_repository.get_movie_files_by_movie_id(
-            movie_id=movie.id
+            movie_id=movie_id
         )
         for movie_file in movie_files:
             if await self.movie_file_exists_on_file(movie_file=movie_file):
                 return True
         return False
+
+    async def rescan_downloaded_movies(self) -> None:
+        """
+        Recompute which movies are downloaded and refresh the shared cache
+        read by `is_movie_downloaded`. Runs on a schedule so movie-lookup
+        endpoints never recheck every movie file's torrent status
+        themselves.
+        """
+        statuses = await self.movie_repository.get_movie_downloaded_statuses()
+        set_cached_downloaded_statuses(DownloadedMediaType.movie, statuses)
 
     async def movie_file_exists_on_file(self, movie_file: MovieFile) -> bool:
         """
@@ -352,7 +376,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
         return remove_special_characters(label) if label else ""
 
     def get_movie_root_path(self, movie: Movie) -> Path:
-        misc_config = MediaManagerConfig().misc
+        misc_config = get_config().misc
         return self.get_root_directory(
             media=movie,
             default_dir=misc_config.movie_directory,

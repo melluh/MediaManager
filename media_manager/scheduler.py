@@ -97,6 +97,22 @@ async def scan_importable_shows_task(
 
 
 @broker.task
+async def rescan_downloaded_movies_task(
+    movie_service: MovieService = TaskiqDepends(get_movie_service),
+) -> None:
+    log.info("Scanning for downloaded movies")
+    await movie_service.rescan_downloaded_movies()
+
+
+@broker.task
+async def rescan_downloaded_episodes_task(
+    tv_service: TvService = TaskiqDepends(get_tv_service),
+) -> None:
+    log.info("Scanning for downloaded episodes")
+    await tv_service.rescan_downloaded_episodes()
+
+
+@broker.task
 async def delete_expired_indexer_query_results_task(
     db: AsyncSession = TaskiqDepends(get_async_session),
 ) -> None:
@@ -117,6 +133,8 @@ _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
     update_all_non_ended_shows_metadata_task.task_name: [{"cron": "0 * * * *"}],
     scan_importable_movies_task.task_name: [{"cron": "*/5 * * * *"}],
     scan_importable_shows_task.task_name: [{"cron": "*/5 * * * *"}],
+    rescan_downloaded_movies_task.task_name: [{"cron": "*/5 * * * *"}],
+    rescan_downloaded_episodes_task.task_name: [{"cron": "*/5 * * * *"}],
     delete_expired_indexer_query_results_task.task_name: [{"cron": "*/30 * * * *"}],
 }
 

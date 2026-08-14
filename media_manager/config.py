@@ -1,5 +1,6 @@
 import logging
 import os
+from functools import lru_cache
 from pathlib import Path
 
 from pydantic import AnyHttpUrl
@@ -83,3 +84,14 @@ class MediaManagerConfig(BaseSettings):
             TomlConfigSettingsSource(settings_cls),
             file_secret_settings,
         )
+
+
+@lru_cache(maxsize=1)
+def get_config() -> MediaManagerConfig:
+    """
+    Cached MediaManagerConfig accessor. config.toml is only ever read at
+    startup/on demand - there's no writer that rewrites it at runtime - so
+    re-parsing it from disk on every call (as `MediaManagerConfig()` does)
+    is pure waste on hot paths. Prefer this over instantiating directly.
+    """
+    return MediaManagerConfig()

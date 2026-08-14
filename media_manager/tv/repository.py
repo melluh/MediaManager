@@ -254,6 +254,44 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         results = (await self.db.execute(stmt)).scalars().all()
         return [EpisodeFileSchema.model_validate(sf) for sf in results]
 
+    async def get_episode_ids_with_files(self) -> set[EpisodeId]:
+        """
+        IDs of every episode that has at least one EpisodeFile row, in a
+        single query - used by the downloaded-status scan instead of
+        querying per episode.
+        """
+        stmt = select(distinct(EpisodeFile.episode_id))
+        results = (await self.db.execute(stmt)).scalars().all()
+        return set(results)
+
+    async def get_episode_scan_rows(
+        self,
+    ) -> Sequence[tuple[ShowId, str, str | None, int, EpisodeId, int]]:
+        """
+        Minimal (show_id, show_name, show_library, season_number,
+        episode_id, episode_number) rows for every episode, for the
+        downloaded-status scan. Avoids hydrating full Show/Season/Episode
+        ORM objects and Pydantic schemas for every show in the library.
+
+        show_id (not just name/library) is included so the scan can key its
+        per-season directory-listing cache uniquely per show, even though
+        two shows could theoretically resolve to the same on-disk directory.
+        """
+        stmt = (
+            select(
+                Show.id,
+                Show.name,
+                Show.library,
+                Season.number,
+                Episode.id,
+                Episode.number,
+            )
+            .select_from(Show)
+            .join(Season, Season.show_id == Show.id)
+            .join(Episode, Episode.season_id == Season.id)
+        )
+        return (await self.db.execute(stmt)).all()
+
     async def get_torrents_by_show_id(self, show_id: ShowId) -> list[TorrentSchema]:
         stmt = (
             select(TorrentModel)
