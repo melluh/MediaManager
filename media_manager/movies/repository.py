@@ -161,6 +161,7 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
         runtime: int | None = None,
         release_date: str | None = None,
         metadata_updated_at: datetime | None = None,
+        metadata_version: int | None = None,
     ) -> MovieSchema:
         return await self.update_media_attributes_base(
             media_id=movie_id,
@@ -174,4 +175,5 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             runtime=runtime,
             release_date=release_date,
             metadata_updated_at=metadata_updated_at,
+            metadata_version=metadata_version,
         )

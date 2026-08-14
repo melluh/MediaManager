@@ -2,7 +2,11 @@ import logging
 from abc import ABC, abstractmethod
 
 from media_manager.config import MediaManagerConfig
-from media_manager.metadataProvider.schemas import MetaDataProviderSearchResult
+from media_manager.metadataProvider.schemas import (
+    MediaImageType,
+    MediaType,
+    MetaDataProviderSearchResult,
+)
 from media_manager.movies.schemas import Movie
 from media_manager.tv.schemas import Show
 
@@ -50,19 +54,34 @@ class AbstractMetadataProvider(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    async def download_show_poster_image(self, show: Show) -> bool:
+    async def get_available_image_types(
+        self, media: Movie | Show, media_type: MediaType
+    ) -> set[MediaImageType]:
         """
-        Downloads the poster image for a show.
-        :param show: The show to download the poster image for.
-        :return: True if the image was downloaded successfully, False otherwise.
+        Which image types (poster, backdrop, ...) this provider currently
+        has available for the given media item.
         """
         raise NotImplementedError()
 
     @abstractmethod
-    async def download_movie_poster_image(self, movie: Movie) -> bool:
+    async def download_media_image(
+        self, media: Movie | Show, media_type: MediaType, image_type: MediaImageType
+    ) -> bool:
         """
-        Downloads the poster image for a show.
-        :param movie: The show to download the poster image for.
+        Downloads a single image for a movie or show.
+        :param media: The movie or show to download the image for.
+        :param media_type: Whether `media` is a movie or a show.
+        :param image_type: Which image (poster, backdrop, ...) to download.
         :return: True if the image was downloaded successfully, False otherwise.
         """
         raise NotImplementedError()
+
+    async def download_all_media_images(
+        self, media: Movie | Show, media_type: MediaType
+    ) -> None:
+        """
+        Downloads every image type this provider has available for the
+        given media item.
+        """
+        for image_type in await self.get_available_image_types(media, media_type):
+            await self.download_media_image(media, media_type, image_type)

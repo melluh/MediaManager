@@ -5,7 +5,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from media_manager.common.schemas import BaseMedia, BaseMediaFile
+from media_manager.common.schemas import (
+    CURRENT_METADATA_VERSION,
+    BaseMedia,
+    BaseMediaFile,
+)
 from media_manager.torrent.models import Quality
 from media_manager.torrent.schemas import TorrentId, TorrentStatus
 
@@ -135,6 +139,8 @@ class PublicShow(BaseModel):
     runtime: int | None = None
     release_date: str | None = None
     metadata_updated_at: datetime | None = None
+    metadata_version: int = CURRENT_METADATA_VERSION
+    images: dict[str, str] = Field(default_factory=dict)
 
     seasons: list[PublicSeason]
 

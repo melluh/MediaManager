@@ -7,13 +7,13 @@ from media_manager.tv.schemas import ShowId
 
 
 class MediaType(StrEnum):
-    """
-    The media types a metadata provider (or the local search index) can
-    return. Add a member here when a new media type becomes searchable.
-    """
-
     movie = "movie"
     tv = "tv"
+
+
+class MediaImageType(StrEnum):
+    poster = "poster"
+    backdrop = "backdrop"
 
 
 class ExternalPosterImage(BaseModel):

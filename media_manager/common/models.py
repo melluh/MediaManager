@@ -31,6 +31,7 @@ class MediaMixin:
     metadata_updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )
+    metadata_version: Mapped[int] = mapped_column(default=1)
 
 
 class MediaFileMixin:

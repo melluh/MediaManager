@@ -5,7 +5,9 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeVar
 
+import media_manager.metadataProvider.utils
 from media_manager.common.repository import BaseRepository
+from media_manager.common.schemas import CURRENT_METADATA_VERSION
 from media_manager.common.slug import generate_slug
 from media_manager.config import MediaManagerConfig
 from media_manager.exceptions import InvalidConfigError, NotFoundError
@@ -13,7 +15,10 @@ from media_manager.indexer.service import IndexerService
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
-from media_manager.metadataProvider.schemas import MetaDataProviderSearchResult
+from media_manager.metadataProvider.schemas import (
+    MediaType,
+    MetaDataProviderSearchResult,
+)
 from media_manager.notification.service import NotificationService
 from media_manager.schemas import MediaImportSuggestion
 from media_manager.torrent.service import TorrentService
@@ -47,6 +52,30 @@ class BaseMediaService[T, S]:
 
     async def get_all_media(self) -> list[S]:
         return await self.repository.get_all()
+
+    async def attach_media_images(self, media: S) -> S:
+        """
+        Populates `media.images` based on the image types on disk.
+        """
+        media.images = await asyncio.to_thread(
+            media_manager.metadataProvider.utils.get_available_media_images, media.id
+        )
+        return media
+
+    async def attach_media_images_many(self, media_list: list[S]) -> list[S]:
+        """
+        Populates `media.images` based on the image types on disk.
+        Batched for multiple media items (more efficient than calling attach_media_images individually).
+        """
+        if not media_list:
+            return media_list
+        images_by_id = await asyncio.to_thread(
+            media_manager.metadataProvider.utils.get_available_media_images_many,
+            [media.id for media in media_list],
+        )
+        for media in media_list:
+            media.images = images_by_id[str(media.id)]
+        return media_list
 
     def get_root_directory(
         self, media: S, default_dir: Path, libraries: list[Any]
@@ -177,10 +206,10 @@ class BaseMetadataService[T, S]:
     async def add_media_base(
         self,
         external_id: int,
-        metadata_provider: AbstractMetadataProvider,  # noqa: ARG002
+        metadata_provider: AbstractMetadataProvider,
+        media_type: MediaType,
         get_metadata_func: Callable[..., Awaitable[S]],
         save_func: Callable[[S], Awaitable[S]],
-        download_poster_func: Callable[[S], Awaitable[bool]],
         language: str | None = None,
         include_year_in_slug: bool = True,
     ) -> S:
@@ -195,7 +224,7 @@ class BaseMetadataService[T, S]:
         )
 
         saved_media = await save_func(media_with_metadata)
-        await download_poster_func(saved_media)
+        await metadata_provider.download_all_media_images(saved_media, media_type)
         return saved_media
 
     async def search_for_media_base(
@@ -264,6 +293,7 @@ class BaseMetadataService[T, S]:
             for item in media_list
             if item.metadata_updated_at is None
             or now - item.metadata_updated_at >= min_age
+            or item.metadata_version != CURRENT_METADATA_VERSION
         ]
 
         log.info(f"Found {len(media_list)} {media_type_name} to update")

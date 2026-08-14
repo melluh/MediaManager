@@ -6,6 +6,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from media_manager.torrent.models import Quality
 
+# Increase to force immediate metadata refresh (regardless of configured metadata refresh interval).
+# Useful when metadata fetching logic changes or a new field is stored from metadata.
+CURRENT_METADATA_VERSION = 2
+
 
 class BaseMedia(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -26,6 +30,8 @@ class BaseMedia(BaseModel):
     runtime: int | None = None
     release_date: str | None = None
     metadata_updated_at: datetime | None = None
+    metadata_version: int = CURRENT_METADATA_VERSION
+    images: dict[str, str] = Field(default_factory=dict) # Image type (e.g. "poster", "backdrop") -> static file path
 
     @field_validator("genres", mode="before")
     @classmethod

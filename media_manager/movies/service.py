@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import mimetypes
 import shutil
 from pathlib import Path
 from uuid import UUID
@@ -114,8 +115,38 @@ class MovieService(BaseMediaService[Movie, Movie]):
         result = []
         for movie_file in public_movie_files:
             movie_file.imported = await self.movie_file_exists_on_file(movie_file=movie_file)
+            movie_file.file_path = await asyncio.to_thread(
+                self.get_movie_file_relative_path, movie, movie_file
+            )
             result.append(movie_file)
         return result
+
+    def get_movie_file_relative_path(self, movie: Movie, movie_file: MovieFile) -> str:
+        """
+        Resolve a movie file's on-disk path, relative to the parent movies
+        folder (the default movie directory, or the movie's library root if
+        it belongs to one). Scans the movie's directory for the actual file
+        matching the expected name to recover its extension; falls back to
+        the expected filename stem (without extension) if it hasn't been
+        imported yet.
+        """
+        movie_root_path = self.get_movie_root_path(movie=movie)
+        stem = f"{remove_special_characters(movie.name)} ({movie.year})"
+        if movie_file.file_path_suffix:
+            stem += f" - {movie_file.file_path_suffix}"
+
+        matched_file: Path | None = None
+        if movie_root_path.is_dir():
+            candidates = sorted(movie_root_path.glob(f"{stem}.*"))
+            video_candidates = [
+                f
+                for f in candidates
+                if (mimetypes.guess_type(f.name)[0] or "").startswith("video")
+            ]
+            matched_file = (video_candidates or candidates or [None])[0]
+
+        resolved_path = matched_file or (movie_root_path / stem)
+        return str(resolved_path.relative_to(movie_root_path.parent))
 
     async def get_all_available_torrents_for_movie(
         self,
@@ -156,7 +187,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
         public_movie = PublicMovie.model_validate(movie)
         public_movie.downloaded = await self.is_movie_downloaded(movie=movie)
         public_movie.torrents = torrents
-        return public_movie
+        return await self.attach_media_images(public_movie)
 
     async def get_movie_by_id(self, movie_id: MovieId) -> Movie:
         """
@@ -226,7 +257,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
         """
         Get all movies in the library.
         """
-        return await self.get_all_media()
+        return await self.attach_media_images_many(await self.get_all_media())
 
     async def get_torrents_for_movie(self, movie: Movie) -> RichMovieTorrent:
         """

@@ -89,11 +89,14 @@ class BaseRepository[T, S]:
         than loading full ORM instances, so this works for any model without
         tripping over relationship-backed schema fields that aren't eagerly
         loaded (see Show.seasons, which is why TvRepository passes a
-        `search_schema` without a `seasons` field).
+        `search_schema` without a `seasons` field). Fields with no matching
+        column (e.g. `images`, populated separately from disk after the
+        query) are skipped and fall back to their schema default.
         """
         columns = [
             getattr(self.model, field_name)
             for field_name in self.search_schema.model_fields
+            if hasattr(self.model, field_name)
         ]
         stmt = (
             select(*columns)
@@ -129,8 +132,8 @@ class BaseRepository[T, S]:
         """
         Generic save method for media models.
         """
-        if exclude is None:
-            exclude = set()
+        # `images` is determined at runtime from files on disk, not stored to DB
+        exclude = (exclude or set()) | {"images"}
 
         db_obj = (
             await self.db.get(model_class, media_schema.id) if media_schema.id else None

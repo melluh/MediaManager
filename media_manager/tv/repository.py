@@ -152,8 +152,9 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
 
         # Scalar fields via model_dump() so new schema fields aren't silently
         # dropped on insert (seasons/episodes still need explicit construction).
+        # `images` is determined at runtime from files on disk.
         db_show = Show(
-            **show.model_dump(exclude={"seasons"}),
+            **show.model_dump(exclude={"seasons", "images"}),
             seasons=[
                 Season(
                     **season.model_dump(exclude={"episodes"}),
@@ -412,6 +413,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         runtime: int | None = None,
         release_date: str | None = None,
         metadata_updated_at: datetime | None = None,
+        metadata_version: int | None = None,
     ) -> ShowSchema:
         return await self.update_media_attributes_base(
             media_id=show_id,
@@ -428,6 +430,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             runtime=runtime,
             release_date=release_date,
             metadata_updated_at=metadata_updated_at,
+            metadata_version=metadata_version,
         )
 
     async def update_season_attributes(

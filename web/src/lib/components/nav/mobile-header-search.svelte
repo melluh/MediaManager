@@ -11,11 +11,17 @@
 	let {
 		open = $bindable(false),
 		onSearchPage,
-		searchQuery
+		searchQuery,
+		textClass = '',
+		iconClass = '',
+		hideLogo = false
 	}: {
 		open?: boolean;
 		onSearchPage: boolean;
 		searchQuery: string;
+		textClass?: string;
+		iconClass?: string;
+		hideLogo?: boolean;
 	} = $props();
 
 	// The search results page always shows the expanded mobile search bar,
@@ -55,9 +61,9 @@
 			onResultSelect={() => (open = false)}
 		/>
 	</div>
-{:else}
+{:else if !hideLogo}
 	<a
-		class="flex flex-1 items-center justify-center gap-2 md:hidden"
+		class={cn('flex flex-1 items-center justify-center gap-2 md:hidden', textClass)}
 		href={resolve('/dashboard', {})}
 	>
 		<AppBrand size="sm" />
@@ -67,7 +73,7 @@
 <Button
 	variant="ghost"
 	size="icon"
-	class={cn('mr-4 ml-auto h-7 w-7 md:hidden', showExpanded && 'hidden')}
+	class={cn('mr-4 ml-auto h-7 w-7 md:hidden', showExpanded && 'hidden', iconClass)}
 	onclick={() => (open = true)}
 >
 	<Search />

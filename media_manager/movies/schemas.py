@@ -21,6 +21,7 @@ class MovieFile(BaseMediaFile):
 
 class PublicMovieFile(MovieFile):
     imported: bool = False
+    file_path: str = ""
 
 
 class MovieTorrent(BaseModel):

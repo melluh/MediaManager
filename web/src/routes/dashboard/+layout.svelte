@@ -10,9 +10,16 @@
 
 	let { data, children }: LayoutProps = $props();
 	let crumbs: Crumb[] = $state([]);
+	// Set by pages with a hero backdrop image behind the header: forces
+	// white header text/icons and hides the mobile logo, since both only
+	// make sense while that backdrop is actually showing.
+	let heroHeader = $state(false);
 	setContext('user', () => data.user);
 	setContext('setCrumbs', (newCrumbs: Crumb[]) => {
 		crumbs = newCrumbs;
+	});
+	setContext('setHeroHeader', (active: boolean) => {
+		heroHeader = active;
 	});
 
 	if (data.user && !data.user.is_verified) {
@@ -24,7 +31,7 @@
 <Sidebar.Provider>
 	<AppSidebar />
 	<Sidebar.Inset>
-		<DashboardHeader {crumbs} />
+		<DashboardHeader {crumbs} {heroHeader} />
 		{@render children()}
 	</Sidebar.Inset>
 </Sidebar.Provider>

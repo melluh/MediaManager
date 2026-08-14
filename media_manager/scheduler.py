@@ -113,8 +113,8 @@ async def delete_expired_indexer_query_results_task(
 _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
     import_all_movie_torrents_task.task_name: [{"cron": "*/2 * * * *"}],
     import_all_show_torrents_task.task_name: [{"cron": "*/2 * * * *"}],
-    update_all_movies_metadata_task.task_name: [{"cron": "0 0 * * 1"}],
-    update_all_non_ended_shows_metadata_task.task_name: [{"cron": "0 0 * * 1"}],
+    update_all_movies_metadata_task.task_name: [{"cron": "0 * * * *"}],
+    update_all_non_ended_shows_metadata_task.task_name: [{"cron": "0 * * * *"}],
     scan_importable_movies_task.task_name: [{"cron": "*/5 * * * *"}],
     scan_importable_shows_task.task_name: [{"cron": "*/5 * * * *"}],
     delete_expired_indexer_query_results_task.task_name: [{"cron": "*/30 * * * *"}],

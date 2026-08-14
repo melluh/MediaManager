@@ -1,10 +1,14 @@
 import logging
 
+from media_manager.common.schemas import CURRENT_METADATA_VERSION
 from media_manager.common.service import BaseMetadataService
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
-from media_manager.metadataProvider.schemas import MetaDataProviderSearchResult
+from media_manager.metadataProvider.schemas import (
+    MediaType,
+    MetaDataProviderSearchResult,
+)
 from media_manager.metadataProvider.tmdb import TmdbMetadataProvider
 from media_manager.metadataProvider.tvdb import TvdbMetadataProvider
 from media_manager.movies.repository import MovieRepository
@@ -27,9 +31,9 @@ class MovieMetadataService(BaseMetadataService[Movie, Movie]):
         return await self.add_media_base(
             external_id=external_id,
             metadata_provider=metadata_provider,
+            media_type=MediaType.movie,
             get_metadata_func=metadata_provider.get_movie_metadata,
             save_func=self.movie_repository.save_movie,
-            download_poster_func=metadata_provider.download_movie_poster_image,
             language=language,
         )
 
@@ -87,9 +91,12 @@ class MovieMetadataService(BaseMetadataService[Movie, Movie]):
             runtime=fresh_movie_data.runtime,
             release_date=fresh_movie_data.release_date,
             metadata_updated_at=fresh_movie_data.metadata_updated_at,
+            metadata_version=CURRENT_METADATA_VERSION,
         )
         updated_movie = await self.movie_repository.get_movie_by_id(db_movie.id)
-        await metadata_provider.download_movie_poster_image(movie=updated_movie)
+        await metadata_provider.download_all_media_images(
+            updated_movie, MediaType.movie
+        )
         return updated_movie
 
     async def update_all_metadata(self) -> None:

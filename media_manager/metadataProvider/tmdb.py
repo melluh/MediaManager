@@ -13,6 +13,7 @@ from media_manager.metadataProvider.abstract_metadata_provider import (
 )
 from media_manager.metadataProvider.schemas import (
     ExternalPosterImage,
+    MediaImageType,
     MediaType,
     MetaDataProviderSearchResult,
 )
@@ -24,6 +25,13 @@ ENDED_STATUS = {"Ended", "Canceled"}
 TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p"
 TMDB_POSTER_WIDTHS = (92, 154, 185, 342, 500, 780)
 TMDB_BACKDROP_WIDTHS = (300, 780, 1280)
+
+# Which metadata JSON key holds each image type's path. Movie and show
+# detail payloads use the same key names.
+TMDB_IMAGE_METADATA_KEYS: dict[MediaImageType, str] = {
+    MediaImageType.poster: "poster_path",
+    MediaImageType.backdrop: "backdrop_path",
+}
 
 log = logging.getLogger(__name__)
 
@@ -289,33 +297,58 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         await self.__refresh_genre_maps_if_stale()
         return _tv_genre_map or {}
 
-    @override
-    async def download_show_poster_image(self, show: Show) -> bool:
-        # Determine which language to use based on show's original_language
-        language = self.__get_language_param(show.original_language)
-
-        # Fetch metadata in the appropriate language to get localized poster
-        show_metadata = await self.__get_show_metadata(
-            show.external_id, language=language
+    async def __get_media_metadata(
+        self, media: Movie | Show, media_type: MediaType, language: str
+    ) -> dict:
+        if media_type == MediaType.tv:
+            return await self.__get_show_metadata(media.external_id, language=language)
+        return await self.__get_movie_metadata(
+            movie_id=media.external_id, language=language
         )
 
-        # downloading the poster
-        # all pictures from TMDB should already be jpeg, so no need to convert
-        if show_metadata["poster_path"] is not None:
-            poster_url = (
-                "https://image.tmdb.org/t/p/original" + show_metadata["poster_path"]
+    @override
+    async def get_available_image_types(
+        self, media: Movie | Show, media_type: MediaType
+    ) -> set[MediaImageType]:
+        language = self.__get_language_param(media.original_language)
+        metadata = await self.__get_media_metadata(media, media_type, language)
+        return {
+            image_type
+            for image_type, metadata_key in TMDB_IMAGE_METADATA_KEYS.items()
+            if metadata.get(metadata_key) is not None
+        }
+
+    @override
+    async def download_media_image(
+        self, media: Movie | Show, media_type: MediaType, image_type: MediaImageType
+    ) -> bool:
+        # Determine which language to use based on the media's original_language
+        language = self.__get_language_param(media.original_language)
+
+        # Fetch metadata in the appropriate language to get a localized image
+        metadata = await self.__get_media_metadata(media, media_type, language)
+
+        image_path = metadata.get(TMDB_IMAGE_METADATA_KEYS[image_type])
+        if image_path is None:
+            log.warning(
+                f"{image_type} image for {media_type} {media.name} could not be downloaded"
             )
-            if await media_manager.metadataProvider.utils.download_poster_image(
-                storage_path=self.storage_path, poster_url=poster_url, uuid=show.id
-            ):
-                log.info("Successfully downloaded poster image for show " + show.name)
-            else:
-                log.warning(f"download for image of show {show.name} failed")
-                return False
-        else:
-            log.warning(f"image for show {show.name} could not be downloaded")
             return False
-        return True
+
+        # all images from TMDB should already be jpeg, so no need to convert
+        image_url = f"{TMDB_POSTER_BASE_URL}/original{image_path}"
+        if await media_manager.metadataProvider.utils.download_media_image(
+            storage_path=self.storage_path,
+            image_url=image_url,
+            media_id=media.id,
+            image_type=image_type,
+        ):
+            log.info(
+                f"Successfully downloaded {image_type} image for {media_type} {media.name}"
+            )
+            return True
+        log.warning(f"download for {image_type} image of {media_type} {media.name} failed")
+        return False
 
     @override
     async def get_show_metadata(
@@ -342,7 +375,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         show_metadata = await self.__get_show_metadata(show_id, language=language)
 
         imdb_id = show_metadata.get("external_ids", {}).get("imdb_id")
-        trailer_url = get_first_trailer(show_metadata.get("videos", {"results": []}).get("results", []))
+        trailer_url = self.__get_first_trailer(show_metadata.get("videos", {"results": []}).get("results", []))
 
         season_metadata_list = [
             await self.__get_season_metadata(
@@ -486,7 +519,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         )
 
         imdb_id = movie_metadata.get("external_ids", {}).get("imdb_id")
-        trailer_url = get_first_trailer(movie_metadata.get("videos", {"results": []}).get("results", []))
+        trailer_url = self.__get_first_trailer(movie_metadata.get("videos", {"results": []}).get("results", []))
 
         year = media_manager.metadataProvider.utils.get_year_from_date(
             movie_metadata["release_date"]
@@ -644,44 +677,16 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                 log.warning("Error processing search result", exc_info=True)
         return formatted_results
 
-    @override
-    async def download_movie_poster_image(self, movie: Movie) -> bool:
-        # Determine which language to use based on movie's original_language
-        language = self.__get_language_param(movie.original_language)
+    def __get_first_trailer(self, videos: list[dict]) -> str | None:
+        for video in videos:
+            if video["type"] == "Trailer":
+                url = self.__get_video_url(video["site"], video["key"])
+                if not url:
+                    continue
+                return url
+        return None
 
-        # Fetch metadata in the appropriate language to get localized poster
-        movie_metadata = await self.__get_movie_metadata(
-            movie_id=movie.external_id, language=language
-        )
-
-        # downloading the poster
-        # all pictures from TMDB should already be jpeg, so no need to convert
-        if movie_metadata["poster_path"] is not None:
-            poster_url = (
-                "https://image.tmdb.org/t/p/original" + movie_metadata["poster_path"]
-            )
-            if await media_manager.metadataProvider.utils.download_poster_image(
-                storage_path=self.storage_path, poster_url=poster_url, uuid=movie.id
-            ):
-                log.info("Successfully downloaded poster image for movie " + movie.name)
-            else:
-                log.warning(f"download for image of movie {movie.name} failed")
-                return False
-        else:
-            log.warning(f"image for movie {movie.name} could not be downloaded")
-            return False
-        return True
-
-def get_first_trailer(videos: list[dict]) -> str | None:
-    for video in videos:
-        if video["type"] == "Trailer":
-            url = get_video_url(video["site"], video["key"])
-            if not url:
-                continue
-            return url
-    return None
-
-def get_video_url(site: str, key: str) -> str | None:
-    if site == "YouTube":
-        return f"https://www.youtube.com/watch?v={key}"
-    return None
+    def __get_video_url(self, site: str, key: str) -> str | None:
+        if site == "YouTube":
+            return f"https://www.youtube.com/watch?v={key}"
+        return None

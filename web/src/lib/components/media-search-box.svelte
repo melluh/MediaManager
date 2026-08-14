@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Input } from '$lib/components/ui/input/index.js';
-	import MediaPicture from '$lib/components/media-picture.svelte';
+	import MediaImage from '$lib/components/media-image.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import Search from '@lucide/svelte/icons/search';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
@@ -189,7 +189,7 @@
 		bind:value={searchTerm}
 		type="search"
 		placeholder="Search..."
-		class="pl-9"
+		class="bg-background pl-9"
 		oninput={handleInput}
 		onfocus={() => {
 			if (hasSearched || results.length > 0) isOpen = true;
@@ -222,7 +222,7 @@
 					>
 						<!-- eslint-enable svelte/no-navigation-without-resolve -->
 						<div class="relative h-12 w-9 shrink-0 overflow-hidden rounded">
-							<MediaPicture media={result} bind:loaded={posterLoaded[result.id]} />
+							<MediaImage media={result} bind:loaded={posterLoaded[result.id]} />
 							{#if !posterLoaded[result.id]}
 								<Skeleton class="absolute inset-0 h-full w-full" />
 							{/if}

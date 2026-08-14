@@ -4,7 +4,7 @@
 	import type { PublicEpisodeFile, Season, Show } from '$lib/api/api';
 	import CheckmarkX from '$lib/components/checkmark-x.svelte';
 	import { getFullyQualifiedMediaName, getTorrentQualityString } from '$lib/utils';
-	import MediaPicture from '$lib/components/media-picture.svelte';
+	import MediaImage from '$lib/components/media-image.svelte';
 	import { resolve } from '$app/paths';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { getContext } from 'svelte';
@@ -49,7 +49,7 @@
 <main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
 	<div class="flex flex-col gap-4 md:flex-row md:items-stretch">
 		<div class="w-full overflow-hidden rounded-xl bg-muted/50 md:w-1/3 md:max-w-sm">
-			<MediaPicture media={show} />
+			<MediaImage media={show} />
 		</div>
 		<div class="h-full w-full flex-auto rounded-xl md:w-1/4">
 			<Card.Root class="h-full w-full">

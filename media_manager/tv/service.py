@@ -71,7 +71,9 @@ class TvService(BaseMediaService[Show, Show]):
         """
         Get all shows in the library, without their seasons/episodes.
         """
-        return await self.tv_repository.get_shows_summary()
+        return await self.attach_media_images_many(
+            await self.tv_repository.get_shows_summary()
+        )
 
     async def delete_show(
         self,
@@ -212,7 +214,7 @@ class TvService(BaseMediaService[Show, Show]):
             public_seasons.append(public_season)
 
         public_show.seasons = public_seasons
-        return public_show
+        return await self.attach_media_images(public_show)
 
     async def get_show_by_id(self, show_id: ShowId) -> Show:
         """

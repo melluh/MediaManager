@@ -12,6 +12,7 @@ from media_manager.metadataProvider.abstract_metadata_provider import (
 )
 from media_manager.metadataProvider.schemas import (
     ExternalPosterImage,
+    MediaImageType,
     MediaType,
     MetaDataProviderSearchResult,
 )
@@ -146,20 +147,44 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
             label="trending movies",
         )
 
-    @override
-    async def download_show_poster_image(self, show: Show) -> bool:
-        show_metadata = await self.__get_show(show_id=show.external_id)
+    async def __get_media(self, media: Movie | Show, media_type: MediaType) -> dict:
+        if media_type == MediaType.tv:
+            return await self.__get_show(show_id=media.external_id)
+        return await self.__get_movie(media.external_id)
 
-        if show_metadata["image"] is not None:
-            await media_manager.metadataProvider.utils.download_poster_image(
-                storage_path=self.storage_path,
-                poster_url=show_metadata["image"],
-                uuid=show.id,
+    @override
+    async def get_available_image_types(
+        self, media: Movie | Show, media_type: MediaType
+    ) -> set[MediaImageType]:
+        # TVDB backdrop artwork is not supported: the relay doesn't expose
+        # artwork type information needed to reliably pick a background
+        # image out of TVDB's mixed poster/banner/background artwork list.
+        metadata = await self.__get_media(media, media_type)
+        return {MediaImageType.poster} if metadata.get("image") else set()
+
+    @override
+    async def download_media_image(
+        self, media: Movie | Show, media_type: MediaType, image_type: MediaImageType
+    ) -> bool:
+        if image_type is not MediaImageType.poster:
+            log.debug(
+                f"{image_type} images are not supported for TVDB {media_type} {media.name}"
             )
-            log.debug("Successfully downloaded poster image for show " + show.name)
-            return True
-        log.warning(f"image for show {show.name} could not be downloaded")
-        return False
+            return False
+
+        metadata = await self.__get_media(media, media_type)
+        if metadata.get("image") is None:
+            log.warning(f"image for {media_type} {media.name} could not be downloaded")
+            return False
+
+        await media_manager.metadataProvider.utils.download_media_image(
+            storage_path=self.storage_path,
+            image_url=metadata["image"],
+            media_id=media.id,
+            image_type=image_type,
+        )
+        log.info(f"Successfully downloaded poster image for {media_type} {media.name}")
+        return True
 
     @override
     async def get_show_metadata(
@@ -406,21 +431,6 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
             except Exception:
                 log.warning("Error processing search result", exc_info=True)
         return formatted_results
-
-    @override
-    async def download_movie_poster_image(self, movie: Movie) -> bool:
-        movie_metadata = await self.__get_movie(movie.external_id)
-
-        if movie_metadata["image"] is not None:
-            await media_manager.metadataProvider.utils.download_poster_image(
-                storage_path=self.storage_path,
-                poster_url=movie_metadata["image"],
-                uuid=movie.id,
-            )
-            log.info("Successfully downloaded poster image for show " + movie.name)
-            return True
-        log.warning(f"image for show {movie.name} could not be downloaded")
-        return False
 
     @override
     async def get_movie_metadata(

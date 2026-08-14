@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import ImageOff from '@lucide/svelte/icons/image-off';
 	import Ellipsis from '@lucide/svelte/icons/ellipsis';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import * as Table from '$lib/components/ui/table/index.js';
@@ -8,22 +7,14 @@
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import { getContext } from 'svelte';
 	import type { PublicShow, RichShowTorrent, UserRead } from '$lib/api/api';
-	import {
-		getFullyQualifiedMediaName,
-		formatRuntime,
-		formatReleaseDate,
-		formatLastUpdated,
-		getMetadataProviderLabel,
-		getMetadataProviderUrl
-	} from '$lib/utils';
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { getFullyQualifiedMediaName } from '$lib/utils';
 	import DownloadSelectedSeasonsDialog from '$lib/components/download-dialogs/download-selected-seasons-dialog.svelte';
 	import DownloadSelectedEpisodesDialog from '$lib/components/download-dialogs/download-selected-episodes-dialog.svelte';
 	import DownloadCustomDialog from '$lib/components/download-dialogs/download-custom-dialog.svelte';
 	import CheckmarkX from '$lib/components/checkmark-x.svelte';
 	import { page } from '$app/state';
 	import TorrentTable from '$lib/components/torrents/torrent-table.svelte';
-	import MediaPicture from '$lib/components/media-picture.svelte';
+	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { toast } from 'svelte-sonner';
 	import { Label } from '$lib/components/ui/label';
@@ -145,126 +136,53 @@
 	}
 </script>
 
-<svelte:head>
-	<title>{getFullyQualifiedMediaName(show)} - MediaManager</title>
-	<meta
-		content="View details and manage downloads for {getFullyQualifiedMediaName(
-			show
-		)} in MediaManager"
-		name="description"
-	/>
-</svelte:head>
+<MediaHeroHeader media={show} isShow={true}>
+	{#snippet actions()}
+		{#if user().is_superuser}
+			<div class="mt-4 flex items-center gap-2">
+				{#if selectedSeasonNumbers.length > 0}
+					<DownloadSelectedSeasonsDialog
+						{show}
+						{selectedSeasonNumbers}
+						triggerText={downloadButtonLabel}
+					/>
+				{/if}
+				{#if selectedEpisodeNumbers.length > 0}
+					<DownloadSelectedEpisodesDialog
+						{show}
+						{selectedEpisodeNumbers}
+						triggerText={episodeDownloadLabel}
+					/>
+				{/if}
+				{#if selectedSeasonNumbers.length === 0 && selectedEpisodeNumbers.length === 0}
+					<DownloadCustomDialog {show} />
+				{/if}
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline' })}>
+						Administrator Actions
+						<ChevronDown />
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end" class="flex w-56 flex-col gap-2 p-3">
+						{#if !show.ended}
+							<div class="flex items-center gap-3 px-1 py-1">
+								<Switch
+									bind:checked={() => continuousDownloadEnabled, toggle_continuous_download}
+									id="continuous-download-checkbox"
+								/>
+								<Label for="continuous-download-checkbox" class="text-xs">
+									Enable automatic download of future seasons
+								</Label>
+							</div>
+							<DropdownMenu.Separator />
+						{/if}
+						<LibraryCombobox media={show} mediaType="tv" />
+						<DeleteMediaDialog isShow={true} media={show} />
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			</div>
+		{/if}
+	{/snippet}
 
-<div class="mx-auto mb-4 w-full px-4 md:max-w-[80em]">
-	<h1 class="scroll-m-20 text-left text-4xl font-extrabold tracking-tight lg:text-5xl">
-		{getFullyQualifiedMediaName(show)}
-	</h1>
-</div>
-<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
-	<div class="flex flex-col gap-4 md:flex-row md:items-stretch">
-		<div class="w-full overflow-hidden rounded-xl bg-muted/50 md:w-1/3 md:max-w-sm">
-			{#if show.id}
-				<MediaPicture media={show} />
-			{:else}
-				<div
-					class="flex aspect-9/16 h-auto w-full items-center justify-center rounded-lg bg-gray-200 text-gray-500"
-				>
-					<ImageOff size={48} />
-				</div>
-			{/if}
-		</div>
-		<div class="flex h-full w-full flex-auto flex-col rounded-xl md:flex-1">
-			<Card.Root class="flex h-full w-full flex-col">
-				<Card.Header>
-					<Card.Title>Overview</Card.Title>
-				</Card.Header>
-				<Card.Content class="flex flex-1 flex-col justify-between gap-4">
-					<div class="flex flex-col gap-3">
-						{#if show.tagline}
-							<p class="text-sm text-muted-foreground italic">"{show.tagline}"</p>
-						{/if}
-						<div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-							{#if formatReleaseDate(show.release_date)}
-								<span>{formatReleaseDate(show.release_date)}</span>
-							{/if}
-							{#if formatRuntime(show.runtime)}
-								<span>{formatRuntime(show.runtime)}</span>
-							{/if}
-							{#if show.genres && show.genres.length > 0}
-								<div class="flex flex-wrap gap-1">
-									{#each show.genres as genre (genre)}
-										<Badge variant="secondary">{genre}</Badge>
-									{/each}
-								</div>
-							{/if}
-						</div>
-						<p class="text-justify text-sm leading-6 hyphens-auto text-muted-foreground">
-							{show.overview}
-						</p>
-						{#if getMetadataProviderUrl(show.metadata_provider, show.external_id, true)}
-							<p class="text-xs text-muted-foreground">
-								Source:
-								<a
-									href={getMetadataProviderUrl(show.metadata_provider, show.external_id, true)}
-									target="_blank"
-									rel="noopener noreferrer external"
-									class="underline hover:text-foreground"
-								>
-									{getMetadataProviderLabel(show.metadata_provider)}
-								</a>
-								{#if formatLastUpdated(show.metadata_updated_at)}
-									· Last updated: {formatLastUpdated(show.metadata_updated_at)}
-								{/if}
-							</p>
-						{/if}
-					</div>
-					{#if user().is_superuser}
-						<div class="flex items-center justify-between gap-2">
-							{#if selectedSeasonNumbers.length > 0}
-								<DownloadSelectedSeasonsDialog
-									{show}
-									{selectedSeasonNumbers}
-									triggerText={downloadButtonLabel}
-								/>
-							{/if}
-							{#if selectedEpisodeNumbers.length > 0}
-								<DownloadSelectedEpisodesDialog
-									{show}
-									{selectedEpisodeNumbers}
-									triggerText={episodeDownloadLabel}
-								/>
-							{/if}
-							{#if selectedSeasonNumbers.length === 0 && selectedEpisodeNumbers.length === 0}
-								<DownloadCustomDialog {show} />
-							{/if}
-							<DropdownMenu.Root>
-								<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline' })}>
-									Administrator Actions
-									<ChevronDown />
-								</DropdownMenu.Trigger>
-								<DropdownMenu.Content align="end" class="flex w-56 flex-col gap-2 p-3">
-									{#if !show.ended}
-										<div class="flex items-center gap-3 px-1 py-1">
-											<Switch
-												bind:checked={() => continuousDownloadEnabled, toggle_continuous_download}
-												id="continuous-download-checkbox"
-											/>
-											<Label for="continuous-download-checkbox" class="text-xs">
-												Enable automatic download of future seasons
-											</Label>
-										</div>
-										<DropdownMenu.Separator />
-									{/if}
-									<LibraryCombobox media={show} mediaType="tv" />
-									<DeleteMediaDialog isShow={true} media={show} />
-								</DropdownMenu.Content>
-							</DropdownMenu.Root>
-						</div>
-					{/if}
-				</Card.Content>
-			</Card.Root>
-		</div>
-	</div>
 	<div class="flex-1 rounded-xl">
 		<Card.Root class="w-full">
 			<Card.Header>
@@ -378,4 +296,4 @@
 			</Card.Content>
 		</Card.Root>
 	</div>
-</main>
+</MediaHeroHeader>

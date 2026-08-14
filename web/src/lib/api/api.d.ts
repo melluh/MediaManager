@@ -1577,8 +1577,6 @@ export interface components {
 		};
 		/**
 		 * MediaType
-		 * @description The media types a metadata provider (or the local search index) can
-		 *     return. Add a member here when a new media type becomes searchable.
 		 * @enum {string}
 		 */
 		MediaType: 'movie' | 'tv';
@@ -1654,6 +1652,15 @@ export interface components {
 			release_date?: string | null;
 			/** Metadata Updated At */
 			metadata_updated_at?: string | null;
+			/**
+			 * Metadata Version
+			 * @default 2
+			 */
+			metadata_version: number;
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
 		};
 		/** MovieTorrent */
 		MovieTorrent: {
@@ -1796,6 +1803,15 @@ export interface components {
 			/** Metadata Updated At */
 			metadata_updated_at?: string | null;
 			/**
+			 * Metadata Version
+			 * @default 2
+			 */
+			metadata_version: number;
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
+			/**
 			 * Downloaded
 			 * @default false
 			 */
@@ -1820,6 +1836,11 @@ export interface components {
 			 * @default false
 			 */
 			imported: boolean;
+			/**
+			 * File Path
+			 * @default
+			 */
+			file_path: string;
 		};
 		/** PublicSeason */
 		PublicSeason: {
@@ -1885,6 +1906,15 @@ export interface components {
 			release_date?: string | null;
 			/** Metadata Updated At */
 			metadata_updated_at?: string | null;
+			/**
+			 * Metadata Version
+			 * @default 2
+			 */
+			metadata_version: number;
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
 			/** Seasons */
 			seasons: components['schemas']['PublicSeason'][];
 		};
@@ -1998,6 +2028,15 @@ export interface components {
 			release_date?: string | null;
 			/** Metadata Updated At */
 			metadata_updated_at?: string | null;
+			/**
+			 * Metadata Version
+			 * @default 2
+			 */
+			metadata_version: number;
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
 			media_type: components['schemas']['MediaType'];
 		};
 		/** Season */
@@ -2076,6 +2115,15 @@ export interface components {
 			/** Metadata Updated At */
 			metadata_updated_at?: string | null;
 			/**
+			 * Metadata Version
+			 * @default 2
+			 */
+			metadata_version: number;
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
+			/**
 			 * Ended
 			 * @default false
 			 */
@@ -2128,6 +2176,15 @@ export interface components {
 			release_date?: string | null;
 			/** Metadata Updated At */
 			metadata_updated_at?: string | null;
+			/**
+			 * Metadata Version
+			 * @default 2
+			 */
+			metadata_version: number;
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
 			/**
 			 * Ended
 			 * @default false

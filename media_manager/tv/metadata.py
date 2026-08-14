@@ -1,10 +1,14 @@
 import logging
 
+from media_manager.common.schemas import CURRENT_METADATA_VERSION
 from media_manager.common.service import BaseMetadataService
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
-from media_manager.metadataProvider.schemas import MetaDataProviderSearchResult
+from media_manager.metadataProvider.schemas import (
+    MediaType,
+    MetaDataProviderSearchResult,
+)
 from media_manager.metadataProvider.tmdb import TmdbMetadataProvider
 from media_manager.metadataProvider.tvdb import TvdbMetadataProvider
 from media_manager.tv.repository import TvRepository
@@ -27,9 +31,9 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
         return await self.add_media_base(
             external_id=external_id,
             metadata_provider=metadata_provider,
+            media_type=MediaType.tv,
             get_metadata_func=metadata_provider.get_show_metadata,
             save_func=self.tv_repository.save_show,
-            download_poster_func=metadata_provider.download_show_poster_image,
             language=language,
             include_year_in_slug=False,
         )
@@ -91,6 +95,7 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
             runtime=fresh_show_data.runtime,
             release_date=fresh_show_data.release_date,
             metadata_updated_at=fresh_show_data.metadata_updated_at,
+            metadata_version=CURRENT_METADATA_VERSION,
         )
 
         existing_season_external_ids = {s.external_id: s for s in db_show.seasons}
@@ -151,15 +156,21 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
                 )
 
         updated_show = await self.tv_repository.get_show_by_id(show_id=db_show.id)
-        await metadata_provider.download_show_poster_image(show=updated_show)
+        await metadata_provider.download_all_media_images(updated_show, MediaType.tv)
         return updated_show
 
     async def update_all_non_ended_shows_metadata(self) -> None:
-        async def get_non_ended_shows() -> list[Show]:
-            return [show for show in await self.tv_repository.get_shows() if not show.ended]
+        async def get_shows_needing_metadata_scan() -> list[Show]:
+            # Exclude ended shows (metadata not likely to change significantly anymore),
+            #   except for shows with outdated metadata version.
+            return [
+                show
+                for show in await self.tv_repository.get_shows()
+                if not show.ended or show.metadata_version != CURRENT_METADATA_VERSION
+            ]
 
         await self.update_all_metadata_base(
-            get_all_to_update_func=get_non_ended_shows,
+            get_all_to_update_func=get_shows_needing_metadata_scan,
             update_single_func=self.update_show_metadata,
             tmdb_provider_class=TmdbMetadataProvider,
             tvdb_provider_class=TvdbMetadataProvider,

@@ -1,5 +1,7 @@
+import asyncio
 from typing import Any
 
+import media_manager.metadataProvider.utils
 from media_manager.common.repository import BaseRepository
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
@@ -35,6 +37,14 @@ class SearchService:
             results.extend(
                 SearchResult(**row.model_dump(), media_type=media_type) for row in rows
             )
+
+        if results:
+            images_by_id = await asyncio.to_thread(
+                media_manager.metadataProvider.utils.get_available_media_images_many,
+                [result.id for result in results],
+            )
+            for result in results:
+                result.images = images_by_id[str(result.id)]
         return results
 
     async def search_external(

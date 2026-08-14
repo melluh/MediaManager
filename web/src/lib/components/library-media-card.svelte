@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import MediaCard from '$lib/components/media-card.svelte';
-	import MediaPicture from '$lib/components/media-picture.svelte';
+	import MediaImage from '$lib/components/media-image.svelte';
 	import type { Movie, SearchResult, ShowSummary } from '$lib/api/api';
 	import type { Snippet } from 'svelte';
 
@@ -35,6 +35,6 @@
 	{indicators}
 >
 	{#snippet poster()}
-		<MediaPicture {media} className="h-full w-full object-cover" bind:loaded={posterLoaded} />
+		<MediaImage {media} className="h-full w-full object-cover" bind:loaded={posterLoaded} />
 	{/snippet}
 </MediaCard>

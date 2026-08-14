@@ -62,6 +62,7 @@ from media_manager.health.registry import get_health_registry
 from media_manager.health.router import router as health_router
 from media_manager.health.schemas import ServiceStatus
 from media_manager.logging import LOGGING_CONFIG, setup_logging
+from media_manager.metadataProvider.utils import migrate_legacy_poster_images
 from media_manager.notification.router import router as notification_router
 from media_manager.scheduler import (
     broker,
@@ -82,9 +83,9 @@ class ImmutableStaticFiles(StaticFiles):
     Serves static files with immutable, 1y Cache-Control headers, but only
     if a ?v= parameter is specified.
 
-    Used for poster images; these are stored at a fixed path keyed by the
-    media's UUID and are overwritten in-place on metadata refresh. Thus
-    the frontend appends ?v={metadata_last_updated}.
+    Used for media images (posters, backdrops, ...); these are stored at a
+    fixed path keyed by the media's UUID, and are overwritten in-place on
+    metadata refresh. Thus the frontend appends ?v={metadata_last_updated}.
     """
 
     def file_response(
@@ -111,6 +112,7 @@ if config.misc.development:
     log.warning("Development Mode activated!")
 
 run_filesystem_checks(config, log)
+migrate_legacy_poster_images()
 
 BASE_PATH = os.getenv("BASE_PATH", "")
 FRONTEND_FILES_DIR = os.getenv("FRONTEND_FILES_DIR")
