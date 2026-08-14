@@ -14,21 +14,46 @@
 	let { data }: PageProps = $props();
 	let recommendedShows: MetaDataProviderSearchResult[] = $state([]);
 	let showsLoading = $state(true);
+	let showsError = $state(false);
 
 	let recommendedMovies: MetaDataProviderSearchResult[] = $state([]);
 	let moviesLoading = $state(true);
+	let moviesError = $state(false);
 
 	let ownTorrents = $derived(data.ownTorrents ?? []);
 
-	onMount(async () => {
-		client.GET('/api/v1/tv/recommended').then((res) => {
-			recommendedShows = res.data as MetaDataProviderSearchResult[];
-			showsLoading = false;
-		});
-		client.GET('/api/v1/movies/recommended').then((res) => {
-			recommendedMovies = res.data as MetaDataProviderSearchResult[];
-			moviesLoading = false;
-		});
+	onMount(() => {
+		client
+			.GET('/api/v1/tv/recommended')
+			.then((res) => {
+				if (res.error || !res.data) {
+					showsError = true;
+					return;
+				}
+				recommendedShows = res.data;
+			})
+			.catch(() => {
+				showsError = true;
+			})
+			.finally(() => {
+				showsLoading = false;
+			});
+
+		client
+			.GET('/api/v1/movies/recommended')
+			.then((res) => {
+				if (res.error || !res.data) {
+					moviesError = true;
+					return;
+				}
+				recommendedMovies = res.data;
+			})
+			.catch(() => {
+				moviesError = true;
+			})
+			.finally(() => {
+				moviesLoading = false;
+			});
 	});
 </script>
 
@@ -69,11 +94,17 @@
 
 		<div class="mx-auto">
 			<h3 class="my-4 text-2xl font-semibold md:ml-12">Trending Shows</h3>
-			<RecommendedMediaCarousel isLoading={showsLoading} isShow={true} media={recommendedShows} />
+			<RecommendedMediaCarousel
+				isLoading={showsLoading}
+				isError={showsError}
+				isShow={true}
+				media={recommendedShows}
+			/>
 
 			<h3 class="my-4 mt-8 text-2xl font-semibold md:ml-12">Trending Movies</h3>
 			<RecommendedMediaCarousel
 				isLoading={moviesLoading}
+				isError={moviesError}
 				isShow={false}
 				media={recommendedMovies}
 			/>
