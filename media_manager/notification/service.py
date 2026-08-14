@@ -26,6 +26,9 @@ class NotificationService:
     async def mark_notification_as_read(self, nid: NotificationId) -> None:
         return await self.notification_repository.mark_notification_as_read(nid=nid)
 
+    async def mark_all_notifications_as_read(self) -> None:
+        return await self.notification_repository.mark_all_notifications_as_read()
+
     async def mark_notification_as_unread(self, nid: NotificationId) -> None:
         return await self.notification_repository.mark_notification_as_unread(nid=nid)
 

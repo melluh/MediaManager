@@ -60,6 +60,20 @@ async def get_notification(
 
 
 @router.patch(
+    "/read",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(current_active_user)],
+)
+async def mark_all_notifications_as_read(
+    notification_service: notification_service_dep,
+) -> None:
+    """
+    Mark all notifications as read.
+    """
+    await notification_service.mark_all_notifications_as_read()
+
+
+@router.patch(
     "/{notification_id}/read",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(current_active_user)],

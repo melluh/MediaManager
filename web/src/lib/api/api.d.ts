@@ -1184,6 +1184,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/notification/read': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Mark All Notifications As Read
+		 * @description Mark all notifications as read.
+		 */
+		patch: operations['mark_all_notifications_as_read_api_v1_notification_read_patch'];
+		trace?: never;
+	};
 	'/api/v1/notification/{notification_id}/read': {
 		parameters: {
 			query?: never;
@@ -4777,6 +4797,24 @@ export interface operations {
 				content: {
 					'application/json': components['schemas']['HTTPValidationError'];
 				};
+			};
+		};
+	};
+	mark_all_notifications_as_read_api_v1_notification_read_patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};

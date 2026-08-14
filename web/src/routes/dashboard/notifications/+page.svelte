@@ -59,20 +59,15 @@
 
 		try {
 			markingAllAsRead = true;
-			const promises = unreadNotifications.map((notification) =>
-				client.PATCH('/api/v1/notification/{notification_id}/read', {
-					params: { path: { notification_id: notification.id! } }
-				})
-			);
+			const { response } = await client.PATCH('/api/v1/notification/read');
 
-			await Promise.all(promises);
-
-			// Move all unread to read
-			readNotifications = [
-				...unreadNotifications.map((n) => ({ ...n, read: true })),
-				...readNotifications
-			];
-			unreadNotifications = [];
+			if (response.ok) {
+				readNotifications = [
+					...unreadNotifications.map((n) => ({ ...n, read: true })),
+					...readNotifications
+				];
+				unreadNotifications = [];
+			}
 		} catch (error) {
 			console.error('Failed to mark all notifications as read:', error);
 		} finally {

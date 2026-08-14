@@ -84,6 +84,10 @@ class NotificationRepository:
         stmt = update(Notification).where(Notification.id == nid).values(read=True)
         await self.db.execute(stmt)
 
+    async def mark_all_notifications_as_read(self) -> None:
+        stmt = update(Notification).where(Notification.read == false()).values(read=True)
+        await self.db.execute(stmt)
+
     async def mark_notification_as_unread(self, nid: NotificationId) -> None:
         stmt = update(Notification).where(Notification.id == nid).values(read=False)
         await self.db.execute(stmt)
