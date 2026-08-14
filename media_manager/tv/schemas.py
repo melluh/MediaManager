@@ -44,6 +44,8 @@ class Season(BaseModel):
 
     episodes: list[Episode]
 
+    images: dict[str, str] = Field(default_factory=dict)
+
 
 class ShowSummary(BaseMedia):
     id: ShowId = Field(default_factory=lambda: ShowId(uuid.uuid4()))
@@ -115,6 +117,8 @@ class PublicSeason(BaseModel):
     external_id: int
 
     episodes: list[PublicEpisode]
+
+    images: dict[str, str] = Field(default_factory=dict)
 
 
 class PublicShow(BaseModel):

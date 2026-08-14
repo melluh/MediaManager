@@ -187,6 +187,42 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
         return True
 
     @override
+    async def get_available_season_image_types(
+        self, show: Show, season: Season
+    ) -> set[MediaImageType]:
+        # Best-effort: not every TVDB season has its own artwork, and the
+        # relay may not expose an "image" field for it at all.
+        season_metadata = await self.__get_season(show_id=season.external_id)
+        return {MediaImageType.poster} if season_metadata.get("image") else set()
+
+    @override
+    async def download_season_image(
+        self, show: Show, season: Season, image_type: MediaImageType
+    ) -> bool:
+        if image_type is not MediaImageType.poster:
+            log.debug(f"{image_type} images are not supported for TVDB seasons")
+            return False
+
+        season_metadata = await self.__get_season(show_id=season.external_id)
+        image_url = season_metadata.get("image")
+        if image_url is None:
+            log.debug(
+                f"poster image for {show.name} season {season.number} could not be downloaded"
+            )
+            return False
+
+        await media_manager.metadataProvider.utils.download_media_image(
+            storage_path=self.storage_path,
+            image_url=image_url,
+            media_id=season.id,
+            image_type=MediaImageType.poster,
+        )
+        log.info(
+            f"Successfully downloaded poster image for {show.name} season {season.number}"
+        )
+        return True
+
+    @override
     async def get_show_metadata(
         self, show_id: int, language: str | None = None
     ) -> Show:

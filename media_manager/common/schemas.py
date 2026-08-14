@@ -8,7 +8,7 @@ from media_manager.torrent.models import Quality
 
 # Increase to force immediate metadata refresh (regardless of configured metadata refresh interval).
 # Useful when metadata fetching logic changes or a new field is stored from metadata.
-CURRENT_METADATA_VERSION = 2
+CURRENT_METADATA_VERSION = 3
 
 
 class BaseMedia(BaseModel):

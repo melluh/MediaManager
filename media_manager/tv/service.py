@@ -213,7 +213,7 @@ class TvService(BaseMediaService[Show, Show]):
             )
             public_seasons.append(public_season)
 
-        public_show.seasons = public_seasons
+        public_show.seasons = await self.attach_media_images_many(public_seasons)
         return await self.attach_media_images(public_show)
 
     async def get_show_by_id(self, show_id: ShowId) -> Show:
@@ -343,7 +343,8 @@ class TvService(BaseMediaService[Show, Show]):
         :param season_id: The ID of the season.
         :return: The season.
         """
-        return await self.tv_repository.get_season(season_id=season_id)
+        season = await self.tv_repository.get_season(season_id=season_id)
+        return await self.attach_media_images(season)
 
     async def get_episode(self, episode_id: EpisodeId) -> Episode:
         """

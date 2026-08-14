@@ -8,7 +8,7 @@ from media_manager.metadataProvider.schemas import (
     MetaDataProviderSearchResult,
 )
 from media_manager.movies.schemas import Movie
-from media_manager.tv.schemas import Show
+from media_manager.tv.schemas import Season, Show
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +81,41 @@ class AbstractMetadataProvider(ABC):
     ) -> None:
         """
         Downloads every image type this provider has available for the
-        given media item.
+        given media item (and, for shows, every season's poster too).
         """
         for image_type in await self.get_available_image_types(media, media_type):
             await self.download_media_image(media, media_type, image_type)
+        if isinstance(media, Show):
+            await self.download_all_season_images(media)
+
+    @abstractmethod
+    async def get_available_season_image_types(
+        self, show: Show, season: Season
+    ) -> set[MediaImageType]:
+        """
+        Which image types this provider currently has available for the
+        given season. In practice only `poster` is ever returned - seasons
+        don't have their own backdrop art.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def download_season_image(
+        self, show: Show, season: Season, image_type: MediaImageType
+    ) -> bool:
+        """
+        Downloads a single image for a season, keyed on disk by the
+        season's own id (same layout `download_media_image` uses for a
+        movie/show, keyed by `media.id`).
+        """
+        raise NotImplementedError()
+
+    async def download_all_season_images(self, show: Show) -> None:
+        """
+        Downloads every image type available for every season of the show.
+        """
+        for season in show.seasons:
+            for image_type in await self.get_available_season_image_types(
+                show, season
+            ):
+                await self.download_season_image(show, season, image_type)

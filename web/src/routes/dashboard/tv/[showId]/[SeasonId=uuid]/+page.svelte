@@ -31,6 +31,17 @@
 			season.episodes.map((ep) => [ep.id, `E${String(ep.number).padStart(2, '0')}`])
 		)
 	);
+
+	// Seasons don't always have their own poster (not every provider/season has
+	// one) - fall back to the show's poster, reusing its cache-bust timestamp
+	// since season posters are downloaded in the same metadata-refresh pass.
+	let seasonPosterMedia = $derived({
+		id: season.id,
+		name: season.name,
+		year: show.year,
+		metadata_updated_at: show.metadata_updated_at,
+		images: season.images?.poster ? season.images : show.images
+	});
 </script>
 
 <svelte:head>
@@ -49,7 +60,7 @@
 <main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
 	<div class="flex flex-col gap-4 md:flex-row md:items-stretch">
 		<div class="w-full overflow-hidden rounded-xl bg-muted/50 md:w-1/3 md:max-w-sm">
-			<MediaImage media={show} />
+			<MediaImage media={seasonPosterMedia} />
 		</div>
 		<div class="h-full w-full flex-auto rounded-xl md:w-1/4">
 			<Card.Root class="h-full w-full">

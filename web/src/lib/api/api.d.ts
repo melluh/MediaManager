@@ -1654,7 +1654,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 2
+			 * @default 3
 			 */
 			metadata_version: number;
 			/** Images */
@@ -1804,7 +1804,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 2
+			 * @default 3
 			 */
 			metadata_version: number;
 			/** Images */
@@ -1864,6 +1864,10 @@ export interface components {
 			external_id: number;
 			/** Episodes */
 			episodes: components['schemas']['PublicEpisode'][];
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
 		};
 		/** PublicShow */
 		PublicShow: {
@@ -1912,7 +1916,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 2
+			 * @default 3
 			 */
 			metadata_version: number;
 			/** Images */
@@ -2034,7 +2038,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 2
+			 * @default 3
 			 */
 			metadata_version: number;
 			/** Images */
@@ -2060,6 +2064,10 @@ export interface components {
 			external_id: number;
 			/** Episodes */
 			episodes: components['schemas']['Episode'][];
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
 		};
 		/** ServiceHealth */
 		ServiceHealth: {
@@ -2120,7 +2128,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 2
+			 * @default 3
 			 */
 			metadata_version: number;
 			/** Images */
@@ -2182,7 +2190,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 2
+			 * @default 3
 			 */
 			metadata_version: number;
 			/** Images */

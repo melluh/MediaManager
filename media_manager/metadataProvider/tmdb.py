@@ -19,7 +19,13 @@ from media_manager.metadataProvider.schemas import (
 )
 from media_manager.movies.schemas import Movie
 from media_manager.notification.manager import notification_manager
-from media_manager.tv.schemas import Episode, EpisodeNumber, Season, SeasonNumber, Show
+from media_manager.tv.schemas import (
+    Episode,
+    EpisodeNumber,
+    Season,
+    SeasonNumber,
+    Show,
+)
 
 ENDED_STATUS = {"Ended", "Canceled"}
 TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p"
@@ -348,6 +354,52 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             )
             return True
         log.warning(f"download for {image_type} image of {media_type} {media.name} failed")
+        return False
+
+    @override
+    async def get_available_season_image_types(
+        self, show: Show, season: Season
+    ) -> set[MediaImageType]:
+        language = self.__get_language_param(show.original_language)
+        season_metadata = await self.__get_season_metadata(
+            show_id=show.external_id, season_number=season.number, language=language
+        )
+        return {MediaImageType.poster} if season_metadata.get("poster_path") else set()
+
+    @override
+    async def download_season_image(
+        self, show: Show, season: Season, image_type: MediaImageType
+    ) -> bool:
+        if image_type is not MediaImageType.poster:
+            log.debug(f"{image_type} images are not supported for TMDB seasons")
+            return False
+
+        language = self.__get_language_param(show.original_language)
+        season_metadata = await self.__get_season_metadata(
+            show_id=show.external_id, season_number=season.number, language=language
+        )
+
+        poster_path = season_metadata.get("poster_path")
+        if poster_path is None:
+            log.warning(
+                f"poster image for {show.name} season {season.number} could not be downloaded"
+            )
+            return False
+
+        image_url = f"{TMDB_POSTER_BASE_URL}/original{poster_path}"
+        if await media_manager.metadataProvider.utils.download_media_image(
+            storage_path=self.storage_path,
+            image_url=image_url,
+            media_id=season.id,
+            image_type=MediaImageType.poster,
+        ):
+            log.info(
+                f"Successfully downloaded poster image for {show.name} season {season.number}"
+            )
+            return True
+        log.warning(
+            f"download for poster image of {show.name} season {season.number} failed"
+        )
         return False
 
     @override

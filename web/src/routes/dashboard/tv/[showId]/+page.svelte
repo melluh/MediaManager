@@ -15,6 +15,9 @@
 	import { page } from '$app/state';
 	import TorrentTable from '$lib/components/torrents/torrent-table.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
+	import MediaImage from '$lib/components/media-image.svelte';
+	import * as Carousel from '$lib/components/ui/carousel/index.js';
+	import Check from '@lucide/svelte/icons/check';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { toast } from 'svelte-sonner';
 	import { Label } from '$lib/components/ui/label';
@@ -38,6 +41,19 @@
 			{ label: getFullyQualifiedMediaName(show) }
 		]);
 	});
+
+	// Seasons don't always have their own poster - fall back to the show's,
+	// reusing its cache-bust timestamp since season posters are downloaded in
+	// the same metadata-refresh pass.
+	function seasonPosterMedia(season: PublicShow['seasons'][number]) {
+		return {
+			id: season.id,
+			name: season.name,
+			year: show.year,
+			metadata_updated_at: show.metadata_updated_at,
+			images: season.images?.poster ? season.images : show.images
+		};
+	}
 
 	let expandedSeasons = $state<Set<string>>(new Set());
 
@@ -180,6 +196,55 @@
 		{/if}
 	{/snippet}
 
+	{#if show.seasons.length > 0}
+		<div class="flex-1 rounded-xl">
+			<Card.Root class="w-full">
+				<Card.Header>
+					<Card.Title>Seasons</Card.Title>
+				</Card.Header>
+				<Card.Content>
+					<Carousel.Root class="w-full md:px-10" opts={{ align: 'start' }}>
+						<Carousel.Content>
+							{#each show.seasons as season (season.id)}
+								<Carousel.Item class="basis-1/3 sm:basis-1/4 md:basis-1/5 lg:basis-1/6">
+									<a
+										href={resolve('/dashboard/tv/[showId]/[seasonId]', {
+											showId: show.slug,
+											seasonId: season.id
+										})}
+										class="group relative block aspect-2/3 w-full overflow-hidden rounded-lg bg-muted/50 ring-1 ring-border transition-shadow hover:shadow-lg"
+									>
+										<MediaImage
+											media={seasonPosterMedia(season)}
+											className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+											loading="lazy"
+										/>
+										{#if season.downloaded}
+											<div
+												class="absolute top-1.5 right-1.5 z-10 rounded-full bg-black/60 p-1 backdrop-blur-sm"
+											>
+												<Check class="size-3 stroke-green-500" />
+											</div>
+										{/if}
+										<div
+											class="absolute inset-0 flex flex-col justify-end gap-0.5 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2 text-white"
+										>
+											<p class="text-sm leading-tight font-semibold">
+												{season.name}
+											</p>
+											<p class="truncate text-xs text-white/70">{season.episodes.length} episodes</p>
+										</div>
+									</a>
+								</Carousel.Item>
+							{/each}
+						</Carousel.Content>
+						<Carousel.Previous class="left-0 hidden size-9 md:inline-flex" />
+						<Carousel.Next class="right-0 hidden size-9 md:inline-flex" />
+					</Carousel.Root>
+				</Card.Content>
+			</Card.Root>
+		</div>
+	{/if}
 	<div class="flex-1 rounded-xl">
 		<Card.Root class="w-full">
 			<Card.Header>
