@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
@@ -10,6 +11,7 @@
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import Plus from '@lucide/svelte/icons/plus';
 	import SearchX from '@lucide/svelte/icons/search-x';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import Film from '@lucide/svelte/icons/film';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -161,43 +163,37 @@
 
 	async function addMedia(action: 'add' | 'download' = 'add') {
 		loadingAction = action;
-		let data;
-		if (isShow) {
-			const response = await client.POST('/api/v1/tv/shows', {
-				params: {
-					query: {
-						show_id: result.external_id,
-						metadata_provider: result.metadata_provider as 'tmdb' | 'tvdb',
-						language: result.original_language ?? undefined
-					}
-				}
-			});
-			data = response.data;
-		} else {
-			const response = await client.POST('/api/v1/movies', {
-				params: {
-					query: {
-						movie_id: result.external_id,
-						metadata_provider: result.metadata_provider as 'tmdb' | 'tvdb',
-						language: result.original_language ?? undefined
-					}
-				}
-			});
-			data = response.data;
+		const query = {
+			metadata_provider: result.metadata_provider as 'tmdb' | 'tvdb',
+			language: result.original_language ?? undefined
+		};
+		const { data, error, response } = isShow
+			? await client.POST('/api/v1/tv/shows', {
+					params: { query: { show_id: result.external_id, ...query } }
+				})
+			: await client.POST('/api/v1/movies', {
+					params: { query: { movie_id: result.external_id, ...query } }
+				});
+
+		// openapi-fetch returns `error: undefined` for a non-ok response with an
+		// empty body (e.g. a 500 with no body), so `!response.ok` must be checked too.
+		if (!response.ok || error) {
+			errorMessage =
+				`Failed to add ${isShow ? 'show' : 'movie'} to the library. ` +
+				(error?.detail ? String(error.detail) : 'Please try again later.');
+			loadingAction = null;
+			return;
 		}
 
-		if (isShow) {
-			await goto(resolve('/dashboard/tv/[showId]', { showId: data?.slug ?? data?.id ?? '' }), {
-				invalidateAll: true
-			});
-		} else {
-			await goto(
-				resolve('/dashboard/movies/[movieId]', { movieId: data?.slug ?? data?.id ?? '' }),
-				{
-					invalidateAll: true
-				}
-			);
-		}
+		await goto(
+			resolve(
+				isShow ? '/dashboard/tv/[showId]' : '/dashboard/movies/[movieId]',
+				isShow
+					? { showId: data?.slug ?? data?.id ?? '' }
+					: { movieId: data?.slug ?? data?.id ?? '' }
+			),
+			{ invalidateAll: true }
+		);
 		loadingAction = null;
 	}
 
@@ -439,8 +435,20 @@
 				</div>
 			</div>
 		{/if}
-		{#if errorMessage}
-			<p class="w-full rounded bg-red-50 px-2 py-1 text-xs text-red-500">{errorMessage}</p>
-		{/if}
 	</Dialog.Footer>
 </Dialog.Content>
+
+<AlertDialog.Root open={errorMessage !== null} onOpenChange={() => (errorMessage = null)}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title class="flex items-center gap-2">
+				<TriangleAlert class="size-5 text-destructive" />
+				Something went wrong
+			</AlertDialog.Title>
+			<AlertDialog.Description>{errorMessage}</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Action onclick={() => (errorMessage = null)}>OK</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
