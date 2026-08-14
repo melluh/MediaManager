@@ -3,6 +3,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
+import media_manager.metadataProvider.utils
 from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.movies.schemas import Movie, MovieFile
 from media_manager.torrent.manager import DownloadManager, get_download_manager
@@ -11,11 +12,12 @@ from media_manager.torrent.schemas import (
     DownloadProgress,
     Torrent,
     TorrentId,
+    TorrentMedia,
     TorrentStatus,
     TorrentWithProgress,
     download_state_to_torrent_status,
 )
-from media_manager.tv.schemas import EpisodeFile, Show
+from media_manager.tv.schemas import EpisodeFile, Show, ShowSummary
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +68,9 @@ class TorrentService:
         if user_id is not None:
             torrent.initiated_by_user_id = user_id
             torrent.initiated_at = datetime.now(UTC)
+
+        torrent.indexer = indexer_result.indexer
+        torrent.comments = indexer_result.comments
 
         return await self.torrent_repository.save_torrent(torrent=torrent)
 
@@ -155,26 +160,46 @@ class TorrentService:
         own = await self.torrent_repository.get_active_torrents_initiated_by_user(
             user_id=user_id
         )
+        torrents, progress_by_hash = await self._resolve_progress_and_status(own)
+        media_by_torrent_id = await self._resolve_media(torrents)
 
+        return [
+            TorrentWithProgress(
+                **t.model_dump(),
+                download_progress=progress_by_hash.get(t.hash),
+                media=media_by_torrent_id.get(t.id),
+            )
+            for t in torrents
+        ]
+
+    async def _resolve_progress_and_status(
+        self, torrents: list[Torrent]
+    ) -> tuple[list[Torrent], dict[str, DownloadProgress]]:
+        """
+        Bulk-fetches live download progress for the given torrents and, for any
+        the client reported on, reconciles their persisted TorrentStatus with the
+        state that implies (writing to the DB only when it actually changed).
+
+        Torrents the bulk fetch has no progress for (client doesn't support it,
+        or is unavailable) fall back to the older per-torrent status check.
+        """
         progress_by_hash: dict[str, DownloadProgress] = {}
         try:
             progress_by_hash = await asyncio.to_thread(
-                self.download_manager.get_download_progress_bulk, own
+                self.download_manager.get_download_progress_bulk, torrents
             )
         except Exception:
             log.exception("Error fetching download progress")
 
-        torrents: list[Torrent] = []
-        for t in own:
+        resolved: list[Torrent] = []
+        for t in torrents:
             progress = progress_by_hash.get(t.hash)
             if progress is None:
-                # Client doesn't support bulk progress (or is unavailable) for
-                # this torrent; fall back to the per-torrent status check.
                 try:
-                    torrents.append(await self.get_torrent_status(t))
+                    resolved.append(await self.get_torrent_status(t))
                 except Exception:
                     log.exception(f"Error fetching status for torrent {t.title}")
-                    torrents.append(t)
+                    resolved.append(t)
                 continue
 
             derived_status = download_state_to_torrent_status(progress.state)
@@ -184,11 +209,63 @@ class TorrentService:
                     await self.torrent_repository.save_torrent(torrent=t)
                 except Exception:
                     log.exception(f"Error saving status for torrent {t.title}")
-            torrents.append(t)
+            resolved.append(t)
 
-        return [
-            TorrentWithProgress(
-                **t.model_dump(), download_progress=progress_by_hash.get(t.hash)
+        return resolved, progress_by_hash
+
+    async def _resolve_media(
+        self, torrents: list[Torrent]
+    ) -> dict[TorrentId, TorrentMedia]:
+        """
+        Bulk-resolves the movie/show each of the given torrents belongs to (if
+        any), including poster/backdrop images, keyed by torrent id.
+        """
+        media_by_torrent_id: dict[TorrentId, TorrentMedia] = {}
+        try:
+            torrent_ids = [t.id for t in torrents]
+            # Sequential, not gathered: both calls share self.db, and AsyncSession
+            # doesn't support concurrent use from multiple tasks.
+            movies_by_torrent_id = await self.torrent_repository.get_movies_of_torrents(
+                torrent_ids=torrent_ids
             )
-            for t in torrents
-        ]
+            shows_by_torrent_id = await self.torrent_repository.get_shows_of_torrents(
+                torrent_ids=torrent_ids
+            )
+            # `images` isn't a DB column - it's resolved from disk, batched
+            # across every movie/show in play here in one call.
+            media_ids = [m.id for m in movies_by_torrent_id.values()] + [
+                s.id for s in shows_by_torrent_id.values()
+            ]
+            images_by_media_id = await asyncio.to_thread(
+                media_manager.metadataProvider.utils.get_available_media_images_many,
+                media_ids,
+            )
+            for torrent_id, movie in movies_by_torrent_id.items():
+                media_by_torrent_id[torrent_id] = self._build_torrent_media(
+                    movie, is_show=False, images_by_media_id=images_by_media_id
+                )
+            for torrent_id, show in shows_by_torrent_id.items():
+                media_by_torrent_id[torrent_id] = self._build_torrent_media(
+                    show, is_show=True, images_by_media_id=images_by_media_id
+                )
+        except Exception:
+            log.exception("Error resolving media for own torrents")
+
+        return media_by_torrent_id
+
+    @staticmethod
+    def _build_torrent_media(
+        media: Movie | ShowSummary,
+        *,
+        is_show: bool,
+        images_by_media_id: dict[str, dict[str, str]],
+    ) -> TorrentMedia:
+        return TorrentMedia(
+            id=media.id,
+            name=media.name,
+            slug=media.slug,
+            year=media.year,
+            is_show=is_show,
+            metadata_updated_at=media.metadata_updated_at,
+            images=images_by_media_id.get(str(media.id), {}),
+        )

@@ -14,6 +14,7 @@ from media_manager.torrent.schemas import TorrentId
 from media_manager.tv.models import Episode, EpisodeFile, Season, Show
 from media_manager.tv.schemas import EpisodeFile as EpisodeFileSchema
 from media_manager.tv.schemas import Show as ShowSchema
+from media_manager.tv.schemas import ShowSummary as ShowSummarySchema
 
 
 class TorrentRepository:
@@ -109,3 +110,41 @@ class TorrentRepository:
         )
         result = (await self.db.execute(stmt)).scalars().all()
         return [TorrentSchema.model_validate(torrent) for torrent in result]
+
+    async def get_movies_of_torrents(
+        self, torrent_ids: list[TorrentId]
+    ) -> dict[TorrentId, MovieSchema]:
+        """
+        Bulk-resolve the movie each of the given torrents belongs to, in a
+        single query, keyed by torrent id. Torrents with no linked movie
+        (e.g. show torrents) are simply absent from the result.
+        """
+        if not torrent_ids:
+            return {}
+        stmt = (
+            select(MovieFile.torrent_id, Movie)
+            .join(Movie, Movie.id == MovieFile.movie_id)
+            .where(MovieFile.torrent_id.in_(torrent_ids))
+        )
+        rows = (await self.db.execute(stmt)).all()
+        return {row[0]: MovieSchema.model_validate(row[1]) for row in rows}
+
+    async def get_shows_of_torrents(
+        self, torrent_ids: list[TorrentId]
+    ) -> dict[TorrentId, ShowSummarySchema]:
+        """
+        Bulk-resolve the show each of the given torrents belongs to, in a
+        single query, keyed by torrent id. Uses ShowSummary (no seasons/episodes)
+        since that's all the dashboard needs a poster/link for.
+        """
+        if not torrent_ids:
+            return {}
+        stmt = (
+            select(EpisodeFile.torrent_id, Show)
+            .join(Episode, Episode.id == EpisodeFile.episode_id)
+            .join(Season, Season.id == Episode.season_id)
+            .join(Show, Show.id == Season.show_id)
+            .where(EpisodeFile.torrent_id.in_(torrent_ids))
+        )
+        rows = (await self.db.execute(stmt)).all()
+        return {row[0]: ShowSummarySchema.model_validate(row[1]) for row in rows}

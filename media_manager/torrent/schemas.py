@@ -43,6 +43,9 @@ class Torrent(BaseModel):
     usenet: bool = False
     initiated_by_user_id: uuid.UUID | None = None
     initiated_at: datetime | None = None
+    indexer: str | None = None
+    comments: str | None = None
+    """Link to the indexer's detail page for this release, if any."""
 
 
 class DownloadState(StrEnum):
@@ -68,11 +71,37 @@ class DownloadProgress(BaseModel):
     progress: float
     """Percentage complete, 0-100."""
     total_bytes: int | None = None
+    downloaded_bytes: int | None = None
+    download_speed_bytes_per_second: int | None = None
+    eta_seconds: int | None = None
+    seeders: int | None = None
+    leechers: int | None = None
+
+
+class TorrentMedia(BaseModel):
+    """
+    Minimal, client-neutral summary of the movie/show a torrent belongs to -
+    just enough for the dashboard to render a poster and link. Deliberately
+    doesn't import Movie/Show schemas (which import from here), so it's built
+    from whichever one applies at the call site.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    slug: str | None = None
+    year: int | None
+    is_show: bool
+    metadata_updated_at: datetime | None = None
+    images: dict[str, str] = Field(default_factory=dict)
 
 
 class TorrentWithProgress(Torrent):
     download_progress: DownloadProgress | None = None
     """Live progress from the download client, if it supports reporting one."""
+    media: TorrentMedia | None = None
+    """The movie/show this torrent belongs to, if one has been linked yet."""
 
 
 _DOWNLOAD_STATE_TO_TORRENT_STATUS: dict[DownloadState, TorrentStatus] = {

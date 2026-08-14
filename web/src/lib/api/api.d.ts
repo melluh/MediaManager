@@ -1485,6 +1485,16 @@ export interface components {
 			progress: number;
 			/** Total Bytes */
 			total_bytes?: number | null;
+			/** Downloaded Bytes */
+			downloaded_bytes?: number | null;
+			/** Download Speed Bytes Per Second */
+			download_speed_bytes_per_second?: number | null;
+			/** Eta Seconds */
+			eta_seconds?: number | null;
+			/** Seeders */
+			seeders?: number | null;
+			/** Leechers */
+			leechers?: number | null;
 		};
 		/**
 		 * DownloadState
@@ -2298,6 +2308,10 @@ export interface components {
 			initiated_by_user_id?: string | null;
 			/** Initiated At */
 			initiated_at?: string | null;
+			/** Indexer */
+			indexer?: string | null;
+			/** Comments */
+			comments?: string | null;
 		};
 		/** TorrentAttributes */
 		TorrentAttributes: {
@@ -2337,6 +2351,34 @@ export interface components {
 			subtitles: components['schemas']['SubtitleInfo'][];
 		};
 		/**
+		 * TorrentMedia
+		 * @description Minimal, client-neutral summary of the movie/show a torrent belongs to -
+		 *     just enough for the dashboard to render a poster and link. Deliberately
+		 *     doesn't import Movie/Show schemas (which import from here), so it's built
+		 *     from whichever one applies at the call site.
+		 */
+		TorrentMedia: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			/** Name */
+			name: string;
+			/** Slug */
+			slug?: string | null;
+			/** Year */
+			year: number | null;
+			/** Is Show */
+			is_show: boolean;
+			/** Metadata Updated At */
+			metadata_updated_at?: string | null;
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
+		};
+		/**
 		 * TorrentStatus
 		 * @enum {integer}
 		 */
@@ -2365,7 +2407,12 @@ export interface components {
 			initiated_by_user_id?: string | null;
 			/** Initiated At */
 			initiated_at?: string | null;
+			/** Indexer */
+			indexer?: string | null;
+			/** Comments */
+			comments?: string | null;
 			download_progress?: components['schemas']['DownloadProgress'] | null;
+			media?: components['schemas']['TorrentMedia'] | null;
 		};
 		/** UserCreate */
 		UserCreate: {
@@ -2554,6 +2601,7 @@ export type SubtitleInfo = components['schemas']['SubtitleInfo'];
 export type SystemHealth = components['schemas']['SystemHealth'];
 export type Torrent = components['schemas']['Torrent'];
 export type TorrentAttributes = components['schemas']['TorrentAttributes'];
+export type TorrentMedia = components['schemas']['TorrentMedia'];
 export type TorrentStatus = components['schemas']['TorrentStatus'];
 export type TorrentWithProgress = components['schemas']['TorrentWithProgress'];
 export type UserCreate = components['schemas']['UserCreate'];

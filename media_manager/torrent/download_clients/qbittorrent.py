@@ -251,10 +251,17 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
             original_hash = wanted_hashes.get(t["hash"].lower())
             if original_hash is None:
                 continue
+            eta = t.get("eta")
             progress[original_hash] = DownloadProgress(
                 state=self.DOWNLOAD_STATE_MAP.get(t["state"], DownloadState.unknown),
                 progress=round(t.get("progress", 0.0) * 100, 1),
                 total_bytes=t.get("size"),
+                downloaded_bytes=t.get("downloaded"),
+                download_speed_bytes_per_second=t.get("dlspeed"),
+                # qBittorrent reports 8640000 (100 days) as its "infinite/unknown" ETA sentinel.
+                eta_seconds=eta if eta is not None and 0 <= eta < 8_640_000 else None,
+                seeders=t.get("num_seeds"),
+                leechers=t.get("num_leechs"),
             )
         return progress
 

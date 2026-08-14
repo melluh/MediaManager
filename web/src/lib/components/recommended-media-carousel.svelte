@@ -3,7 +3,7 @@
 	import MediaCardSkeleton from '$lib/components/media-card-skeleton.svelte';
 	import * as Carousel from '$lib/components/ui/carousel/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
-	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
+	import { ResponsiveCarouselOpts } from '$lib/hooks/responsive-carousel-opts.svelte.js';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
 
@@ -19,17 +19,10 @@
 		isError?: boolean;
 	} = $props();
 
-	// Reuses the sidebar's mobile-detection instance (this carousel only ever
-	// renders inside the dashboard's Sidebar.Provider) rather than opening a
-	// second matchMedia listener for the same breakpoint.
-	const sidebar = useSidebar();
-	// On mobile, scroll freely instead of snapping to slide boundaries -
-	// align only controls where snap points land, so it can't disable
-	// snapping by itself.
-	let opts = $derived(sidebar.isMobile ? { dragFree: true } : ({ align: 'start' } as const));
+	const carouselOpts = new ResponsiveCarouselOpts();
 </script>
 
-<Carousel.Root class="w-full md:px-12" {opts}>
+<Carousel.Root class="w-full md:px-12" opts={carouselOpts.opts}>
 	<Carousel.Content class={isError ? 'pointer-events-none blur-xs' : ''}>
 		{#if isLoading || isError}
 			{#each { length: 5 }}

@@ -23,6 +23,8 @@ class Torrent(Base):
     initiated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )
+    indexer: Mapped[str | None] = mapped_column(default=None)
+    comments: Mapped[str | None] = mapped_column(default=None)
 
     episode_files = relationship("EpisodeFile", back_populates="torrent")
     movie_files = relationship("MovieFile", back_populates="torrent")

@@ -30,7 +30,6 @@ export const downloadStateMap: { [key: string]: string } = {
 	error: 'Error',
 	unknown: 'Unknown'
 };
-
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
@@ -62,6 +61,11 @@ export function formatBytes(bytes: number | null | undefined): string | null {
 	const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
 	const value = bytes / 1024 ** exponent;
 	return `${exponent === 0 ? value : value.toFixed(1)} ${units[exponent]}`;
+}
+
+export function formatDownloadSpeed(bytesPerSecond: number | null | undefined): string | null {
+	if (bytesPerSecond == null || bytesPerSecond <= 0) return null;
+	return `${formatBytes(bytesPerSecond)}/s`;
 }
 
 export function getFullyQualifiedMediaName(media: { name: string; year: number | null }): string {
