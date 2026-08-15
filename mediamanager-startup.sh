@@ -165,9 +165,9 @@ fi
 
 echo "Running DB migrations..."
 if [ "$(id -u)" = '0' ]; then
-   gosu mediamanager uv run alembic upgrade head
+   gosu mediamanager uv run --no-dev alembic upgrade head
 else
-   uv run alembic upgrade head
+   uv run --no-dev alembic upgrade head
 fi
 
 echo "Starting MediaManager backend service..."
@@ -190,7 +190,7 @@ else
 fi
 
 if [ "$(id -u)" = '0' ]; then
-    exec gosu mediamanager uv run fastapi run /app/media_manager/main.py --port "$PORT" --proxy-headers $DEV_OPTIONS
+    exec gosu mediamanager uv run --no-dev fastapi run /app/media_manager/main.py --port "$PORT" --proxy-headers $DEV_OPTIONS
 else
-    exec uv run fastapi run /app/media_manager/main.py --port "$PORT" --proxy-headers $DEV_OPTIONS
+    exec uv run --no-dev fastapi run /app/media_manager/main.py --port "$PORT" --proxy-headers $DEV_OPTIONS
 fi

@@ -1,0 +1,50 @@
+# Version control / CI
+.git
+.github
+.gitignore
+
+# Frontend build artifacts and deps (rebuilt inside the image)
+web/node_modules
+web/build
+web/.svelte-kit
+web/.output
+web/.vercel
+web/.netlify
+web/.wrangler
+web/cache
+
+# Python caches / local envs
+__pycache__
+**/__pycache__
+*.egg-info
+.venv
+venv
+.pytest_cache
+.ruff_cache
+
+# Local runtime data / config
+data
+config
+images
+postgres
+res
+log.txt
+
+# Docs / site
+docs
+site
+mkdocs.yml
+*.md
+
+# Editor / OS cruft
+.idea
+*.iml
+.DS_Store
+Thumbs.db
+
+# Not part of the app image
+metadata_relay
+tests
+docker-compose*.yaml
+docker-compose*.yml
+config.dev.toml

@@ -30,7 +30,6 @@ dependencies = [
     "taskiq-fastapi>=0.4.0",
     "taskiq-postgresql[psycopg]>=0.4.0",
     "alembic>=1.16.1",
-    "pytest>=8.4.0",
     "pillow>=11.3.0",
     "sabnzbd-api>=0.1.2",
     "transmission-rpc>=7.0.11",
@@ -45,6 +44,7 @@ dependencies = [
 dev = [
     "ruff",
     "ty>=0.0.33",
+    "pytest>=8.4.0",
 ]
 
 [tool.setuptools.packages.find]
