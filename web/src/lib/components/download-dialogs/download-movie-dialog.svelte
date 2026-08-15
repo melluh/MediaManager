@@ -25,7 +25,7 @@
 	import { formatSize } from '$lib/components/download-dialogs/torrent-format';
 	import { getTorrentQualityString } from '$lib/utils';
 
-	let { movie }: { movie: Movie } = $props();
+	let { movie, hasImportedFile = false }: { movie: Movie; hasImportedFile?: boolean } = $props();
 	let dialogueState = $state(false);
 	let torrentsError: string | null = $state(null);
 	let queryOverride: string = $state('');
@@ -133,10 +133,9 @@
 <DownloadDialogWrapper
 	bind:open={dialogueState}
 	triggerText="Download Movie"
-	triggerClass={cn(
-		buttonVariants({ variant: 'default' }),
-		'bg-blue-600 text-white hover:bg-blue-700'
-	)}
+	triggerClass={hasImportedFile
+		? buttonVariants({ variant: 'secondary' })
+		: cn(buttonVariants({ variant: 'default' }), 'bg-blue-600 text-white hover:bg-blue-700')}
 	title={`Download ${movie.name}`}
 >
 	{#snippet triggerIcon()}

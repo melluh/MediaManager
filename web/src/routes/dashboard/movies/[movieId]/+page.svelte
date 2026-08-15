@@ -19,6 +19,7 @@
 
 	let movie: PublicMovie = $derived(page.data.movie);
 	let movieFiles: PublicMovieFile[] = $derived(page.data.movieFiles);
+	let hasImportedFile = $derived(movieFiles.some((file) => file.imported));
 	let user: () => UserRead = getContext('user');
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
@@ -33,7 +34,7 @@
 <MediaHeroHeader media={movie} isShow={false}>
 	{#snippet actions()}
 		{#if user().is_superuser}
-			<DownloadMovieDialog {movie} />
+			<DownloadMovieDialog {movie} {hasImportedFile} />
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'icon' })}>
 					<EllipsisVertical class="size-4" />
