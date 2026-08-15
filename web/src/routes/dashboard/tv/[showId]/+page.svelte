@@ -232,7 +232,9 @@
 											<p class="text-sm leading-tight font-semibold">
 												{season.name}
 											</p>
-											<p class="truncate text-xs text-white/70">{season.episodes.length} episodes</p>
+											<p class="truncate text-xs text-white/70">
+												{season.episodes.length} episodes
+											</p>
 										</div>
 									</a>
 								</Carousel.Item>
