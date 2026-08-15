@@ -18,7 +18,7 @@ class Show(Base, MediaMixin):
     continuous_download: Mapped[bool] = mapped_column(default=False)
 
     seasons: Mapped[list["Season"]] = relationship(
-        back_populates="show", cascade="all, delete"
+        back_populates="show", cascade="all, delete", order_by="Season.number"
     )
 
 
@@ -38,7 +38,7 @@ class Season(Base):
 
     show: Mapped["Show"] = relationship(back_populates="seasons")
     episodes: Mapped[list["Episode"]] = relationship(
-        back_populates="season", cascade="all, delete"
+        back_populates="season", cascade="all, delete", order_by="Episode.number"
     )
 
 
