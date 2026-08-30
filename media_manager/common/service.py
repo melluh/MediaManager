@@ -21,6 +21,7 @@ from media_manager.metadataProvider.schemas import (
 )
 from media_manager.notification.service import NotificationService
 from media_manager.schemas import MediaImportSuggestion
+from media_manager.torrent.schemas import Torrent
 from media_manager.torrent.service import TorrentService
 from media_manager.torrent.utils import (
     get_importable_media_directories,
@@ -105,9 +106,15 @@ class BaseMediaService[T, S]:
             )
 
     async def notify_import_failure(
-        self, media_name: str, media_type: str, error_msg: str = ""
+        self, torrent: Torrent, media_name: str, media_type: str, error_msg: str = ""
     ) -> None:
-        if self.notification_service:
+        """
+        Records the failure on the torrent and notifies, but only when the
+        stored error actually changes - repeated cron passes over the same
+        unresolved failure must not re-notify every run.
+        """
+        stored_error = error_msg or "Unknown error"
+        if self.notification_service and torrent.import_error != stored_error:
             msg = f"Failed to import files for {media_type} {media_name}."
             if error_msg:
                 msg += f" Error: {error_msg}"
@@ -115,6 +122,9 @@ class BaseMediaService[T, S]:
                 title="Import Failed",
                 message=msg,
             )
+        torrent.imported = False
+        torrent.import_error = stored_error
+        await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
 
     async def get_import_candidates(
         self,
@@ -179,7 +189,7 @@ class BaseMediaService[T, S]:
         log.info(f"Importing all torrents for {media_type_name}")
         torrents = await self.torrent_service.get_completed_torrents()
         for t in torrents:
-            if t.imported:
+            if t.imported or t.import_error:
                 continue
             try:
                 media = await get_media_func(t)

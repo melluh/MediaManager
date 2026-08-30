@@ -5,11 +5,13 @@
 	import TorrentStat from '$lib/components/download-dialogs/torrent-stat.svelte';
 	import { getDownloadStatusBadge } from '$lib/components/downloads/download-status.js';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import Gauge from '@lucide/svelte/icons/gauge';
 	import HardDrive from '@lucide/svelte/icons/hard-drive';
 	import Users from '@lucide/svelte/icons/users';
 	import Clock from '@lucide/svelte/icons/clock';
+	import ClockAlert from '@lucide/svelte/icons/clock-alert';
 	import { resolve } from '$app/paths';
 	import type { TorrentWithProgress } from '$lib/api/api';
 	import {
@@ -24,6 +26,9 @@
 
 	let progress = $derived(torrent.download_progress);
 	let statusBadge = $derived(getDownloadStatusBadge(torrent));
+	let waitingForImport = $derived(
+		statusBadge.isFinished && !torrent.import_error && !torrent.imported
+	);
 	let downloadedLabel = $derived(formatBytes(progress?.downloaded_bytes));
 	let totalLabel = $derived(formatBytes(progress?.total_bytes));
 	let speedLabel = $derived(formatDownloadSpeed(progress?.download_speed_bytes_per_second));
@@ -85,14 +90,22 @@
 
 	{#if progress}
 		<div class="flex flex-col items-center gap-1 py-2">
-			{#if statusBadge.isFinished}
+			{#if torrent.import_error}
+				<CircleAlert class="h-[72px] w-[72px] text-destructive" />
+			{:else if waitingForImport}
+				<ClockAlert class="h-[72px] w-[72px] text-muted-foreground" />
+			{:else if statusBadge.isFinished}
 				<CircleCheck class="h-[72px] w-[72px] text-primary" />
 			{:else}
 				<CircularProgress value={progress.progress} size={72} strokeWidth={6}>
 					<span class="text-base font-semibold">{Math.round(progress.progress)}%</span>
 				</CircularProgress>
 			{/if}
-			{#if downloadedLabel && totalLabel}
+			{#if torrent.import_error}
+				<p class="max-w-[320px] text-center text-xs text-destructive">{torrent.import_error}</p>
+			{:else if waitingForImport}
+				<p class="text-xs text-muted-foreground">Waiting for import to run</p>
+			{:else if downloadedLabel && totalLabel}
 				<p class="text-xs text-muted-foreground">{downloadedLabel} of {totalLabel}</p>
 			{:else if totalLabel}
 				<p class="text-xs text-muted-foreground">{totalLabel} total</p>

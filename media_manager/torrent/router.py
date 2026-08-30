@@ -91,6 +91,7 @@ async def update_torrent_status(
 ) -> Torrent:
     if imported is not None:
         torrent.imported = imported
+        torrent.import_error = None
     if state is not None:
         torrent.status = state
     if state is None and imported is None:

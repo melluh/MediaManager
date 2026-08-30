@@ -39,6 +39,8 @@ class Torrent(BaseModel):
     title: str
     quality: Quality
     imported: bool
+    import_error: str | None = None
+    """Set when the last automatic import attempt failed; cleared on success or manual resolution."""
     hash: str
     usenet: bool = False
     initiated_by_user_id: uuid.UUID | None = None

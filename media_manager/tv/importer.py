@@ -123,10 +123,11 @@ class TvImportService(BaseMediaService[Show, Show]):
         )
         if success:
             torrent.imported = True
+            torrent.import_error = None
             await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
             await self.notify_import_success(show.name, "TV show")
         else:
-            await self.notify_import_failure(show.name, "TV show")
+            await self.notify_import_failure(torrent, show.name, "TV show")
 
     async def get_import_candidates(
         self, tv_path: Path, metadata_provider: AbstractMetadataProvider

@@ -109,6 +109,7 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         )
         if len(video_files) != 1:
             await self.notify_import_failure(
+                torrent,
                 movie.name,
                 "movie",
                 "Multiple video files found. Manual import required.",
@@ -119,9 +120,7 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             torrent=torrent
         )
         if not movie_files:
-            torrent.imported = False
-            await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
-            await self.notify_import_failure(movie.name, "movie")
+            await self.notify_import_failure(torrent, movie.name, "movie")
             return
 
         success = [
@@ -133,10 +132,11 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
 
         if all(success):
             torrent.imported = True
+            torrent.import_error = None
             await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
             await self.notify_import_success(movie.name, "movie")
         else:
-            await self.notify_import_failure(movie.name, "movie")
+            await self.notify_import_failure(torrent, movie.name, "movie")
 
     async def get_import_candidates(
         self, movie_path: Path, metadata_provider: AbstractMetadataProvider

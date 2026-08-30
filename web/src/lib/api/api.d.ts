@@ -2317,6 +2317,8 @@ export interface components {
 			quality: components['schemas']['Quality'];
 			/** Imported */
 			imported: boolean;
+			/** Import Error */
+			import_error?: string | null;
 			/** Hash */
 			hash: string;
 			/**
@@ -2416,6 +2418,8 @@ export interface components {
 			quality: components['schemas']['Quality'];
 			/** Imported */
 			imported: boolean;
+			/** Import Error */
+			import_error?: string | null;
 			/** Hash */
 			hash: string;
 			/**

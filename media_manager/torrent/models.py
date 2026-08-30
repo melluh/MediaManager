@@ -15,6 +15,7 @@ class Torrent(Base):
     title: Mapped[str]
     quality: Mapped[Quality]
     imported: Mapped[bool]
+    import_error: Mapped[str | None] = mapped_column(default=None)
     hash: Mapped[str]
     usenet: Mapped[bool]
     initiated_by_user_id: Mapped[UUID | None] = mapped_column(
