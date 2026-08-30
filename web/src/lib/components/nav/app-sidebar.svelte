@@ -19,33 +19,13 @@
 				title: 'TV',
 				url: resolve('/dashboard/tv', {}),
 				icon: TvIcon,
-				isActive: true,
-				items: [
-					{
-						title: 'Add a show',
-						url: resolve('/dashboard/tv/add-show', {})
-					},
-					{
-						title: 'Torrents',
-						url: resolve('/dashboard/tv/torrents', {})
-					}
-				]
+				isActive: true
 			},
 			{
 				title: 'Movies',
 				url: resolve('/dashboard/movies', {}),
 				icon: Clapperboard,
-				isActive: true,
-				items: [
-					{
-						title: 'Add a movie',
-						url: resolve('/dashboard/movies/add-movie', {})
-					},
-					{
-						title: 'Torrents',
-						url: resolve('/dashboard/movies/torrents', {})
-					}
-				]
+				isActive: true
 			}
 		],
 		navSecondary: [
