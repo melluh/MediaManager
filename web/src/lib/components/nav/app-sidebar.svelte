@@ -56,8 +56,7 @@
 	import type { ComponentProps } from 'svelte';
 	import AppBrand from '$lib/components/app-brand.svelte';
 	import { afterNavigate } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import client from '$lib/api';
+	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
@@ -69,27 +68,11 @@
 		}
 	});
 
-	let unreadNotificationCount = $state(0);
-
-	async function fetchUnreadNotificationCount() {
-		const { data: count } = await client.GET('/api/v1/notification/unread/count');
-		if (count !== undefined) {
-			unreadNotificationCount = count;
-		}
-	}
-
 	const navSecondaryItems = $derived(
 		data.navSecondary.map((item) =>
-			item.title === 'Notifications' ? { ...item, badge: unreadNotificationCount } : item
+			item.title === 'Notifications' ? { ...item, badge: notificationCount.unread } : item
 		)
 	);
-
-	onMount(() => {
-		fetchUnreadNotificationCount();
-
-		const interval = setInterval(fetchUnreadNotificationCount, 30000);
-		return () => clearInterval(interval);
-	});
 </script>
 
 <Sidebar.Root {...restProps} bind:ref variant="inset">

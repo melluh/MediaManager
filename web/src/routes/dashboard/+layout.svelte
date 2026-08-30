@@ -3,10 +3,11 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import DashboardHeader, { type Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import type { LayoutProps } from './$types';
-	import { setContext } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
+	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
 
 	let { data, children }: LayoutProps = $props();
 	let crumbs: Crumb[] = $state([]);
@@ -26,6 +27,8 @@
 		toast.info('Your account requires verification. Redirecting...');
 		goto(resolve('/login/verify', {}));
 	}
+
+	onMount(() => notificationCount.startPolling());
 </script>
 
 <Sidebar.Provider>

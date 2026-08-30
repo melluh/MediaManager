@@ -6,6 +6,7 @@
 	import client from '$lib/api';
 	import type { Notification } from '$lib/api/api';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
+	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Notifications' }]);
@@ -22,6 +23,7 @@
 		loading = true;
 		const unread = await client.GET('/api/v1/notification/unread');
 		unreadNotifications = unread.data!;
+		notificationCount.unread = unreadNotifications.length;
 		loading = false;
 	}
 
@@ -51,6 +53,7 @@
 				notification.read = true;
 				readNotifications = [notification, ...readNotifications];
 				unreadNotifications = unreadNotifications.filter((n) => n.id !== notificationId);
+				notificationCount.unread = unreadNotifications.length;
 			}
 		}
 	}
@@ -66,6 +69,7 @@
 				notification.read = false;
 				unreadNotifications = [notification, ...unreadNotifications];
 				readNotifications = readNotifications.filter((n) => n.id !== notificationId);
+				notificationCount.unread = unreadNotifications.length;
 			}
 		}
 	}
@@ -83,6 +87,7 @@
 					...readNotifications
 				];
 				unreadNotifications = [];
+				notificationCount.unread = 0;
 			}
 		} catch (error) {
 			console.error('Failed to mark all notifications as read:', error);
@@ -92,6 +97,7 @@
 	}
 
 	onMount(() => {
+		notificationCount.pausePolling();
 		fetchUnreadNotifications();
 
 		const interval = setInterval(() => {
@@ -100,7 +106,10 @@
 				fetchReadNotifications();
 			}
 		}, 30000);
-		return () => clearInterval(interval);
+		return () => {
+			clearInterval(interval);
+			notificationCount.resumePolling();
+		};
 	});
 </script>
 
