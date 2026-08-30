@@ -16,6 +16,7 @@
 			// This should be `Component` after @lucide/svelte updates types
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			icon: any;
+			badge?: number;
 		}[];
 	} & ComponentProps<typeof Sidebar.Group> = $props();
 </script>
@@ -48,6 +49,12 @@
 							<!-- eslint-enable svelte/no-navigation-without-resolve -->
 						{/snippet}
 					</Sidebar.MenuButton>
+					{#if item.badge}
+						<Sidebar.MenuBadge
+							class="bg-destructive text-destructive-foreground peer-hover/menu-button:text-destructive-foreground peer-data-[active=true]/menu-button:text-destructive-foreground"
+							>{item.badge}</Sidebar.MenuBadge
+						>
+					{/if}
 				</Sidebar.MenuItem>
 			{/each}
 		</Sidebar.Menu>

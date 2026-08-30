@@ -1,6 +1,6 @@
 import logging
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import (
     IntegrityError,
     SQLAlchemyError,
@@ -49,6 +49,18 @@ class NotificationRepository:
             log.exception("Database error while retrieving unread notifications")
             raise
 
+    async def get_unread_notification_count(self) -> int:
+        try:
+            stmt = (
+                select(func.count())
+                .select_from(Notification)
+                .where(Notification.read == false())
+            )
+            return (await self.db.execute(stmt)).scalar_one()
+        except SQLAlchemyError:
+            log.exception("Database error while counting unread notifications")
+            raise
+
     async def get_all_notifications(self) -> list[NotificationSchema]:
         try:
             stmt = select(Notification).order_by(Notification.timestamp.desc())
@@ -85,7 +97,9 @@ class NotificationRepository:
         await self.db.execute(stmt)
 
     async def mark_all_notifications_as_read(self) -> None:
-        stmt = update(Notification).where(Notification.read == false()).values(read=True)
+        stmt = (
+            update(Notification).where(Notification.read == false()).values(read=True)
+        )
         await self.db.execute(stmt)
 
     async def mark_notification_as_unread(self, nid: NotificationId) -> None:

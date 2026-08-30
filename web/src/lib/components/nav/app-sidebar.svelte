@@ -76,6 +76,8 @@
 	import type { ComponentProps } from 'svelte';
 	import AppBrand from '$lib/components/app-brand.svelte';
 	import { afterNavigate } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import client from '$lib/api';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
@@ -85,6 +87,28 @@
 		if (sidebar.isMobile) {
 			sidebar.setOpenMobile(false);
 		}
+	});
+
+	let unreadNotificationCount = $state(0);
+
+	async function fetchUnreadNotificationCount() {
+		const { data: count } = await client.GET('/api/v1/notification/unread/count');
+		if (count !== undefined) {
+			unreadNotificationCount = count;
+		}
+	}
+
+	const navSecondaryItems = $derived(
+		data.navSecondary.map((item) =>
+			item.title === 'Notifications' ? { ...item, badge: unreadNotificationCount } : item
+		)
+	);
+
+	onMount(() => {
+		fetchUnreadNotificationCount();
+
+		const interval = setInterval(fetchUnreadNotificationCount, 30000);
+		return () => clearInterval(interval);
 	});
 </script>
 
@@ -107,7 +131,7 @@
 	<Sidebar.Content>
 		<NavMain items={data.navMain} />
 		<!--  <NavProjects projects={data.projects}/> -->
-		<NavSecondary class="mt-auto" items={data.navSecondary} />
+		<NavSecondary class="mt-auto" items={navSecondaryItems} />
 	</Sidebar.Content>
 	<Sidebar.Footer>
 		<NavUser />

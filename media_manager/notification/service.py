@@ -17,6 +17,9 @@ class NotificationService:
     async def get_unread_notifications(self) -> list[Notification]:
         return await self.notification_repository.get_unread_notifications()
 
+    async def get_unread_notification_count(self) -> int:
+        return await self.notification_repository.get_unread_notification_count()
+
     async def get_all_notifications(self) -> list[Notification]:
         return await self.notification_repository.get_all_notifications()
 
@@ -35,7 +38,9 @@ class NotificationService:
     async def delete_notification(self, nid: NotificationId) -> None:
         return await self.notification_repository.delete_notification(nid=nid)
 
-    async def send_notification_to_all_providers(self, title: str, message: str) -> None:
+    async def send_notification_to_all_providers(
+        self, title: str, message: str
+    ) -> None:
         await self.notification_manager.send_notification(title, message)
 
         internal_notification = Notification(message=f"{title}: {message}", read=False)

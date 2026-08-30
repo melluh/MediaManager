@@ -39,6 +39,19 @@ async def get_unread_notifications(
 
 
 @router.get(
+    "/unread/count",
+    dependencies=[Depends(current_active_user)],
+)
+async def get_unread_notification_count(
+    notification_service: notification_service_dep,
+) -> int:
+    """
+    Get the count of unread notifications.
+    """
+    return await notification_service.get_unread_notification_count()
+
+
+@router.get(
     "/{notification_id}",
     dependencies=[Depends(current_active_user)],
     responses={

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Spinner } from '$lib/components/ui/spinner';
 
 	import client from '$lib/api';
 	import type { Notification } from '$lib/api/api';
@@ -12,16 +13,31 @@
 	let unreadNotifications: Notification[] = [];
 	let readNotifications: Notification[] = [];
 	let loading = true;
+	let loadingRead = false;
+	let readLoaded = false;
 	let showRead = false;
 	let markingAllAsRead = false;
 
-	async function fetchNotifications() {
+	async function fetchUnreadNotifications() {
 		loading = true;
 		const unread = await client.GET('/api/v1/notification/unread');
-		const all = await client.GET('/api/v1/notification');
 		unreadNotifications = unread.data!;
-		readNotifications = all.data!.filter((n) => n.read);
 		loading = false;
+	}
+
+	async function fetchReadNotifications() {
+		loadingRead = true;
+		const all = await client.GET('/api/v1/notification');
+		readNotifications = all.data!.filter((n) => n.read);
+		loadingRead = false;
+		readLoaded = true;
+	}
+
+	async function toggleShowRead() {
+		showRead = !showRead;
+		if (showRead && !readLoaded) {
+			await fetchReadNotifications();
+		}
 	}
 
 	async function markAsRead(notificationId: string) {
@@ -76,9 +92,14 @@
 	}
 
 	onMount(() => {
-		fetchNotifications();
+		fetchUnreadNotifications();
 
-		const interval = setInterval(fetchNotifications, 30000);
+		const interval = setInterval(() => {
+			fetchUnreadNotifications();
+			if (showRead) {
+				fetchReadNotifications();
+			}
+		}, 30000);
 		return () => clearInterval(interval);
 	});
 </script>
@@ -93,7 +114,7 @@
 		{#if unreadNotifications.length > 0}
 			<Button onclick={() => markAllAsRead()} disabled={markingAllAsRead} class="flex items-center">
 				{#if markingAllAsRead}
-					<div class="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
+					<Spinner class="size-4" />
 				{/if}
 				Mark All as Read
 			</Button>
@@ -102,7 +123,7 @@
 
 	{#if loading}
 		<div class="flex items-center justify-center py-12">
-			<div class="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+			<Spinner class="size-8" />
 		</div>
 	{:else}
 		<!-- Unread Notifications -->
@@ -110,8 +131,8 @@
 			<div class="mb-4 flex items-center gap-2">
 				<h2 class="text-xl font-semibold text-gray-900 dark:text-white">
 					Unread Notifications
-					{#if unreadNotifications.length > 0}:
-						{unreadNotifications.length}
+					{#if unreadNotifications.length > 0}
+						({unreadNotifications.length})
 					{/if}
 				</h2>
 			</div>
@@ -167,7 +188,7 @@
 		<!-- Read Notifications Toggle -->
 		<div class="mb-4">
 			<button
-				on:click={() => (showRead = !showRead)}
+				on:click={toggleShowRead}
 				class="flex items-center gap-2 text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
 			>
 				<svg
@@ -179,14 +200,18 @@
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
 					></path>
 				</svg>
-				<span>Read Notifications ({readNotifications.length})</span>
+				<span>Read Notifications{readLoaded ? ` (${readNotifications.length})` : ''}</span>
 			</button>
 		</div>
 
 		<!-- Read Notifications -->
 		{#if showRead}
 			<div>
-				{#if readNotifications.length === 0}
+				{#if loadingRead}
+					<div class="flex items-center justify-center py-12">
+						<Spinner class="size-8" />
+					</div>
+				{:else if readNotifications.length === 0}
 					<div
 						class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center dark:border-gray-700 dark:bg-gray-800"
 					>
