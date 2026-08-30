@@ -39,8 +39,9 @@
 				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'icon' })}>
 					<EllipsisVertical class="size-4" />
 				</DropdownMenu.Trigger>
-				<DropdownMenu.Content align="end" class="flex w-56 flex-col gap-2 p-3">
+				<DropdownMenu.Content align="end" class="w-48">
 					<LibraryCombobox media={movie} mediaType="movie" />
+					<DropdownMenu.Separator />
 					<DeleteMediaDialog isShow={false} media={movie} />
 				</DropdownMenu.Content>
 			</DropdownMenu.Root>

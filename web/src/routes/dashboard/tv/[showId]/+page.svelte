@@ -176,9 +176,9 @@
 				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'icon' })}>
 					<EllipsisVertical class="size-4" />
 				</DropdownMenu.Trigger>
-				<DropdownMenu.Content align="end" class="flex w-56 flex-col gap-2 p-3">
+				<DropdownMenu.Content align="end" class="w-64">
 					{#if !show.ended}
-						<div class="flex items-center gap-3 px-1 py-1">
+						<div class="flex items-center gap-3 px-2 py-1.5">
 							<Switch
 								bind:checked={() => continuousDownloadEnabled, toggle_continuous_download}
 								id="continuous-download-checkbox"
@@ -190,6 +190,7 @@
 						<DropdownMenu.Separator />
 					{/if}
 					<LibraryCombobox media={show} mediaType="tv" />
+					<DropdownMenu.Separator />
 					<DeleteMediaDialog isShow={true} media={show} />
 				</DropdownMenu.Content>
 			</DropdownMenu.Root>

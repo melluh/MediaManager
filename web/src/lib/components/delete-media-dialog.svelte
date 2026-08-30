@@ -6,9 +6,11 @@
 	import { resolve } from '$app/paths';
 	import { getFullyQualifiedMediaName } from '$lib/utils.ts';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
 
 	let {
 		media,
@@ -59,12 +61,21 @@
 </script>
 
 <AlertDialog.Root bind:open={deleteDialogOpen}>
-	<AlertDialog.Trigger class={buttonVariants({ variant: 'destructive' })}>
-		Delete {isShow ? ' Show' : ' Movie'}
+	<AlertDialog.Trigger>
+		{#snippet child({ props })}
+			<DropdownMenu.Item
+				{...props}
+				closeOnSelect={false}
+				class="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+			>
+				<Trash2 />
+				Delete
+			</DropdownMenu.Item>
+		{/snippet}
 	</AlertDialog.Trigger>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Delete - {getFullyQualifiedMediaName(media)}?</AlertDialog.Title>
+			<AlertDialog.Title>Delete {getFullyQualifiedMediaName(media)}?</AlertDialog.Title>
 			<AlertDialog.Description>
 				This action cannot be undone. This will permanently delete
 				<strong>{getFullyQualifiedMediaName(media)}</strong>.
@@ -77,8 +88,11 @@
 					for="delete-files"
 					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 				>
-					Also delete files on disk<br />
-					<span class="text-sm text-muted-foreground">Removes imported files (not downloads)</span>
+					Delete media files from my library<br />
+					<span class="text-sm text-muted-foreground"
+						>Deletes the imported copy from your media library folder. Files still sitting in your
+						download client are unaffected by this.</span
+					>
 				</Label>
 			</div>
 			<div class="flex items-center space-x-2">
@@ -87,9 +101,10 @@
 					for="delete-torrents"
 					class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 				>
-					Also delete torrents<br />
+					Delete torrents from my download client<br />
 					<span class="text-sm text-muted-foreground"
-						>Removes torrents from your download clients</span
+						>Removes the torrent from your download client and deletes the data it downloaded
+						there.</span
 					>
 				</Label>
 			</div>
@@ -104,6 +119,7 @@
 				}}
 				class={buttonVariants({ variant: 'destructive' })}
 			>
+				<Trash2 />
 				Delete
 			</AlertDialog.Action>
 		</AlertDialog.Footer>

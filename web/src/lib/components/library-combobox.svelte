@@ -1,11 +1,6 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Command from '$lib/components/ui/command/index.js';
-	import * as Popover from '$lib/components/ui/popover/index.js';
-	import { cn } from '$lib/utils.js';
-	import { tick } from 'svelte';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import FolderInput from '@lucide/svelte/icons/folder-input';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import client from '$lib/api';
@@ -20,13 +15,9 @@
 		mediaType: 'tv' | 'movie';
 	} = $props();
 
-	let open = $state(false);
 	let value = $derived(media.library === '' ? 'Default' : media.library);
 	let libraries: LibraryItem[] = $state([]);
-	let triggerRef: HTMLButtonElement = $state(null!);
-	const selectedLabel: string = $derived(
-		libraries.find((item) => item.name === value)?.name ?? 'Default'
-	);
+
 	onMount(async () => {
 		const tvLibraries = await client.GET('/api/v1/tv/shows/libraries');
 		const movieLibraries = await client.GET('/api/v1/movies/libraries');
@@ -37,88 +28,51 @@
 			libraries = movieLibraries.data as LibraryItem[];
 		}
 
-		if (!value && libraries.length > 0) {
-			value = 'Default';
-		}
 		libraries.push({
 			name: 'Default',
 			path: 'Default'
 		} as LibraryItem);
 	});
 
-	async function handleSelect() {
-		open = false;
-		await tick();
-		triggerRef.focus();
+	async function handleSelect(libraryName: string) {
 		let response;
 		if (mediaType === 'tv') {
 			response = await client.POST('/api/v1/tv/shows/{show_id}/library', {
 				params: {
 					path: { show_id: media.id! },
-					query: { library: selectedLabel }
+					query: { library: libraryName }
 				}
 			});
 		} else {
 			response = await client.POST('/api/v1/movies/{movie_id}/library', {
 				params: {
 					path: { movie_id: media.id! },
-					query: { library: selectedLabel }
+					query: { library: libraryName }
 				}
 			});
 		}
 		if (response.error) {
 			toast.error('Failed to update library');
 		} else {
-			toast.success(`Library updated to ${selectedLabel}`);
-			media.library = selectedLabel;
+			toast.success(`Library updated to ${libraryName}`);
+			media.library = libraryName;
 		}
 		await invalidateAll();
 	}
-
-	function closeAndFocusTrigger() {
-		open = false;
-		tick().then(() => {
-			triggerRef.focus();
-		});
-	}
 </script>
 
-<Popover.Root bind:open>
-	<Popover.Trigger bind:ref={triggerRef}>
-		{#snippet child({ props })}
-			<Button
-				{...props}
-				variant="outline"
-				class="w-[200px] justify-between"
-				role="combobox"
-				aria-expanded={open}
-			>
-				Select Library
-				<ChevronsUpDownIcon class="opacity-50" />
-			</Button>
-		{/snippet}
-	</Popover.Trigger>
-	<Popover.Content class="w-[200px] p-0">
-		<Command.Root>
-			<Command.Input placeholder="Search library..." />
-			<Command.List>
-				<Command.Empty>No library found.</Command.Empty>
-				<Command.Group value="libraries">
-					{#each libraries as item (item.name)}
-						<Command.Item
-							value={item.name}
-							onSelect={() => {
-								value = item.name;
-								handleSelect();
-								closeAndFocusTrigger();
-							}}
-						>
-							<CheckIcon class={cn(value !== item.name && 'text-transparent')} />
-							{item.name}
-						</Command.Item>
-					{/each}
-				</Command.Group>
-			</Command.List>
-		</Command.Root>
-	</Popover.Content>
-</Popover.Root>
+<DropdownMenu.Sub>
+	<DropdownMenu.SubTrigger>
+		<FolderInput />
+		Move Library
+	</DropdownMenu.SubTrigger>
+	<DropdownMenu.SubContent>
+		<DropdownMenu.RadioGroup {value} onValueChange={handleSelect}>
+			{#each libraries as item (item.name)}
+				<DropdownMenu.RadioItem value={item.name}>
+					{item.name}
+				</DropdownMenu.RadioItem>
+			{/each}
+		</DropdownMenu.RadioGroup>
+	</DropdownMenu.SubContent>
+</DropdownMenu.Sub>
