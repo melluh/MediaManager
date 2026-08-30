@@ -157,7 +157,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             **show.model_dump(exclude={"seasons", "images"}),
             seasons=[
                 Season(
-                    **season.model_dump(exclude={"episodes"}),
+                    **season.model_dump(exclude={"episodes", "images"}),
                     show_id=show.id,
                     episodes=[
                         Episode(**episode.model_dump(), season_id=season.id)
