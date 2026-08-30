@@ -193,6 +193,42 @@ export function getMetadataProviderUrl(
 	}
 }
 
+function getOrdinalSuffix(day: number): string {
+	if (day >= 11 && day <= 13) return 'th';
+	switch (day % 10) {
+		case 1:
+			return 'st';
+		case 2:
+			return 'nd';
+		case 3:
+			return 'rd';
+		default:
+			return 'th';
+	}
+}
+
+export function formatAddedTime(date: string | null | undefined): string | null {
+	if (!date) return null;
+	const parsed = new Date(date);
+	if (Number.isNaN(parsed.getTime())) return null;
+
+	const diffSeconds = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 1000));
+	if (diffSeconds < 60) return 'just now';
+
+	const diffMinutes = Math.floor(diffSeconds / 60);
+	if (diffMinutes < 60) return `${diffMinutes} min ago`;
+
+	const diffHours = Math.floor(diffMinutes / 60);
+	if (diffHours < 24) return `${diffHours} hr ago`;
+
+	const diffDays = Math.floor(diffHours / 24);
+	if (diffDays < 7) return `${diffDays}d ago`;
+
+	const month = parsed.toLocaleDateString(undefined, { month: 'short' });
+	const day = parsed.getDate();
+	return `${month} ${day}${getOrdinalSuffix(day)}, ${parsed.getFullYear()}`;
+}
+
 export function formatLastUpdated(date: string | null | undefined): string | null {
 	if (!date) return null;
 	const parsed = new Date(date);

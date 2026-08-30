@@ -8,8 +8,9 @@
 	import DownloadDetailsDialog from '$lib/components/downloads/download-details-dialog.svelte';
 	import { getDownloadStatusBadge } from '$lib/components/downloads/download-status.js';
 	import Film from '@lucide/svelte/icons/film';
+	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 	import type { TorrentWithProgress } from '$lib/api/api';
-	import { cn, formatBytes } from '$lib/utils';
+	import { cn, formatAddedTime, formatBytes } from '$lib/utils';
 
 	let { torrent }: { torrent: TorrentWithProgress } = $props();
 
@@ -19,6 +20,7 @@
 
 	let displayName = $derived(torrent.media?.name ?? torrent.title);
 	let sizeLabel = $derived(formatBytes(torrent.download_progress?.total_bytes));
+	let addedLabel = $derived(formatAddedTime(torrent.initiated_at));
 	let statusBadge = $derived(getDownloadStatusBadge(torrent));
 </script>
 
@@ -100,10 +102,18 @@
 									</div>
 								{/if}
 							</div>
-							<Badge variant={statusBadge.variant} class="w-fit shrink-0 self-start">
-								<statusBadge.icon class="mr-1 size-3" />
-								{statusBadge.label}
-							</Badge>
+							<div class="space-y-1">
+								{#if addedLabel}
+									<p class="flex items-center gap-1.5 text-xs text-muted-foreground">
+										<CalendarClock class="size-3.5" />
+										{addedLabel}
+									</p>
+								{/if}
+								<Badge variant={statusBadge.variant} class="w-fit shrink-0 self-start">
+									<statusBadge.icon class="mr-1 size-3" />
+									{statusBadge.label}
+								</Badge>
+							</div>
 						</div>
 					</div>
 				</Card.Root>
