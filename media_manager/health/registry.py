@@ -19,14 +19,20 @@ class HealthRegistry:
         status: ServiceStatus,
         message: str | None = None,
     ) -> None:
-        entry = ServiceHealth(
-            name=key,
-            display_name=display_name,
-            status=status,
-            message=message,
-            last_checked=datetime.now(UTC),
-        )
+        now = datetime.now(UTC)
         with self._lock:
+            previous = self._services.get(key)
+            last_healthy = previous.last_healthy if previous else None
+            if status == ServiceStatus.healthy:
+                last_healthy = now
+            entry = ServiceHealth(
+                name=key,
+                display_name=display_name,
+                status=status,
+                message=message,
+                last_checked=now,
+                last_healthy=last_healthy,
+            )
             self._services[key] = entry
 
     def get_all(self) -> SystemHealth:

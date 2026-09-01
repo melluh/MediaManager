@@ -8,6 +8,7 @@
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
+	import { serviceHealth } from '$lib/hooks/service-health.svelte.js';
 
 	let { data, children }: LayoutProps = $props();
 	let crumbs: Crumb[] = $state([]);
@@ -28,7 +29,10 @@
 		goto(resolve('/login/verify', {}));
 	}
 
-	onMount(() => notificationCount.startPolling());
+	onMount(() => {
+		notificationCount.startPolling();
+		serviceHealth.startPolling();
+	});
 </script>
 
 <Sidebar.Provider>

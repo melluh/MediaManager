@@ -51,12 +51,14 @@
 <script lang="ts">
 	import NavMain from '$lib/components/nav/nav-main.svelte';
 	import NavSecondary from '$lib/components/nav/nav-secondary.svelte';
+	import NavServiceAlerts from '$lib/components/nav/nav-service-alerts.svelte';
 	import NavUser from '$lib/components/nav/nav-user.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import type { ComponentProps } from 'svelte';
 	import AppBrand from '$lib/components/app-brand.svelte';
 	import { afterNavigate } from '$app/navigation';
 	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
+	import { serviceHealth } from '$lib/hooks/service-health.svelte.js';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
@@ -94,7 +96,10 @@
 	<Sidebar.Content>
 		<NavMain items={data.navMain} />
 		<!--  <NavProjects projects={data.projects}/> -->
-		<NavSecondary class="mt-auto" items={navSecondaryItems} />
+		<div class="mt-auto flex flex-col gap-2">
+			<NavServiceAlerts services={serviceHealth.services} />
+			<NavSecondary items={navSecondaryItems} />
+		</div>
 	</Sidebar.Content>
 	<Sidebar.Footer>
 		<NavUser />

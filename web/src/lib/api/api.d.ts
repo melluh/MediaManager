@@ -2155,6 +2155,8 @@ export interface components {
 			message?: string | null;
 			/** Last Checked */
 			last_checked?: string | null;
+			/** Last Healthy */
+			last_healthy?: string | null;
 		};
 		/**
 		 * ServiceStatus

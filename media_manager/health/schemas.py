@@ -16,6 +16,7 @@ class ServiceHealth(BaseModel):
     status: ServiceStatus
     message: str | None = None
     last_checked: datetime | None = None
+    last_healthy: datetime | None = None
 
 
 class SystemHealth(BaseModel):
