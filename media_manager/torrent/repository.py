@@ -105,8 +105,10 @@ class TorrentRepository:
     async def get_active_torrents_initiated_by_user(
         self, user_id: UUID
     ) -> list[TorrentSchema]:
-        stmt = select(Torrent).where(
-            Torrent.initiated_by_user_id == user_id, ~Torrent.imported
+        stmt = (
+            select(Torrent)
+            .where(Torrent.initiated_by_user_id == user_id, ~Torrent.imported)
+            .order_by(Torrent.initiated_at.desc().nulls_last())
         )
         result = (await self.db.execute(stmt)).scalars().all()
         return [TorrentSchema.model_validate(torrent) for torrent in result]
