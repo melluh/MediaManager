@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import UTC, datetime
 from typing import override
@@ -23,6 +24,10 @@ from media_manager.tv.schemas import Episode, Season, SeasonNumber, Show
 log = logging.getLogger(__name__)
 
 _client = httpx.AsyncClient(timeout=30.0)
+
+_MAX_CONCURRENT_SEASON_FETCHES = 8
+"""Caps concurrent per-season TVDB requests when fetching a show - a show can
+have an arbitrary number of seasons, so this must not be unbounded."""
 
 # These are module-level because TvdbMetadataProvider is instantiated fresh per
 # request.
@@ -243,7 +248,15 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
                 if remote_id.get("type") == 2:
                     imdb_id = remote_id.get("id")
 
-        season_payloads = [await self.__get_season(show_id=sid) for sid in seasons_ids]
+        season_fetch_semaphore = asyncio.Semaphore(_MAX_CONCURRENT_SEASON_FETCHES)
+
+        async def _fetch_season(season_id: int) -> dict:
+            async with season_fetch_semaphore:
+                return await self.__get_season(show_id=season_id)
+
+        season_payloads = await asyncio.gather(
+            *(_fetch_season(sid) for sid in seasons_ids)
+        )
         for s in season_payloads:
             # Filter to "aired order" only; mixing aired/dvd orders duplicates
             # (show_id, season_number) and violates the seasons unique constraint.

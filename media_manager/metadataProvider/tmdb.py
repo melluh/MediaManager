@@ -43,6 +43,10 @@ log = logging.getLogger(__name__)
 
 _client = httpx.AsyncClient(timeout=30.0)
 
+_MAX_CONCURRENT_SEASON_FETCHES = 8
+"""Caps concurrent per-season TMDB requests when fetching a show - a show can
+have an arbitrary number of seasons, so this must not be unbounded."""
+
 # Genre id -> name lookups, lazily populated from a single relay call and
 # refreshed periodically since TMDB's genre list can change over time.
 GENRE_MAP_MAX_AGE = timedelta(hours=24)
@@ -429,14 +433,22 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         imdb_id = show_metadata.get("external_ids", {}).get("imdb_id")
         trailer_url = self.__get_first_trailer(show_metadata.get("videos", {"results": []}).get("results", []))
 
-        season_metadata_list = [
-            await self.__get_season_metadata(
-                show_id=show_metadata["id"],
-                season_number=season["season_number"],
-                language=language,
+        season_fetch_semaphore = asyncio.Semaphore(_MAX_CONCURRENT_SEASON_FETCHES)
+
+        async def _fetch_season(season_number: int) -> dict:
+            async with season_fetch_semaphore:
+                return await self.__get_season_metadata(
+                    show_id=show_metadata["id"],
+                    season_number=season_number,
+                    language=language,
+                )
+
+        season_metadata_list = await asyncio.gather(
+            *(
+                _fetch_season(season["season_number"])
+                for season in show_metadata["seasons"]
             )
-            for season in show_metadata["seasons"]
-        ]
+        )
         season_list = [
             Season(
                 external_id=int(season_metadata["id"]),

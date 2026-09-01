@@ -1,5 +1,8 @@
+import asyncio
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Coroutine
+from typing import Any
 
 from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.schemas import (
@@ -11,6 +14,10 @@ from media_manager.movies.schemas import Movie
 from media_manager.tv.schemas import Season, Show
 
 log = logging.getLogger(__name__)
+
+_MAX_CONCURRENT_IMAGE_DOWNLOADS = 8
+"""Caps concurrent image downloads per add/update - a show can have an
+arbitrary number of seasons, so this must not be unbounded."""
 
 
 class AbstractMetadataProvider(ABC):
@@ -83,10 +90,19 @@ class AbstractMetadataProvider(ABC):
         Downloads every image type this provider has available for the
         given media item (and, for shows, every season's poster too).
         """
-        for image_type in await self.get_available_image_types(media, media_type):
-            await self.download_media_image(media, media_type, image_type)
+        semaphore = asyncio.Semaphore(_MAX_CONCURRENT_IMAGE_DOWNLOADS)
+
+        async def _download(image_type: MediaImageType) -> bool:
+            async with semaphore:
+                return await self.download_media_image(media, media_type, image_type)
+
+        image_types = await self.get_available_image_types(media, media_type)
+        tasks: list[Coroutine[Any, Any, Any]] = [
+            _download(image_type) for image_type in image_types
+        ]
         if isinstance(media, Show):
-            await self.download_all_season_images(media)
+            tasks.append(self.download_all_season_images(media))
+        await asyncio.gather(*tasks)
 
     @abstractmethod
     async def get_available_season_image_types(
@@ -114,8 +130,11 @@ class AbstractMetadataProvider(ABC):
         """
         Downloads every image type available for every season of the show.
         """
-        for season in show.seasons:
-            for image_type in await self.get_available_season_image_types(
-                show, season
-            ):
-                await self.download_season_image(show, season, image_type)
+        semaphore = asyncio.Semaphore(_MAX_CONCURRENT_IMAGE_DOWNLOADS)
+
+        async def _download_season(season: Season) -> None:
+            for image_type in await self.get_available_season_image_types(show, season):
+                async with semaphore:
+                    await self.download_season_image(show, season, image_type)
+
+        await asyncio.gather(*(_download_season(season) for season in show.seasons))
