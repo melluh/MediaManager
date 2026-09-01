@@ -85,19 +85,7 @@
 											<span class="shrink-0">&middot;</span>
 										{/if}
 										{#if torrent.indexer}
-											{#if torrent.comments}
-												<a
-													href={torrent.comments}
-													target="_blank"
-													rel="noopener noreferrer external"
-													class="min-w-0 truncate hover:text-foreground hover:underline"
-													onclick={(event) => event.stopPropagation()}
-												>
-													{torrent.indexer}
-												</a>
-											{:else}
-												<span class="min-w-0 truncate">{torrent.indexer}</span>
-											{/if}
+											<span class="min-w-0 truncate">{torrent.indexer}</span>
 										{/if}
 									</div>
 								{/if}
