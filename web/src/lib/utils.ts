@@ -103,6 +103,35 @@ function padSeasonOrEpisodeNumber(n: number): string {
 }
 
 /**
+ * Renders sorted numbers as prefixed runs, collapsing only genuinely
+ * consecutive ones: [1,2,3] becomes "S01-S03" but [1,3] stays "S01, S03".
+ * Taking just the first and last would claim a torrent covers seasons or
+ * episodes it does not actually contain.
+ */
+function formatContiguousRuns(numbers: number[], prefix: string): string {
+	const sorted = [...numbers].sort((a, b) => a - b);
+	const runs: string[] = [];
+	let runStart = sorted[0]!;
+	let previous = runStart;
+
+	for (const current of sorted.slice(1)) {
+		if (current !== previous + 1) {
+			runs.push(formatRun(runStart, previous, prefix));
+			runStart = current;
+		}
+		previous = current;
+	}
+	runs.push(formatRun(runStart, previous, prefix));
+	return runs.join(', ');
+}
+
+function formatRun(start: number, end: number, prefix: string): string {
+	const startLabel = `${prefix}${padSeasonOrEpisodeNumber(start)}`;
+	if (start === end) return startLabel;
+	return `${startLabel}-${prefix}${padSeasonOrEpisodeNumber(end)}`;
+}
+
+/**
  * Formats the seasons/episodes a torrent covers as a compact label, e.g.
  * "S01", "S01-S03" or "S01E01-E10". Returns null for anything without seasons
  * (movie torrents).
@@ -113,21 +142,14 @@ export function formatTorrentSeasonEpisodeRange(
 ): string | null {
 	if (!seasons || seasons.length === 0) return null;
 
-	const firstSeason = seasons[0]!;
-	const lastSeason = seasons.at(-1)!;
 	if (seasons.length > 1) {
-		return `S${padSeasonOrEpisodeNumber(firstSeason)}-S${padSeasonOrEpisodeNumber(lastSeason)}`;
+		return formatContiguousRuns(seasons, 'S');
 	}
 
-	const seasonLabel = `S${padSeasonOrEpisodeNumber(firstSeason)}`;
+	const seasonLabel = `S${padSeasonOrEpisodeNumber(seasons[0]!)}`;
 	if (!episodes || episodes.length === 0) return seasonLabel;
 
-	const firstEpisode = episodes[0]!;
-	const lastEpisode = episodes.at(-1)!;
-	if (episodes.length === 1) return `${seasonLabel}E${padSeasonOrEpisodeNumber(firstEpisode)}`;
-	return `${seasonLabel}E${padSeasonOrEpisodeNumber(firstEpisode)}-E${padSeasonOrEpisodeNumber(
-		lastEpisode
-	)}`;
+	return `${seasonLabel}${formatContiguousRuns(episodes, 'E')}`;
 }
 
 export async function handleLogout() {
