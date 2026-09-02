@@ -13,7 +13,7 @@ RUN env PUBLIC_VERSION=${VERSION} PUBLIC_API_URL=${BASE_PATH} BASE_PATH=${BASE_P
 FROM ghcr.io/astral-sh/uv:python3.13-trixie-slim AS base 
 
 RUN apt-get update && \
-    apt-get install -y ca-certificates bash bc locales media-types mailcap curl gzip unzip tar 7zip bzip2 unar gosu && \
+    apt-get install -y ca-certificates bash bc locales media-types mailcap curl gzip unzip tar 7zip bzip2 unar gosu ffmpeg && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

@@ -31,7 +31,8 @@ from media_manager.movies.schemas import (
     RichMovieTorrent,
 )
 from media_manager.schemas import MediaImportSuggestion
-from media_manager.torrent.schemas import Torrent
+from media_manager.torrent.dependencies import torrent_dep
+from media_manager.torrent.schemas import Torrent, TorrentImportCandidate
 from media_manager.torrent.utils import get_importable_media_directories
 
 router = APIRouter()
@@ -370,3 +371,63 @@ async def download_torrent_for_movie(
         override_movie_file_path_suffix=override_file_path_suffix,
         user_id=user.id,
     )
+
+
+async def _get_movie_torrent_or_404(
+    movie_import_service: movie_import_service_dep, movie: Movie, torrent: Torrent
+) -> None:
+    movie_of_torrent = await movie_import_service.torrent_service.get_movie_of_torrent(
+        torrent=torrent
+    )
+    if movie_of_torrent is None or movie_of_torrent.id != movie.id:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "This torrent does not belong to this movie"
+        )
+
+
+@router.get(
+    "/{movie_id}/torrents/{torrent_id}/import-candidates",
+    dependencies=[Depends(current_superuser)],
+)
+async def get_movie_torrent_import_candidates(
+    movie_import_service: movie_import_service_dep,
+    movie: movie_dep,
+    torrent: torrent_dep,
+) -> list[TorrentImportCandidate]:
+    """
+    Lists the video files found in a torrent's download directory, so a
+    torrent whose automatic import failed (e.g. because it contained
+    multiple video files) can be resolved manually.
+    """
+    await _get_movie_torrent_or_404(movie_import_service, movie, torrent)
+    return await movie_import_service.torrent_service.get_import_candidates(
+        torrent=torrent
+    )
+
+
+@router.post(
+    "/{movie_id}/torrents/{torrent_id}/import",
+    dependencies=[Depends(current_superuser)],
+)
+async def resolve_movie_torrent_import(
+    movie_import_service: movie_import_service_dep,
+    movie: movie_dep,
+    torrent: torrent_dep,
+    relative_path: str,
+) -> Torrent:
+    """
+    Manually resolves a torrent that failed automatic import (currently:
+    the "multiple video files found" failure) by importing the given file,
+    identified by its path relative to the torrent's download directory as
+    returned by GET .../import-candidates.
+    """
+    await _get_movie_torrent_or_404(movie_import_service, movie, torrent)
+    success = await movie_import_service.resolve_multiple_video_files(
+        torrent=torrent, movie=movie, relative_path=relative_path
+    )
+    if not success:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Error on importing")
+    # `torrent` was mutated in place by the successful import - return it
+    # directly rather than re-fetching, which would round-trip the download
+    # client and could fail even though the import itself already succeeded.
+    return torrent

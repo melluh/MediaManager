@@ -16,6 +16,8 @@ class Torrent(Base):
     quality: Mapped[Quality]
     imported: Mapped[bool]
     import_error: Mapped[str | None] = mapped_column(default=None)
+    import_error_kind: Mapped[str | None] = mapped_column(default=None)
+    """Stored as plain text (not a native enum column) since ImportErrorKind is expected to grow over time."""
     hash: Mapped[str]
     usenet: Mapped[bool]
     initiated_by_user_id: Mapped[UUID | None] = mapped_column(

@@ -10,6 +10,7 @@ from media_manager.common.import_scan_cache import (
 )
 from media_manager.common.service import BaseMediaService
 from media_manager.config import MediaManagerConfig
+from media_manager.exceptions import BadRequestError, ConflictError
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
@@ -19,11 +20,13 @@ from media_manager.movies.repository import MovieRepository
 from media_manager.movies.schemas import Movie, MovieFile
 from media_manager.notification.service import NotificationService
 from media_manager.schemas import MediaImportSuggestion
-from media_manager.torrent.schemas import Quality, Torrent
+from media_manager.torrent.schemas import ImportErrorKind, Quality, Torrent
 from media_manager.torrent.service import TorrentService
 from media_manager.torrent.utils import (
     get_files_for_import,
+    get_torrent_filepath,
     import_file,
+    list_torrent_media_files,
     remove_special_characters,
 )
 
@@ -107,21 +110,85 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         video_files, subtitle_files, _ = await asyncio.to_thread(
             get_files_for_import, torrent=torrent
         )
+        if len(video_files) == 0:
+            await self.notify_import_failure(
+                torrent,
+                movie.name,
+                "movie",
+                "No video files found."
+            )
+            return
+
         if len(video_files) != 1:
             await self.notify_import_failure(
                 torrent,
                 movie.name,
                 "movie",
                 "Multiple video files found. Manual import required.",
+                import_error_kind=ImportErrorKind.multiple_video_files,
             )
             return
+
+        await self._import_resolved_files(torrent, movie, video_files, subtitle_files)
+
+    async def resolve_multiple_video_files(
+        self, torrent: Torrent, movie: Movie, relative_path: str
+    ) -> bool:
+        """
+        Manually resolves a torrent that failed automatic import because it
+        contained multiple video files, by importing the one the caller
+        picked.
+
+        :param relative_path: Path of the chosen file, relative to the
+            torrent's download directory, exactly as returned by
+            `TorrentService.get_import_candidates`.
+        """
+        if torrent.import_error_kind != ImportErrorKind.multiple_video_files:
+            msg = "This torrent has no pending multiple-video-file import to resolve."
+            raise ConflictError(msg)
+
+        torrent_dir = get_torrent_filepath(torrent=torrent)
+        # Re-scan rather than trust the caller's path outright: only a file
+        # that's actually present now is a valid import target.
+        video_files, subtitle_files = await asyncio.to_thread(
+            list_torrent_media_files, torrent=torrent
+        )
+        selected_file = next(
+            (
+                file
+                for file in video_files
+                if file.relative_to(torrent_dir).as_posix() == relative_path
+            ),
+            None,
+        )
+        if selected_file is None:
+            msg = f"'{relative_path}' is not one of the video files found for this torrent."
+            raise BadRequestError(msg)
+
+        return await self._import_resolved_files(
+            torrent, movie, [selected_file], subtitle_files
+        )
+
+    async def _import_resolved_files(
+        self,
+        torrent: Torrent,
+        movie: Movie,
+        video_files: list[Path],
+        subtitle_files: list[Path],
+    ) -> bool:
+        # A failed attempt must not clear a recognized failure kind - otherwise
+        # a transient error on manual resolution would permanently lock the
+        # torrent out of the resolution flow that gated this call.
+        kind_on_failure = torrent.import_error_kind
 
         movie_files = await self.torrent_service.get_movie_files_of_torrent(
             torrent=torrent
         )
         if not movie_files:
-            await self.notify_import_failure(torrent, movie.name, "movie")
-            return
+            await self.notify_import_failure(
+                torrent, movie.name, "movie", import_error_kind=kind_on_failure
+            )
+            return False
 
         success = [
             await self.import_movie(
@@ -133,10 +200,15 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         if all(success):
             torrent.imported = True
             torrent.import_error = None
+            torrent.import_error_kind = None
             await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
             await self.notify_import_success(movie.name, "movie")
-        else:
-            await self.notify_import_failure(torrent, movie.name, "movie")
+            return True
+
+        await self.notify_import_failure(
+            torrent, movie.name, "movie", import_error_kind=kind_on_failure
+        )
+        return False
 
     async def get_import_candidates(
         self, movie_path: Path, metadata_provider: AbstractMetadataProvider

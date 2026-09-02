@@ -21,7 +21,7 @@ from media_manager.metadataProvider.schemas import (
 )
 from media_manager.notification.service import NotificationService
 from media_manager.schemas import MediaImportSuggestion
-from media_manager.torrent.schemas import Torrent
+from media_manager.torrent.schemas import ImportErrorKind, Torrent
 from media_manager.torrent.service import TorrentService
 from media_manager.torrent.utils import (
     get_importable_media_directories,
@@ -106,12 +106,20 @@ class BaseMediaService[T, S]:
             )
 
     async def notify_import_failure(
-        self, torrent: Torrent, media_name: str, media_type: str, error_msg: str = ""
+        self,
+        torrent: Torrent,
+        media_name: str,
+        media_type: str,
+        error_msg: str = "",
+        import_error_kind: ImportErrorKind | None = None,
     ) -> None:
         """
         Records the failure on the torrent and notifies, but only when the
         stored error actually changes - repeated cron passes over the same
         unresolved failure must not re-notify every run.
+
+        :param import_error_kind: Set when the failure is one the API can offer
+            a targeted resolution flow for; left unset otherwise.
         """
         stored_error = error_msg or "Unknown error"
         if self.notification_service and torrent.import_error != stored_error:
@@ -124,6 +132,7 @@ class BaseMediaService[T, S]:
             )
         torrent.imported = False
         torrent.import_error = stored_error
+        torrent.import_error_kind = import_error_kind
         await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
 
     async def get_import_candidates(

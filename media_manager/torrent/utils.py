@@ -95,28 +95,11 @@ def import_file(target_file: Path, source_file: Path) -> None:
         shutil.copy(src=source_file, dst=target_file)
 
 
-def get_files_for_import(
-    torrent: Torrent | None = None, directory: Path | None = None
-) -> tuple[list[Path], list[Path], list[Path]]:
+def classify_media_files(all_files: list[Path]) -> tuple[list[Path], list[Path]]:
     """
-    Extracts all files from the torrent download directory, including extracting archives.
-    Returns a tuple containing: seperated video files, subtitle files, and all files found in the torrent directory.
+    Splits a list of files into video files and subtitle files, based on
+    guessed mimetype (and, for subtitles, the .srt extension).
     """
-    if torrent:
-        log.info(f"Importing torrent {torrent}")
-        search_directory = get_torrent_filepath(torrent=torrent)
-    elif directory:
-        log.info(f"Importing files from directory {directory}")
-        search_directory = directory
-    else:
-        msg = "Either torrent or directory must be provided."
-        raise ValueError(msg)
-
-    all_files: list[Path] = list_files_recursively(path=search_directory)
-    log.debug(f"Found {len(all_files)} files downloaded by the torrent")
-    extract_archives(all_files)
-    all_files = list_files_recursively(path=search_directory)
-
     video_files: list[Path] = []
     subtitle_files: list[Path] = []
     for file in all_files:
@@ -132,11 +115,56 @@ def get_files_for_import(
                 log.debug(
                     f"File is neither a video nor a subtitle, will not be imported: {file}"
                 )
+    return video_files, subtitle_files
+
+
+def get_files_for_import(
+    torrent: Torrent | None = None, directory: Path | None = None
+) -> tuple[list[Path], list[Path], list[Path]]:
+    """
+    Extracts all files from the torrent download directory, including extracting archives.
+    Returns a tuple containing: seperated video files, subtitle files, and all files found in the torrent directory.
+    """
+    search_directory = _resolve_search_directory(torrent=torrent, directory=directory)
+
+    all_files: list[Path] = list_files_recursively(path=search_directory)
+    log.debug(f"Found {len(all_files)} files downloaded by the torrent")
+    extract_archives(all_files)
+    all_files = list_files_recursively(path=search_directory)
+
+    video_files, subtitle_files = classify_media_files(all_files)
 
     log.info(
         f"Found {len(all_files)} files ({len(video_files)} video files, {len(subtitle_files)} subtitle files) for further processing."
     )
     return video_files, subtitle_files, all_files
+
+
+def list_torrent_media_files(
+    torrent: Torrent | None = None, directory: Path | None = None
+) -> tuple[list[Path], list[Path]]:
+    """
+    Read-only counterpart to `get_files_for_import`: lists the video and
+    subtitle files already present in the directory, without extracting
+    archives. Intended for inspecting a directory a previous import attempt
+    has already scanned (and extracted archives in).
+    """
+    search_directory = _resolve_search_directory(torrent=torrent, directory=directory)
+    all_files = list_files_recursively(path=search_directory)
+    return classify_media_files(all_files)
+
+
+def _resolve_search_directory(
+    torrent: Torrent | None = None, directory: Path | None = None
+) -> Path:
+    if torrent:
+        search_directory = get_torrent_filepath(torrent=torrent)
+    elif directory:
+        search_directory = directory
+    else:
+        msg = "Either torrent or directory must be provided."
+        raise ValueError(msg)
+    return search_directory
 
 
 def get_torrent_hash(torrent: IndexerQueryResult) -> str:

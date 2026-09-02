@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import UUID
 
 import media_manager.metadataProvider.utils
@@ -10,16 +11,24 @@ from media_manager.torrent.manager import DownloadManager, get_download_manager
 from media_manager.torrent.repository import TorrentRepository
 from media_manager.torrent.schemas import (
     DownloadProgress,
+    Quality,
     Torrent,
     TorrentId,
+    TorrentImportCandidate,
     TorrentMedia,
     TorrentStatus,
     TorrentWithProgress,
     download_state_to_torrent_status,
 )
+from media_manager.torrent.utils import get_torrent_filepath, list_torrent_media_files
+from media_manager.torrent.video_probe import probe_video_file, resolve_file_quality
 from media_manager.tv.schemas import EpisodeFile, Show, ShowSummary
 
 log = logging.getLogger(__name__)
+
+_MAX_CONCURRENT_PROBES = 4
+"""Caps concurrent ffprobe subprocesses per import-candidates request - a
+torrent's file count is attacker-influenced, so this must not be unbounded."""
 
 
 class TorrentService:
@@ -150,6 +159,52 @@ class TorrentService:
         return await self.torrent_repository.get_movie_files_of_torrent(
             torrent_id=torrent.id
         )
+
+    async def get_import_candidates(
+        self, torrent: Torrent
+    ) -> list[TorrentImportCandidate]:
+        """
+        Lists the video files found in a torrent's download directory, with
+        enough detail (size, quality, duration) for a user to pick which one
+        should actually be imported.
+        """
+        video_files, sizes_by_file = await asyncio.to_thread(
+            self._list_video_files_with_sizes, torrent
+        )
+        # Bounded, not one subprocess per file at once: a torrent can contain
+        # an arbitrary (attacker-influenced) number of video-mimetype files.
+        probe_semaphore = asyncio.Semaphore(_MAX_CONCURRENT_PROBES)
+
+        async def _probe(file: Path) -> tuple[Quality | None, int | None]:
+            async with probe_semaphore:
+                return await asyncio.to_thread(probe_video_file, file)
+
+        probe_results = await asyncio.gather(*(_probe(file) for file in video_files))
+
+        torrent_dir = get_torrent_filepath(torrent=torrent)
+        candidates = []
+        for file, (probed_quality, duration_seconds) in zip(
+            video_files, probe_results, strict=True
+        ):
+            candidates.append(
+                TorrentImportCandidate(
+                    relative_path=file.relative_to(torrent_dir).as_posix(),
+                    file_name=file.name,
+                    size_bytes=sizes_by_file[file],
+                    quality=resolve_file_quality(
+                        probed_quality, file.name, torrent.quality
+                    ),
+                    duration_seconds=duration_seconds,
+                )
+            )
+        return candidates
+
+    @staticmethod
+    def _list_video_files_with_sizes(
+        torrent: Torrent,
+    ) -> tuple[list[Path], dict[Path, int]]:
+        video_files, _ = list_torrent_media_files(torrent=torrent)
+        return video_files, {file: file.stat().st_size for file in video_files}
 
     async def get_own_torrents(self, user_id: UUID) -> list[TorrentWithProgress]:
         """

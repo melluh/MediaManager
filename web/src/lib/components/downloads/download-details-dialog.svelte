@@ -1,12 +1,16 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge, type BadgeVariant } from '$lib/components/ui/badge/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { CircularProgress } from '$lib/components/ui/circular-progress/index.js';
+	import { Spinner } from '$lib/components/ui/spinner/index.js';
 	import TorrentStat from '$lib/components/download-dialogs/torrent-stat.svelte';
 	import { getDownloadStatusBadge } from '$lib/components/downloads/download-status.js';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 	import Globe from '@lucide/svelte/icons/globe';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
+	import Circle from '@lucide/svelte/icons/circle';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import Gauge from '@lucide/svelte/icons/gauge';
 	import HardDrive from '@lucide/svelte/icons/hard-drive';
 	import Film from '@lucide/svelte/icons/film';
@@ -14,7 +18,10 @@
 	import Clock from '@lucide/svelte/icons/clock';
 	import ClockAlert from '@lucide/svelte/icons/clock-alert';
 	import { resolve } from '$app/paths';
-	import type { TorrentWithProgress } from '$lib/api/api';
+	import { invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+	import client from '$lib/api';
+	import type { TorrentImportCandidate, TorrentWithProgress } from '$lib/api/api';
 	import {
 		cn,
 		formatBytes,
@@ -57,6 +64,85 @@
 			? resolve('/dashboard/tv/[showId]', { showId: slugOrId })
 			: resolve('/dashboard/movies/[movieId]', { movieId: slugOrId });
 	});
+
+	// Movie-only for now: TV torrents don't have this failure mode.
+	let canResolveMultipleVideoFiles = $derived(
+		torrent.import_error_kind === 'multiple_video_files' &&
+			torrent.media != null &&
+			!torrent.media.is_show
+	);
+
+	let candidates = $state<TorrentImportCandidate[] | null>(null);
+	let candidatesLoading = $state(false);
+	let candidatesError = $state<string | null>(null);
+	let candidatesFetchedForTorrentId = $state<string | null>(null);
+	let selectedPath = $state<string | null>(null);
+	let resolving = $state(false);
+
+	$effect(() => {
+		if (!canResolveMultipleVideoFiles) return;
+		if (candidatesFetchedForTorrentId === torrent.id) return;
+		fetchCandidates();
+	});
+
+	async function fetchCandidates() {
+		const movieId = torrent.media?.id;
+		if (!movieId) return;
+
+		candidatesLoading = true;
+		candidatesError = null;
+		candidatesFetchedForTorrentId = torrent.id!;
+
+		const { data, error } = await client.GET(
+			'/api/v1/movies/{movie_id}/torrents/{torrent_id}/import-candidates',
+			{ params: { path: { movie_id: movieId, torrent_id: torrent.id! } } }
+		);
+
+		candidatesLoading = false;
+		if (error) {
+			candidatesError = 'Failed to load the files found in this download.';
+			return;
+		}
+		candidates = data;
+		selectedPath = data[0]?.relative_path ?? null;
+	}
+
+	async function resolveImport() {
+		const movieId = torrent.media?.id;
+		if (!movieId || !selectedPath) return;
+
+		resolving = true;
+		const { error, response } = await client.POST(
+			'/api/v1/movies/{movie_id}/torrents/{torrent_id}/import',
+			{
+				params: {
+					path: { movie_id: movieId, torrent_id: torrent.id! },
+					query: { relative_path: selectedPath }
+				}
+			}
+		);
+		resolving = false;
+
+		if (error) {
+			if (response.status === 409) {
+				toast.info('This download was already resolved.');
+			} else {
+				toast.error('Failed to import the selected file.');
+			}
+			await invalidateAll();
+			return;
+		}
+
+		toast.success('Import resolved successfully.');
+		await invalidateAll();
+	}
+
+	function formatDuration(seconds: number | null | undefined): string {
+		if (seconds == null || seconds <= 0) return 'unknown length';
+		const hours = Math.floor(seconds / 3600);
+		const minutes = Math.floor((seconds % 3600) / 60);
+		return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+	}
 </script>
 
 <Dialog.Content class="w-full max-w-[500px] rounded-lg p-6 shadow-lg">
@@ -165,5 +251,59 @@
 				Live progress isn't available for this download client.
 			</p>
 		{/if}
+	{/if}
+
+	{#if canResolveMultipleVideoFiles}
+		<div class="space-y-2 border-t pt-3">
+			<p class="text-sm font-medium">Multiple video files were found — pick one to import:</p>
+			{#if candidatesLoading}
+				<div class="flex items-center justify-center py-4">
+					<Spinner class="size-6" />
+				</div>
+			{:else if candidatesError}
+				<p class="text-xs text-destructive">{candidatesError}</p>
+			{:else if candidates && candidates.length === 0}
+				<p class="text-xs text-muted-foreground">
+					No video files were found anymore in this download's directory.
+				</p>
+			{:else if candidates}
+				<div class="max-h-[220px] space-y-1 overflow-y-auto pr-1">
+					{#each candidates as candidate (candidate.relative_path)}
+						<button
+							type="button"
+							class={cn(
+								'flex w-full items-start gap-2 rounded-md border p-2 text-left text-xs transition-colors hover:bg-muted',
+								selectedPath === candidate.relative_path && 'border-primary bg-muted'
+							)}
+							onclick={() => (selectedPath = candidate.relative_path)}
+						>
+							{#if selectedPath === candidate.relative_path}
+								<CircleCheck class="mt-0.5 size-3.5 shrink-0 text-primary" />
+							{:else}
+								<Circle class="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+							{/if}
+							<span class="min-w-0 flex-1 space-y-0.5">
+								<span class="block truncate font-medium" title={candidate.relative_path}>
+									{candidate.file_name}
+								</span>
+								<span class="flex flex-wrap items-center gap-x-1.5 text-muted-foreground">
+									<span>{formatBytes(candidate.size_bytes) ?? 'unknown size'}</span>
+									<span>&middot;</span>
+									<span>{getTorrentQualityString(candidate.quality)}</span>
+									<span>&middot;</span>
+									<span>{formatDuration(candidate.duration_seconds)}</span>
+								</span>
+							</span>
+						</button>
+					{/each}
+				</div>
+				<Button class="w-full" disabled={!selectedPath || resolving} onclick={resolveImport}>
+					{#if resolving}
+						<Spinner class="mr-1 size-4" />
+					{/if}
+					Import selected file
+				</Button>
+			{/if}
+		</div>
 	{/if}
 </Dialog.Content>

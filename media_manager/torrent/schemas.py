@@ -31,6 +31,16 @@ class TorrentStatus(Enum):
     unknown = 4
 
 
+class ImportErrorKind(StrEnum):
+    """
+    Structured tag for a `Torrent.import_error`, letting the API offer a
+    targeted resolution flow for failure types it knows how to fix. Left
+    unset for failures that have no such flow (yet).
+    """
+
+    multiple_video_files = "multiple_video_files"
+
+
 class Torrent(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -41,6 +51,8 @@ class Torrent(BaseModel):
     imported: bool
     import_error: str | None = None
     """Set when the last automatic import attempt failed; cleared on success or manual resolution."""
+    import_error_kind: ImportErrorKind | None = None
+    """Structured kind of `import_error`, if recognized; drives which manual-resolution endpoint applies."""
     hash: str
     usenet: bool = False
     initiated_by_user_id: uuid.UUID | None = None
@@ -104,6 +116,18 @@ class TorrentWithProgress(Torrent):
     """Live progress from the download client, if it supports reporting one."""
     media: TorrentMedia | None = None
     """The movie/show this torrent belongs to, if one has been linked yet."""
+
+
+class TorrentImportCandidate(BaseModel):
+    """A video file found in a torrent's download directory, offered up for manual import resolution."""
+
+    relative_path: str
+    """Path relative to the torrent's download directory; the identifier passed back to resolve the import."""
+    file_name: str
+    size_bytes: int
+    quality: Quality
+    duration_seconds: int | None = None
+    """Playback duration, if it could be determined by probing the file."""
 
 
 _DOWNLOAD_STATE_TO_TORRENT_STATUS: dict[DownloadState, TorrentStatus] = {
