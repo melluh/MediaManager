@@ -1,5 +1,6 @@
 import Check from '@lucide/svelte/icons/check';
 import CircleAlert from '@lucide/svelte/icons/circle-alert';
+import CircleHelp from '@lucide/svelte/icons/circle-help';
 import Clock from '@lucide/svelte/icons/clock';
 import Download from '@lucide/svelte/icons/download';
 import type { TorrentWithProgress } from '$lib/api/api';
@@ -65,12 +66,10 @@ export function getDownloadStatusBadge(torrent: TorrentWithProgress): DownloadSt
 		if (statusLabel === 'error') {
 			return { variant: 'destructive', icon: CircleAlert, label: 'Error', isFinished: false };
 		}
-		return {
-			variant: 'outline',
-			icon: Download,
-			label: statusLabel === 'downloading' ? 'Downloading' : 'Unknown',
-			isFinished: false
-		};
+		if (statusLabel === 'downloading') {
+			return { variant: 'outline', icon: Download, label: 'Downloading', isFinished: false };
+		}
+		return { variant: 'outline', icon: CircleHelp, label: 'Unknown', isFinished: false };
 	}
 
 	if (progress.state === 'error') {
