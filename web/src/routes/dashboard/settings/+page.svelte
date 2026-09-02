@@ -1,11 +1,14 @@
 <script lang="ts">
 	import UserTable from '$lib/components/user-data-table.svelte';
-	import { page } from '$app/state';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { getContext } from 'svelte';
 	import UserSettings from '$lib/components/user-settings.svelte';
 	import type { UserReadWithPermissions } from '$lib/api/api';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
+	import PageLoading from '$lib/components/page-loading.svelte';
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Settings' }]);
@@ -27,7 +30,11 @@
 			<Card.Title>Your account</Card.Title>
 		</Card.Header>
 		<Card.Content>
-			<UserSettings passwordLoginEnabled={page.data.passwordLoginEnabled} />
+			{#await data.passwordLoginEnabled}
+				<PageLoading message="Loading account settings…" />
+			{:then passwordLoginEnabled}
+				<UserSettings {passwordLoginEnabled} />
+			{/await}
 		</Card.Content>
 	</Card.Root>
 	{#if currentUser().is_superuser}
@@ -37,11 +44,11 @@
 				<Card.Description>Edit, delete or change the permissions of other users</Card.Description>
 			</Card.Header>
 			<Card.Content>
-				<UserTable
-					currentUserId={currentUser().id}
-					passwordLoginEnabled={page.data.passwordLoginEnabled}
-					users={page.data.users}
-				/>
+				{#await Promise.all([data.users, data.passwordLoginEnabled])}
+					<PageLoading message="Loading users…" />
+				{:then [users, passwordLoginEnabled]}
+					<UserTable currentUserId={currentUser().id} {passwordLoginEnabled} {users} />
+				{/await}
 			</Card.Content>
 		</Card.Root>
 	{/if}

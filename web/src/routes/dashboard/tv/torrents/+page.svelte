@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import { getFullyQualifiedMediaName } from '$lib/utils';
 	import * as Accordion from '$lib/components/ui/accordion/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
@@ -7,6 +6,10 @@
 	import { resolve } from '$app/paths';
 	import { getContext } from 'svelte';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
+	import PageLoading from '$lib/components/page-loading.svelte';
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Shows', href: resolve('/dashboard/tv', {}) }, { label: 'TV Torrents' }]);
@@ -22,21 +25,25 @@
 		TV Torrents
 	</h1>
 	<Accordion.Root type="single" class="w-full">
-		{#each page.data.torrents as show (show.show_id)}
-			<div class="p-6">
-				<Card.Root>
-					<Card.Header>
-						<Card.Title>
-							{getFullyQualifiedMediaName(show)}
-						</Card.Title>
-					</Card.Header>
-					<Card.Content>
-						<TorrentTable isShow={true} torrents={show.torrents} showSlug={show.slug} />
-					</Card.Content>
-				</Card.Root>
-			</div>
-		{:else}
-			<div class="col-span-full text-center text-muted-foreground">No Torrents added yet.</div>
-		{/each}
+		{#await data.torrents}
+			<PageLoading message="Loading torrents…" />
+		{:then torrents}
+			{#each torrents ?? [] as show (show.show_id)}
+				<div class="p-6">
+					<Card.Root>
+						<Card.Header>
+							<Card.Title>
+								{getFullyQualifiedMediaName(show)}
+							</Card.Title>
+						</Card.Header>
+						<Card.Content>
+							<TorrentTable isShow={true} torrents={show.torrents} showSlug={show.slug} />
+						</Card.Content>
+					</Card.Root>
+				</div>
+			{:else}
+				<div class="col-span-full text-center text-muted-foreground">No Torrents added yet.</div>
+			{/each}
+		{/await}
 	</Accordion.Root>
 </div>

@@ -4,9 +4,76 @@
 		<meta charset="utf-8" />
 		<link href="%sveltekit.assets%/favicon.ico" rel="icon" />
 		<meta content="width=device-width, initial-scale=1" name="viewport" />
+		<style>
+			/*
+				Boot splash. This app is a client-rendered SPA (ssr = false), so nothing is
+				painted until the JS bundle has downloaded and the first route's load
+				functions have resolved. Without this the user stares at a blank white page
+				for that whole window. The root +layout.svelte removes it once it mounts.
+			*/
+			#app-boot-splash {
+				position: fixed;
+				inset: 0;
+				z-index: 2147483647;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 0.75rem;
+				background: #fff;
+				color: #71717a;
+				font-family:
+					ui-sans-serif,
+					system-ui,
+					-apple-system,
+					'Segoe UI',
+					Roboto,
+					sans-serif;
+				font-size: 0.875rem;
+			}
+			#app-boot-splash > .spinner {
+				width: 2rem;
+				height: 2rem;
+				border: 2px solid currentColor;
+				border-top-color: transparent;
+				border-radius: 9999px;
+				animation: app-boot-spin 0.8s linear infinite;
+			}
+			/* Only announce "still loading" if the boot is actually taking a while. */
+			#app-boot-splash > .slow {
+				opacity: 0;
+				animation: app-boot-fade-in 0.2s ease-out 8s forwards;
+			}
+			@keyframes app-boot-spin {
+				to {
+					transform: rotate(360deg);
+				}
+			}
+			@keyframes app-boot-fade-in {
+				to {
+					opacity: 1;
+				}
+			}
+			@media (prefers-reduced-motion: reduce) {
+				#app-boot-splash > .spinner {
+					animation-duration: 2s;
+				}
+			}
+			@media (prefers-color-scheme: dark) {
+				#app-boot-splash {
+					background: #09090b;
+					color: #a1a1aa;
+				}
+			}
+		</style>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<div id="app-boot-splash">
+			<div class="spinner"></div>
+			<p>Loading MediaManager…</p>
+			<p class="slow">This is taking longer than usual, the backend may still be starting up.</p>
+		</div>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

@@ -4,15 +4,13 @@
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import client from '$lib/api';
-	import type { MetaDataProviderSearchResult } from '$lib/api/api.d.ts';
-	import type { PageProps } from './$types';
+	import type { MetaDataProviderSearchResult, TorrentWithProgress } from '$lib/api/api.d.ts';
 
 	const OWN_TORRENTS_POLL_INTERVAL_MS = 7000;
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Dashboard' }]);
 
-	let { data }: PageProps = $props();
 	let recommendedShows: MetaDataProviderSearchResult[] = $state([]);
 	let showsLoading = $state(true);
 	let showsError = $state(false);
@@ -21,7 +19,9 @@
 	let moviesLoading = $state(true);
 	let moviesError = $state(false);
 
-	let ownTorrents = $state(data.ownTorrents ?? []);
+	// Fetched here rather than in a `load` so the dashboard paints its layout right
+	// away instead of waiting on the backend - see `routes/dashboard/+layout.ts`.
+	let ownTorrents: TorrentWithProgress[] = $state([]);
 	let ownTorrentsPollHandle: ReturnType<typeof setInterval> | undefined;
 	let ownTorrentsRefreshing = false;
 
@@ -42,9 +42,18 @@
 	}
 
 	onMount(() => {
-		if (ownTorrents.length > 0) {
-			ownTorrentsPollHandle = setInterval(refreshOwnTorrents, OWN_TORRENTS_POLL_INTERVAL_MS);
-		}
+		client
+			.GET('/api/v1/torrent/mine')
+			.then((res) => {
+				if (res.data) ownTorrents = res.data;
+				if (ownTorrents.length > 0) {
+					ownTorrentsPollHandle = setInterval(refreshOwnTorrents, OWN_TORRENTS_POLL_INTERVAL_MS);
+				}
+			})
+			.catch(() => {
+				// nothing to show; the user simply sees no downloads section
+			});
+
 		client
 			.GET('/api/v1/tv/recommended')
 			.then((res) => {

@@ -4,8 +4,39 @@
 
 	import background from '$lib/images/pawel-czerwinski-NTYYL9Eb9y8-unsplash.jpg?enhanced';
 	import { resolve } from '$app/paths';
+	import { setContext } from 'svelte';
+	import type { AuthMetadata } from '$lib/api/api';
+	import type { LayoutProps } from './$types';
 
-	let { children } = $props();
+	let { data, children }: LayoutProps = $props();
+
+	// Resolved here instead of in `load` so the login chrome paints immediately even
+	// when the backend is slow or down - see the note in `routes/dashboard/+layout.ts`.
+	let metadata = $state<AuthMetadata | undefined>(undefined);
+	let status = $state<'loading' | 'ready' | 'error'>('loading');
+
+	setContext('authMetadata', () => metadata);
+	setContext('authMetadataStatus', () => status);
+
+	$effect(() => {
+		const pending = data.loginData;
+		let cancelled = false;
+		status = 'loading';
+
+		pending.then((result) => {
+			if (cancelled) return;
+			if (result.state === 'ok') {
+				metadata = result.metadata;
+				status = 'ready';
+			} else {
+				status = 'error';
+			}
+		});
+
+		return () => {
+			cancelled = true;
+		};
+	});
 </script>
 
 <div class="grid min-h-svh lg:grid-cols-2">
