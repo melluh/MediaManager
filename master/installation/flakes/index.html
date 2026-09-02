@@ -1519,14 +1519,14 @@
 <h2 id="importing-the-community-flake">Importing the community flake</h2>
 <p>To use the community-provided flake and module, first import it in your own flake, for example:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-  <span class="ss">description</span> <span class="o">=</span> <span class="s2">&quot;An example NixOS configuration&quot;</span><span class="p">;</span>
+  <span class="ss">description</span> <span class="o">=</span> <span class="s2">"An example NixOS configuration"</span><span class="p">;</span>
 
   <span class="ss">inputs</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="ss">nixpkgs</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">url</span> <span class="o">=</span> <span class="s2">&quot;github:nixos/nixpkgs/nixos-unstable&quot;</span><span class="p">;</span> <span class="p">};</span>
+    <span class="ss">nixpkgs</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">url</span> <span class="o">=</span> <span class="s2">"github:nixos/nixpkgs/nixos-unstable"</span><span class="p">;</span> <span class="p">};</span>
 
     <span class="ss">mediamanager-nix</span> <span class="o">=</span> <span class="p">{</span>
-      <span class="ss">url</span> <span class="o">=</span> <span class="s2">&quot;github:strangeglyph/mediamanager-nix&quot;</span><span class="p">;</span>
-      inputs<span class="o">.</span>nixpkgs<span class="o">.</span><span class="ss">follows</span> <span class="o">=</span> <span class="s2">&quot;nixpkgs&quot;</span><span class="p">;</span>
+      <span class="ss">url</span> <span class="o">=</span> <span class="s2">"github:strangeglyph/mediamanager-nix"</span><span class="p">;</span>
+      inputs<span class="o">.</span>nixpkgs<span class="o">.</span><span class="ss">follows</span> <span class="o">=</span> <span class="s2">"nixpkgs"</span><span class="p">;</span>
     <span class="p">};</span>
   <span class="p">};</span>
 
@@ -1570,13 +1570,13 @@ See <a href="../../configuration/#configuring-secrets">Configuration</a> for gui
 <h2 id="example-configuration">Example Configuration</h2>
 <p>Here is a minimal complete flake for a MediaManager setup:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-  <span class="ss">description</span> <span class="o">=</span> <span class="s2">&quot;An example NixOS configuration&quot;</span><span class="p">;</span>
+  <span class="ss">description</span> <span class="o">=</span> <span class="s2">"An example NixOS configuration"</span><span class="p">;</span>
 
   <span class="ss">inputs</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="ss">nixpkgs</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">url</span> <span class="o">=</span> <span class="s2">&quot;github:nixos/nixpkgs/nixos-unstable&quot;</span><span class="p">;</span> <span class="p">};</span>
+    <span class="ss">nixpkgs</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">url</span> <span class="o">=</span> <span class="s2">"github:nixos/nixpkgs/nixos-unstable"</span><span class="p">;</span> <span class="p">};</span>
     <span class="ss">mediamanager-nix</span> <span class="o">=</span> <span class="p">{</span>
-      <span class="ss">url</span> <span class="o">=</span> <span class="s2">&quot;github:strangeglyph/mediamanager-nix&quot;</span><span class="p">;</span>
-      inputs<span class="o">.</span>nixpkgs<span class="o">.</span><span class="ss">follows</span> <span class="o">=</span> <span class="s2">&quot;nixpkgs&quot;</span><span class="p">;</span>
+      <span class="ss">url</span> <span class="o">=</span> <span class="s2">"github:strangeglyph/mediamanager-nix"</span><span class="p">;</span>
+      inputs<span class="o">.</span>nixpkgs<span class="o">.</span><span class="ss">follows</span> <span class="o">=</span> <span class="s2">"nixpkgs"</span><span class="p">;</span>
     <span class="p">};</span>
   <span class="p">};</span>
 
@@ -1595,17 +1595,17 @@ See <a href="../../configuration/#configuring-secrets">Configuration</a> for gui
           <span class="ss">enable</span> <span class="o">=</span> <span class="no">true</span><span class="p">;</span>
           postgres<span class="o">.</span><span class="ss">enable</span> <span class="o">=</span> <span class="no">true</span><span class="p">;</span>
           <span class="ss">port</span> <span class="o">=</span> <span class="mi">12345</span><span class="p">;</span>
-          <span class="ss">dataDir</span> <span class="o">=</span> <span class="s2">&quot;/tmp&quot;</span><span class="p">;</span>
+          <span class="ss">dataDir</span> <span class="o">=</span> <span class="s2">"/tmp"</span><span class="p">;</span>
           <span class="ss">settings</span> <span class="o">=</span> <span class="p">{</span>
-            misc<span class="o">.</span><span class="ss">frontend_url</span> <span class="o">=</span> <span class="s2">&quot;http://[::1]:12345&quot;</span><span class="p">;</span>
+            misc<span class="o">.</span><span class="ss">frontend_url</span> <span class="o">=</span> <span class="s2">"http://[::1]:12345"</span><span class="p">;</span>
           <span class="p">};</span>
         <span class="p">};</span>
 
-        systemd<span class="o">.</span>tmpfiles<span class="o">.</span>settings<span class="o">.</span><span class="s2">&quot;10-mediamanager&quot;</span> <span class="o">=</span> <span class="p">{</span>
-          <span class="s2">&quot;/tmp/movies&quot;</span><span class="o">.</span><span class="ss">d</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">user</span> <span class="o">=</span> config<span class="o">.</span>services<span class="o">.</span>media-manager<span class="o">.</span>user<span class="p">;</span> <span class="p">};</span>
-          <span class="s2">&quot;/tmp/shows&quot;</span><span class="o">.</span><span class="ss">d</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">user</span> <span class="o">=</span> config<span class="o">.</span>services<span class="o">.</span>media-manager<span class="o">.</span>user<span class="p">;</span> <span class="p">};</span>
-          <span class="s2">&quot;/tmp/images&quot;</span><span class="o">.</span><span class="ss">d</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">user</span> <span class="o">=</span> config<span class="o">.</span>services<span class="o">.</span>media-manager<span class="o">.</span>user<span class="p">;</span> <span class="p">};</span>
-          <span class="s2">&quot;/tmp/torrents&quot;</span><span class="o">.</span><span class="ss">d</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">user</span> <span class="o">=</span> config<span class="o">.</span>services<span class="o">.</span>media-manager<span class="o">.</span>user<span class="p">;</span> <span class="p">};</span>
+        systemd<span class="o">.</span>tmpfiles<span class="o">.</span>settings<span class="o">.</span><span class="s2">"10-mediamanager"</span> <span class="o">=</span> <span class="p">{</span>
+          <span class="s2">"/tmp/movies"</span><span class="o">.</span><span class="ss">d</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">user</span> <span class="o">=</span> config<span class="o">.</span>services<span class="o">.</span>media-manager<span class="o">.</span>user<span class="p">;</span> <span class="p">};</span>
+          <span class="s2">"/tmp/shows"</span><span class="o">.</span><span class="ss">d</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">user</span> <span class="o">=</span> config<span class="o">.</span>services<span class="o">.</span>media-manager<span class="o">.</span>user<span class="p">;</span> <span class="p">};</span>
+          <span class="s2">"/tmp/images"</span><span class="o">.</span><span class="ss">d</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">user</span> <span class="o">=</span> config<span class="o">.</span>services<span class="o">.</span>media-manager<span class="o">.</span>user<span class="p">;</span> <span class="p">};</span>
+          <span class="s2">"/tmp/torrents"</span><span class="o">.</span><span class="ss">d</span> <span class="o">=</span> <span class="p">{</span> <span class="ss">user</span> <span class="o">=</span> config<span class="o">.</span>services<span class="o">.</span>media-manager<span class="o">.</span>user<span class="p">;</span> <span class="p">};</span>
         <span class="p">};</span>
       <span class="p">};</span>
     <span class="p">};</span>

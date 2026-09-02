@@ -1488,7 +1488,7 @@
 <div class="highlight"><pre><span></span><code>DEBUG - media_manager.indexer.utils -
  follow_redirects_to_final_torrent_url():
   An error occurred during the request for &lt;some-url&gt;:
-   HTTPConnectionPool(host=&#39;&lt;some-host&gt;&#39;, port=&lt;some-port&gt;):
+   HTTPConnectionPool(host='&lt;some-host&gt;', port=&lt;some-port&gt;):
     Read timed out. (read timeout=10)
 </code></pre></div>
 
@@ -1513,15 +1513,15 @@
 <div class="highlight"><span class="filename">config.toml</span><pre><span></span><code><span class="k">[indexers]</span>
 <span class="k">[indexers.prowlarr]</span>
 <span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;http://prowlarr:9696&quot;</span>
-<span class="n">api_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;your_prowlarr_api_key&quot;</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"http://prowlarr:9696"</span>
+<span class="n">api_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"your_prowlarr_api_key"</span>
 <span class="n">timeout_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">60</span>
 
 <span class="k">[indexers.jackett]</span>
 <span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;http://jackett:9117&quot;</span>
-<span class="n">api_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;your_jackett_api_key&quot;</span>
-<span class="n">indexers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;1337x&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;rarbg&quot;</span><span class="p">]</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"http://jackett:9117"</span>
+<span class="n">api_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"your_jackett_api_key"</span>
+<span class="n">indexers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"1337x"</span><span class="p">,</span><span class="w"> </span><span class="s2">"rarbg"</span><span class="p">]</span>
 <span class="n">timeout_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">60</span>
 </code></pre></div>
 

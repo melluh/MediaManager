@@ -2570,7 +2570,7 @@ npm<span class="w"> </span>run<span class="w"> </span>dev
 * Verify `MEDIAMANAGER_MISC__DEVELOPMENT=TRUE` is set in `docker-compose.dev.yaml`
 * Check backend logs:
 
-<div class="highlight"><pre><span></span><code>make<span class="w"> </span>logs<span class="w"> </span><span class="nv">ARGS</span><span class="o">=</span><span class="s2">&quot;--follow mediamanager&quot;</span>
+<div class="highlight"><pre><span></span><code>make<span class="w"> </span>logs<span class="w"> </span><span class="nv">ARGS</span><span class="o">=</span><span class="s2">"--follow mediamanager"</span>
 <span class="c1"># or</span>
 docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.dev.yaml<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>mediamanager
 </code></pre></div>
@@ -2596,7 +2596,7 @@ uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </s
 * To create new migration:
 
 <div class="highlight"><pre><span></span><code>make<span class="w"> </span>app
-uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>revision<span class="w"> </span>--autogenerate<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;description&quot;</span>
+uv<span class="w"> </span>run<span class="w"> </span>alembic<span class="w"> </span>revision<span class="w"> </span>--autogenerate<span class="w"> </span>-m<span class="w"> </span><span class="s2">"description"</span>
 </code></pre></div>
 
 </details>

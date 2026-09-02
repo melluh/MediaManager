@@ -1637,14 +1637,14 @@
 </ul>
 <p>Examples for Title Rules</p>
 <div class="highlight"><span class="filename">config.toml</span><pre><span></span><code><span class="k">[[indexers.title_scoring_rules]]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;prefer_h265&quot;</span>
-<span class="n">keywords</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;h265&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;hevc&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;x265&quot;</span><span class="p">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"prefer_h265"</span>
+<span class="n">keywords</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"h265"</span><span class="p">,</span><span class="w"> </span><span class="s2">"hevc"</span><span class="p">,</span><span class="w"> </span><span class="s2">"x265"</span><span class="p">]</span>
 <span class="n">score_modifier</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
 <span class="n">negate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 
 <span class="k">[[indexers.title_scoring_rules]]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;avoid_cam&quot;</span>
-<span class="n">keywords</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;cam&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ts&quot;</span><span class="p">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"avoid_cam"</span>
+<span class="n">keywords</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"cam"</span><span class="p">,</span><span class="w"> </span><span class="s2">"ts"</span><span class="p">]</span>
 <span class="n">score_modifier</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-10000</span>
 <span class="n">negate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 </code></pre></div>
@@ -1668,14 +1668,14 @@
 </ul>
 <p>Examples for Indexer Flag Rules</p>
 <div class="highlight"><span class="filename">config.toml</span><pre><span></span><code><span class="k">[[indexers.indexer_flag_scoring_rules]]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;reject_non_freeleech&quot;</span>
-<span class="n">flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;freeleech&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;freeleech75&quot;</span><span class="p">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"reject_non_freeleech"</span>
+<span class="n">flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"freeleech"</span><span class="p">,</span><span class="w"> </span><span class="s2">"freeleech75"</span><span class="p">]</span>
 <span class="n">score_modifier</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-10000</span>
 <span class="n">negate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 
 <span class="k">[[indexers.indexer_flag_scoring_rules]]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;reject_nuked&quot;</span>
-<span class="n">flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;nuked&quot;</span><span class="p">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"reject_nuked"</span>
+<span class="n">flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"nuked"</span><span class="p">]</span>
 <span class="n">score_modifier</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-10000</span>
 <span class="n">negate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 </code></pre></div>
@@ -1686,14 +1686,14 @@
 <p>If <code>negate</code> is set to <code>true</code>, the <code>score_modifier</code> is applied only if none of the flags are present on the release.</p>
 <h2 id="example">Example</h2>
 <div class="highlight"><span class="filename">config.toml</span><pre><span></span><code><span class="k">[[indexers.scoring_rule_sets]]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;default&quot;</span>
-<span class="n">libraries</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ALL_TV&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ALL_MOVIES&quot;</span><span class="p">]</span>
-<span class="n">rule_names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;prefer_h265&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;avoid_cam&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;reject_nuked&quot;</span><span class="p">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"default"</span>
+<span class="n">libraries</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"ALL_TV"</span><span class="p">,</span><span class="w"> </span><span class="s2">"ALL_MOVIES"</span><span class="p">]</span>
+<span class="n">rule_names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"prefer_h265"</span><span class="p">,</span><span class="w"> </span><span class="s2">"avoid_cam"</span><span class="p">,</span><span class="w"> </span><span class="s2">"reject_nuked"</span><span class="p">]</span>
 
 <span class="k">[[indexers.scoring_rule_sets]]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;strict_quality&quot;</span>
-<span class="n">libraries</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ALL_MOVIES&quot;</span><span class="p">]</span>
-<span class="n">rule_names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;prefer_h265&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;avoid_cam&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;reject_non_freeleech&quot;</span><span class="p">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"strict_quality"</span>
+<span class="n">libraries</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"ALL_MOVIES"</span><span class="p">]</span>
+<span class="n">rule_names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"prefer_h265"</span><span class="p">,</span><span class="w"> </span><span class="s2">"avoid_cam"</span><span class="p">,</span><span class="w"> </span><span class="s2">"reject_non_freeleech"</span><span class="p">]</span>
 </code></pre></div>
 <h2 id="libraries">Libraries</h2>
 <p>The libraries that are mentioned in the preceding example are explained in greater detail in the <a href="../custom-libraries/">Library config section</a>.</p>

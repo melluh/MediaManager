@@ -1415,19 +1415,19 @@
 <h2 id="configuring-secrets">Configuring Secrets</h2>
 <p>For sensitive information like API keys, passwords, and secrets, you should use environment variables. You can actually set every configuration value through environment variables. For example, to set the <code>token_secret</code> value for authentication, with a .toml file you would use:</p>
 <div class="highlight"><pre><span></span><code><span class="k">[auth]</span>
-<span class="n">token_secret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;your_super_secret_key_here&quot;</span>
+<span class="n">token_secret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"your_super_secret_key_here"</span>
 </code></pre></div>
 <p>But you can also set it through an environment variable:</p>
-<div class="highlight"><pre><span></span><code>MEDIAMANAGER_AUTH__TOKEN_SECRET = &quot;your_super_secret_key_here&quot;
+<div class="highlight"><pre><span></span><code>MEDIAMANAGER_AUTH__TOKEN_SECRET = "your_super_secret_key_here"
 </code></pre></div>
 <p>or another example with the OIDC client secret:</p>
 <div class="highlight"><pre><span></span><code><span class="k">[auth]</span>
 <span class="p">...</span>
 <span class="k">[auth.openid_connect]</span>
-<span class="n">client_secret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;your_client_secret_from_provider&quot;</span>
+<span class="n">client_secret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"your_client_secret_from_provider"</span>
 </code></pre></div>
 <p>env variable:</p>
-<div class="highlight"><pre><span></span><code>MEDIAMANAGER_AUTH__OPENID_CONNECT__CLIENT_SECRET = &quot;your_client_secret_from_provider&quot;
+<div class="highlight"><pre><span></span><code>MEDIAMANAGER_AUTH__OPENID_CONNECT__CLIENT_SECRET = "your_client_secret_from_provider"
 </code></pre></div>
 <p>So for every config "level", you basically have to take the name of the value and prepend it with the section names in uppercase with 2 underscores as delimiters and <code>MEDIAMANAGER_</code> as the prefix.</p>
 <div class="admonition warning">

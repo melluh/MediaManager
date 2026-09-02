@@ -1653,16 +1653,16 @@
 <h2 id="configuring-slots">Configuring slots</h2>
 <p>Each slot is a <code>name</code> (a stable, machine-readable key), a <code>label</code> (shown in the UI), an ordered list of <code>conditions</code> (AND-combined predicates over the attributes above), and an optional <code>bitrate</code> band.</p>
 <div class="highlight"><span class="filename">config.toml</span><pre><span></span><code><span class="k">[[indexers.slots]]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;4k_remux&quot;</span>
-<span class="n">label</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;4K Remux&quot;</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"4k_remux"</span>
+<span class="n">label</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"4K Remux"</span>
 <span class="k">[[indexers.slots.conditions]]</span>
-<span class="n">attribute</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;resolution&quot;</span>
-<span class="n">operator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;eq&quot;</span>
-<span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2160p&quot;</span>
+<span class="n">attribute</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"resolution"</span>
+<span class="n">operator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"eq"</span>
+<span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"2160p"</span>
 <span class="k">[[indexers.slots.conditions]]</span>
-<span class="n">attribute</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;source&quot;</span>
-<span class="n">operator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;eq&quot;</span>
-<span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;remux&quot;</span>
+<span class="n">attribute</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"source"</span>
+<span class="n">operator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"eq"</span>
+<span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"remux"</span>
 <span class="k">[indexers.slots.bitrate]</span>
 <span class="n">min_mbps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">50</span>
 <span class="n">preferred_mbps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">70</span>
@@ -1679,18 +1679,18 @@
 <p>Within a slot that mixes codecs (like the default "1080p Encode" slot covering h264/h265/AV1), more efficient codecs are preferred automatically - AV1 scores highest, then h265, then h264 - since they deliver more detail per Mbps at the same bitrate. This isn't configurable per-tracker; it's a fixed preference applied wherever a slot's <code>codec</code> condition allows more than one value.</p>
 <h2 id="hdr-ladder">HDR ladder</h2>
 <div class="highlight"><span class="filename">config.toml</span><pre><span></span><code><span class="k">[indexers.hdr_ladder]</span>
-<span class="n">order</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;dv_hdr10plus&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;dv_hdr10&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;hdr10plus&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;hdr10&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;dv&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;sdr&quot;</span><span class="p">]</span>
+<span class="n">order</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"dv_hdr10plus"</span><span class="p">,</span><span class="w"> </span><span class="s2">"dv_hdr10"</span><span class="p">,</span><span class="w"> </span><span class="s2">"hdr10plus"</span><span class="p">,</span><span class="w"> </span><span class="s2">"hdr10"</span><span class="p">,</span><span class="w"> </span><span class="s2">"dv"</span><span class="p">,</span><span class="w"> </span><span class="s2">"sdr"</span><span class="p">]</span>
 <span class="n">dv_only_penalty</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-20</span>
 </code></pre></div>
 <p><code>order</code> ranks HDR combinations best-to-worst; a release's <code>hdr_flags</code> are matched against this ladder. <code>dv_only_penalty</code> is an extra penalty for Dolby Vision releases with no HDR10/HDR10+ fallback layer (which won't display correctly on non-DV displays). If you don't have a DV-capable display, reorder the ladder to put plain HDR10/HDR10+ first.</p>
 <h2 id="release-group-tiers">Release group tiers</h2>
 <div class="highlight"><span class="filename">config.toml</span><pre><span></span><code><span class="k">[[indexers.release_group_tiers]]</span>
 <span class="n">tier</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">groups</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;FraMeSToR&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EDGE2020&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;NTb&quot;</span><span class="p">]</span>
+<span class="n">groups</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"FraMeSToR"</span><span class="p">,</span><span class="w"> </span><span class="s2">"EDGE2020"</span><span class="p">,</span><span class="w"> </span><span class="s2">"NTb"</span><span class="p">]</span>
 
 <span class="k">[[indexers.release_group_tiers]]</span>
 <span class="n">tier</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span>
-<span class="n">groups</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Tigole&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;QxR&quot;</span><span class="p">]</span>
+<span class="n">groups</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Tigole"</span><span class="p">,</span><span class="w"> </span><span class="s2">"QxR"</span><span class="p">]</span>
 </code></pre></div>
 <p>Lower <code>tier</code> number scores higher. This is plain, user-editable configuration data - e.g. copy in a tier list from TRaSH Guides - not an auto-updating reputation database. Groups not listed score as unranked (neutral).</p>
 <h2 id="language-variants">Language variants</h2>
