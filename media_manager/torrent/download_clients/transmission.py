@@ -9,7 +9,7 @@ from media_manager.torrent.download_clients.abstract_download_client import (
     AbstractDownloadClient,
 )
 from media_manager.torrent.schemas import Torrent, TorrentStatus
-from media_manager.torrent.utils import get_torrent_hash
+from media_manager.torrent.utils import get_torrent_hash, sanitize_torrent_title
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +57,8 @@ class TransmissionDownloadClient(AbstractDownloadClient):
         """
         torrent_hash = get_torrent_hash(torrent=indexer_result)
         download_dir = (
-            MediaManagerConfig().misc.torrent_directory / indexer_result.title
+            MediaManagerConfig().misc.torrent_directory
+            / sanitize_torrent_title(indexer_result.title)
         )
         try:
             self._client.add_torrent(

@@ -62,8 +62,22 @@ def extract_archives(files: list) -> None:
                 log.exception(f"Failed to extract archive {file}")
 
 
+def sanitize_torrent_title(title: str) -> str:
+    """
+    Makes a torrent/indexer-result title safe to use as a single path
+    component. Titles originate from external indexers and are otherwise
+    untrusted - without this, a crafted title containing `../` sequences
+    (or an absolute path) could escape the configured torrent directory,
+    both when a download client is told where to save files and when
+    MediaManager later looks for them on disk.
+    """
+    return sanitize_filename(title)
+
+
 def get_torrent_filepath(torrent: Torrent) -> Path:
-    return MediaManagerConfig().misc.torrent_directory / torrent.title
+    return MediaManagerConfig().misc.torrent_directory / sanitize_torrent_title(
+        torrent.title
+    )
 
 
 def import_file(target_file: Path, source_file: Path) -> None:
@@ -134,7 +148,7 @@ def get_torrent_hash(torrent: IndexerQueryResult) -> str:
     """
     torrent_filepath = (
         MediaManagerConfig().misc.torrent_directory
-        / f"{sanitize_filename(torrent.title)}.torrent"
+        / f"{sanitize_torrent_title(torrent.title)}.torrent"
     )
     if torrent_filepath.exists():
         log.warning(f"Torrent file already exists at: {torrent_filepath}")

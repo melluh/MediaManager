@@ -8,6 +8,7 @@ from media_manager.torrent.download_clients.abstract_download_client import (
     AbstractDownloadClient,
 )
 from media_manager.torrent.schemas import Torrent, TorrentStatus
+from media_manager.torrent.utils import sanitize_torrent_title
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +54,8 @@ class SabnzbdDownloadClient(AbstractDownloadClient):
         try:
             # Add NZB to SABnzbd queue
             response = self.client.add_uri(
-                url=str(indexer_result.download_url), nzbname=indexer_result.title
+                url=str(indexer_result.download_url),
+                nzbname=sanitize_torrent_title(indexer_result.title),
             )
             if not response["status"]:
                 raise RuntimeError(f"Failed to add NZB to SABnzbd: {response}")  # noqa: EM102, TRY003, TRY301

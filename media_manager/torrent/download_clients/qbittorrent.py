@@ -15,7 +15,7 @@ from media_manager.torrent.schemas import (
     Torrent,
     TorrentStatus,
 )
-from media_manager.torrent.utils import get_torrent_hash
+from media_manager.torrent.utils import get_torrent_hash, sanitize_torrent_title
 
 log = logging.getLogger(__name__)
 
@@ -148,7 +148,7 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
             answer = self.api_client.torrents_add(
                 category=self.config.category_name,
                 urls=indexer_result.download_url,
-                save_path=indexer_result.title,
+                save_path=sanitize_torrent_title(indexer_result.title),
             )
         finally:
             self.api_client.auth_log_out()
