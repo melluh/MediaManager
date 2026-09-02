@@ -30,6 +30,12 @@
 
 	let singleOauthOnly = $derived(!passwordLoginEnabled && oauthProviderNames.length === 1);
 
+	$effect(() => {
+		if (singleOauthOnly) {
+			handleOauth();
+		}
+	});
+
 	async function handleLogin(event: Event) {
 		event.preventDefault();
 
