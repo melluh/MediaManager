@@ -11,6 +11,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let {
@@ -23,9 +24,24 @@
 	const deleteDialog = shallowDialog('deleteMedia');
 	let deleteFilesOnDisk = $state(false);
 	let deleteTorrents = $state(false);
+	let deleting = $state(false);
 
 	// Deletion navigates away on success, which replaces the page (and its
 	// shallow-routed state) anyway, so we don't close the dialog ourselves.
+	async function delete_media() {
+		if (deleting) return;
+		deleting = true;
+		try {
+			if (isShow) {
+				await delete_show();
+			} else {
+				await delete_movie();
+			}
+		} finally {
+			deleting = false;
+		}
+	}
+
 	async function delete_movie() {
 		if (!media.id) {
 			toast.error('Movie ID is missing');
@@ -110,16 +126,22 @@
 			</div>
 		</div>
 		<AlertDialog.Footer>
-			<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Cancel disabled={deleting}>Cancel</AlertDialog.Cancel>
 			<AlertDialog.Action
-				onclick={() => {
-					if (isShow) {
-						delete_show();
-					} else delete_movie();
+				onclick={(e) => {
+					// Keep the dialog open while the request is in flight so the loading
+					// indicator stays visible.
+					e.preventDefault();
+					delete_media();
 				}}
+				disabled={deleting}
 				class={buttonVariants({ variant: 'destructive' })}
 			>
-				<Trash2 />
+				{#if deleting}
+					<LoaderCircle class="animate-spin" />
+				{:else}
+					<Trash2 />
+				{/if}
 				Delete
 			</AlertDialog.Action>
 		</AlertDialog.Footer>
