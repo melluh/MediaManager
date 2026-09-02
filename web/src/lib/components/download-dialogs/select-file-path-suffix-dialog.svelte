@@ -4,11 +4,13 @@
 	import FilePathSuffixSelector from '$lib/components/download-dialogs/file-path-suffix-selector.svelte';
 	import type { Movie, Show } from '$lib/api/api';
 	import { type Snippet } from 'svelte';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let {
 		filePathSuffix = $bindable(),
 		media,
 		callback,
+		dialogKey,
 		triggerIcon,
 		triggerText = 'Download',
 		size,
@@ -17,22 +19,24 @@
 		filePathSuffix: string;
 		media: Movie | Show;
 		callback: () => void;
+		/** Unique among the other dialogs open at the same time (e.g. sibling rows). */
+		dialogKey: string;
 		triggerIcon?: Snippet;
 		triggerText?: string;
 		size?: ButtonSize;
 		disabled?: boolean;
 	} = $props();
-	let dialogOpen = $state(false);
+	const dialogState = $derived(shallowDialog(`selectFilePathSuffix:${dialogKey}`));
 
 	function onDownload() {
 		callback();
-		dialogOpen = false;
+		dialogState.open = false;
 	}
 </script>
 
-<Dialog.Root bind:open={dialogOpen}>
+<Dialog.Root bind:open={() => dialogState.open, (v) => (dialogState.open = v)}>
 	<Dialog.Trigger>
-		<Button class="w-full" {size} {disabled} onclick={() => (dialogOpen = true)}>
+		<Button class="w-full" {size} {disabled} onclick={() => (dialogState.open = true)}>
 			{#if triggerIcon}{@render triggerIcon()}{/if}
 			{triggerText}
 		</Button>
@@ -46,7 +50,7 @@
 		</Dialog.Header>
 		<FilePathSuffixSelector bind:filePathSuffix {media} />
 		<div class="mt-8 flex justify-between gap-2">
-			<Button onclick={() => (dialogOpen = false)} variant="secondary">Cancel</Button>
+			<Button onclick={() => (dialogState.open = false)} variant="secondary">Cancel</Button>
 			<Button onclick={() => onDownload()}>Download Torrent</Button>
 		</div>
 	</Dialog.Content>

@@ -11,10 +11,11 @@
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 	import type { TorrentWithProgress } from '$lib/api/api';
 	import { cn, formatAddedTime, formatBytes } from '$lib/utils';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let { torrent }: { torrent: TorrentWithProgress } = $props();
 
-	let detailsOpen = $state(false);
+	const detailsDialog = $derived(shallowDialog(`downloadDetails:${torrent.id}`));
 	let posterLoaded = $state(false);
 	let backdropLoaded = $state(false);
 
@@ -24,7 +25,7 @@
 	let statusBadge = $derived(getDownloadStatusBadge(torrent));
 </script>
 
-<Dialog.Root bind:open={detailsOpen}>
+<Dialog.Root bind:open={() => detailsDialog.open, (v) => (detailsDialog.open = v)}>
 	<Dialog.Trigger>
 		{#snippet child({ props })}
 			<div

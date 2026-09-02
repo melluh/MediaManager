@@ -5,7 +5,11 @@ declare global {
 		// interface Error {}
 		// interface Locals {}
 		// interface PageData {}
-		// interface PageState {}
+		interface PageState {
+			// Stack of open shallow-routed dialog keys, innermost last. See
+			// $lib/hooks/shallow-dialog.svelte.ts.
+			dialogs?: string[];
+		}
 		// interface Platform {}
 	}
 }

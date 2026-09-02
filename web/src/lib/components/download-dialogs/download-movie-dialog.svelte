@@ -24,9 +24,10 @@
 	import { groupIntoSlots } from '$lib/components/download-dialogs/torrent-grouping';
 	import { formatSize } from '$lib/components/download-dialogs/torrent-format';
 	import { getTorrentQualityString } from '$lib/utils';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let { movie, hasImportedFile = false }: { movie: Movie; hasImportedFile?: boolean } = $props();
-	let dialogueState = $state(false);
+	const dialogueState = shallowDialog('downloadMovie');
 	let torrentsError: string | null = $state(null);
 	let queryOverride: string = $state('');
 
@@ -70,7 +71,7 @@
 					'A movie file for this quality/version already exists. Pick a different release.';
 				console.warn(errorMessage);
 				torrentsError = errorMessage;
-				if (dialogueState) toast.info(errorMessage);
+				if (dialogueState.open) toast.info(errorMessage);
 			} else if (!response.ok) {
 				const errorMessage = `Failed to download torrent for movie ${movie.id}: ${response.statusText}`;
 				console.error(errorMessage);
@@ -79,7 +80,7 @@
 			} else {
 				console.log('Downloading torrent:', data);
 				toast.success('Torrent download started successfully!');
-				dialogueState = false;
+				dialogueState.open = false;
 			}
 			await invalidateAll();
 		} finally {
@@ -120,7 +121,7 @@
 	// }
 
 	$effect(() => {
-		if (dialogueState) {
+		if (dialogueState.open) {
 			untrack(() => {
 				customSearchOpen = false;
 				queryOverride = '';
@@ -131,7 +132,7 @@
 </script>
 
 <DownloadDialogWrapper
-	bind:open={dialogueState}
+	bind:open={() => dialogueState.open, (v) => (dialogueState.open = v)}
 	triggerText="Download Movie"
 	triggerClass={hasImportedFile
 		? buttonVariants({ variant: 'secondary' })

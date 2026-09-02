@@ -6,9 +6,10 @@
 	import client from '$lib/api';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { invalidateAll } from '$app/navigation';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let { torrentId, torrentName }: { torrentId: string; torrentName: string } = $props();
-	let dialogueState = $state(false);
+	const dialogState = $derived(shallowDialog(`deleteTorrent:${torrentId}`));
 	let deleteFiles = $state(false);
 
 	async function deleteTorrent() {
@@ -26,13 +27,13 @@
 			toast.error(`Failed to delete torrent: ${error}`);
 		} else {
 			toast.success('Torrent deleted successfully!');
-			dialogueState = false;
+			dialogState.open = false;
 		}
 		await invalidateAll();
 	}
 </script>
 
-<Dialog.Root bind:open={dialogueState}>
+<Dialog.Root bind:open={() => dialogState.open, (v) => (dialogState.open = v)}>
 	<Dialog.Trigger class={buttonVariants({ variant: 'destructive' })}>Delete Torrent</Dialog.Trigger>
 	<Dialog.Content>
 		<Dialog.Header>
@@ -54,7 +55,7 @@
 		</div>
 
 		<Dialog.Footer>
-			<Button onclick={() => (dialogueState = false)}>Cancel</Button>
+			<Button onclick={() => (dialogState.open = false)}>Cancel</Button>
 			<Button onclick={() => deleteTorrent()} variant="destructive">Delete Torrent</Button>
 		</Dialog.Footer>
 	</Dialog.Content>

@@ -7,17 +7,18 @@
 	import client from '$lib/api';
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll } from '$app/navigation';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let {
 		torrent
 	}: {
 		torrent: MovieTorrent | RichSeasonTorrent;
 	} = $props();
-	let dialogOpen = $state(false);
+	const dialogState = $derived(shallowDialog(`editTorrent:${torrent.torrent_id}`));
 	let importedState = $derived(torrent.imported);
 
 	async function closeDialog() {
-		dialogOpen = false;
+		dialogState.open = false;
 	}
 	async function saveTorrent() {
 		const { error } = await client.PATCH('/api/v1/torrent/{torrent_id}/status', {
@@ -39,9 +40,9 @@
 	}
 </script>
 
-<Dialog.Root bind:open={dialogOpen}>
+<Dialog.Root bind:open={() => dialogState.open, (v) => (dialogState.open = v)}>
 	<Dialog.Trigger>
-		<Button class="w-full" onclick={() => (dialogOpen = true)}>Edit Torrent</Button>
+		<Button class="w-full" onclick={() => (dialogState.open = true)}>Edit Torrent</Button>
 	</Dialog.Trigger>
 	<Dialog.Content class="w-full max-w-[600px] rounded-lg p-6 shadow-lg">
 		<Dialog.Header>

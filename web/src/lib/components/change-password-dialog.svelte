@@ -8,14 +8,15 @@
 	import KeyRound from '@lucide/svelte/icons/key-round';
 	import Check from '@lucide/svelte/icons/check';
 	import X from '@lucide/svelte/icons/x';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let { userId }: { userId?: string } = $props();
 
 	let newPassword: string = $state('');
-	let dialogOpen = $state(false);
+	const dialogState = shallowDialog('changePassword');
 
 	function closeDialog() {
-		dialogOpen = false;
+		dialogState.open = false;
 		newPassword = '';
 	}
 
@@ -37,9 +38,9 @@
 	}
 </script>
 
-<Dialog.Root bind:open={dialogOpen}>
+<Dialog.Root bind:open={() => dialogState.open, (v) => (dialogState.open = v)}>
 	<Dialog.Trigger>
-		<Button onclick={() => (dialogOpen = true)} variant="outline">
+		<Button onclick={() => (dialogState.open = true)} variant="outline">
 			<KeyRound class="mr-2 size-4" />Change Password
 		</Button>
 	</Dialog.Trigger>

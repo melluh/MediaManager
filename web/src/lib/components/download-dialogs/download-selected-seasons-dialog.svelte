@@ -17,6 +17,7 @@
 	import TorrentScoreCell from '$lib/components/download-dialogs/torrent-score-cell.svelte';
 	import TorrentPickCard from '$lib/components/download-dialogs/torrent-pick-card.svelte';
 	import { groupIntoSlots } from '$lib/components/download-dialogs/torrent-grouping';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let {
 		show,
@@ -28,7 +29,7 @@
 		triggerText?: string;
 	} = $props();
 
-	let dialogueState = $state(false);
+	const dialogueState = shallowDialog('downloadSelectedSeasons');
 	let torrentsError: string | null = $state(null);
 	let filePathSuffix: string = $state('');
 	let torrentsPromise: Promise<IndexerQueryResult[]> | undefined = $state();
@@ -135,7 +136,7 @@
 </script>
 
 <DownloadDialogWrapper
-	bind:open={dialogueState}
+	bind:open={() => dialogueState.open, (v) => (dialogueState.open = v)}
 	{triggerText}
 	triggerClass={cn(
 		buttonVariants({ variant: 'default' }),
@@ -242,6 +243,7 @@
 							bind:filePathSuffix
 							media={show}
 							callback={() => downloadTorrent(torrent.id as string)}
+							dialogKey={`downloadSelectedSeasons:${torrent.id}`}
 						/>
 					</Table.Cell>
 				{/snippet}
@@ -254,6 +256,7 @@
 				bind:filePathSuffix
 				media={show}
 				callback={() => downloadTorrent(selectedResultId as string)}
+				dialogKey="downloadSelectedSeasons:hero"
 				size="lg"
 			>
 				{#snippet triggerIcon()}

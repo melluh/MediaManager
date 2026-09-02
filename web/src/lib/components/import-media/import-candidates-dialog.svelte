@@ -8,6 +8,7 @@
 	import SuggestedMediaCard from '$lib/components/import-media/suggested-media-card.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import type { Snippet } from 'svelte';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let {
 		isTv,
@@ -20,7 +21,7 @@
 		candidates: MetaDataProviderSearchResult[];
 		children?: Snippet;
 	} = $props();
-	let dialogOpen = $state(false);
+	const dialogState = $derived(shallowDialog(`importCandidates:${name}`));
 	let submitRequestError = $state<string | null>(null);
 	let isImporting = $state<boolean>(false);
 
@@ -79,15 +80,15 @@
 			toast.success('Imported successfully!');
 		}
 		await invalidateAll();
-		dialogOpen = false;
+		dialogState.open = false;
 	}
 </script>
 
-<Dialog.Root bind:open={dialogOpen}>
+<Dialog.Root bind:open={() => dialogState.open, (v) => (dialogState.open = v)}>
 	<Dialog.Trigger
 		class={buttonVariants({ variant: 'default' })}
 		onclick={() => {
-			dialogOpen = true;
+			dialogState.open = true;
 		}}
 	>
 		{@render children?.()}
@@ -117,7 +118,7 @@
 			{/if}
 		</div>
 		<Dialog.Footer>
-			<Button disabled={isImporting} onclick={() => (dialogOpen = false)} variant="outline"
+			<Button disabled={isImporting} onclick={() => (dialogState.open = false)} variant="outline"
 				>Cancel
 			</Button>
 		</Dialog.Footer>

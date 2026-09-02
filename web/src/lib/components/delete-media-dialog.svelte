@@ -11,6 +11,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let {
 		media,
@@ -19,10 +20,12 @@
 		media: PublicMovie | PublicShow;
 		isShow: boolean;
 	} = $props();
-	let deleteDialogOpen = $state(false);
+	const deleteDialog = shallowDialog('deleteMedia');
 	let deleteFilesOnDisk = $state(false);
 	let deleteTorrents = $state(false);
 
+	// Deletion navigates away on success, which replaces the page (and its
+	// shallow-routed state) anyway, so we don't close the dialog ourselves.
 	async function delete_movie() {
 		if (!media.id) {
 			toast.error('Movie ID is missing');
@@ -38,7 +41,6 @@
 			toast.error('Failed to delete movie: ' + error.detail);
 		} else {
 			toast.success('Movie deleted successfully.');
-			deleteDialogOpen = false;
 			await goto(resolve('/dashboard/movies', {}), { invalidateAll: true });
 		}
 	}
@@ -54,13 +56,12 @@
 			toast.error('Failed to delete show: ' + error.detail);
 		} else {
 			toast.success('Show deleted successfully.');
-			deleteDialogOpen = false;
 			await goto(resolve('/dashboard/tv', {}), { invalidateAll: true });
 		}
 	}
 </script>
 
-<AlertDialog.Root bind:open={deleteDialogOpen}>
+<AlertDialog.Root bind:open={() => deleteDialog.open, (v) => (deleteDialog.open = v)}>
 	<AlertDialog.Trigger>
 		{#snippet child({ props })}
 			<DropdownMenu.Item

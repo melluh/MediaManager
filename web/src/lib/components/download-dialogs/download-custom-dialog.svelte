@@ -20,10 +20,11 @@
 	import TorrentPickCard from '$lib/components/download-dialogs/torrent-pick-card.svelte';
 	import { groupIntoSlots } from '$lib/components/download-dialogs/torrent-grouping';
 	import { getFullyQualifiedMediaName } from '$lib/utils';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let { show }: { show: Show } = $props();
 
-	let dialogueState = $state(false);
+	const dialogueState = shallowDialog('downloadCustom');
 	let torrentsError: string | null = $state(null);
 	let queryOverride: string = $state('');
 	let filePathSuffix: string = $state('');
@@ -64,7 +65,7 @@
 			const errorMessage = `There already is a File using the Filepath Suffix '${filePathSuffix}'. Try again with a different Filepath Suffix.`;
 			console.warn(errorMessage);
 			torrentsError = errorMessage;
-			if (dialogueState) toast.info(errorMessage);
+			if (dialogueState.open) toast.info(errorMessage);
 		} else if (!response.ok) {
 			const errorMessage = `Failed to download torrent for show ${show.id}: ${response.statusText}`;
 			console.error(errorMessage);
@@ -112,7 +113,7 @@
 </script>
 
 <DownloadDialogWrapper
-	bind:open={dialogueState}
+	bind:open={() => dialogueState.open, (v) => (dialogueState.open = v)}
 	triggerText="Custom Download"
 	triggerClass={cn(
 		buttonVariants({ variant: 'default' }),
@@ -213,6 +214,7 @@
 							bind:filePathSuffix
 							media={show}
 							callback={() => downloadTorrent(torrent.id as string)}
+							dialogKey={`downloadCustom:${torrent.id}`}
 						/>
 					</Table.Cell>
 				{/snippet}
@@ -225,6 +227,7 @@
 				bind:filePathSuffix
 				media={show}
 				callback={() => downloadTorrent(selectedResultId as string)}
+				dialogKey="downloadCustom:hero"
 				size="lg"
 			>
 				{#snippet triggerIcon()}

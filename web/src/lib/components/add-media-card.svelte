@@ -6,11 +6,14 @@
 	import AddMediaDialog from '$lib/components/add-media-dialog/add-media-dialog.svelte';
 	import MediaCard from '$lib/components/media-card.svelte';
 	import { fetchMediaDetailsCached } from '$lib/api/media-details';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
-	let detailsOpen = $state(false);
 	let posterImageLoaded = $state(false);
 	let { result, isShow = true }: { result: MetaDataProviderSearchResult; isShow: boolean } =
 		$props();
+	const detailsDialog = $derived(
+		shallowDialog(`addMedia:${result.metadata_provider}-${result.media_type}-${result.external_id}`)
+	);
 
 	// Warm the details cache on hover/focus so the dialog's fetch (~1s) is
 	// often already in flight or done by the time the user clicks.
@@ -22,7 +25,7 @@
 	}
 </script>
 
-<Dialog.Root bind:open={detailsOpen}>
+<Dialog.Root bind:open={() => detailsDialog.open, (v) => (detailsDialog.open = v)}>
 	<Dialog.Trigger>
 		{#snippet child({ props })}
 			<MediaCard
@@ -50,5 +53,5 @@
 			</MediaCard>
 		{/snippet}
 	</Dialog.Trigger>
-	<AddMediaDialog {result} {isShow} open={detailsOpen} />
+	<AddMediaDialog {result} {isShow} open={detailsDialog.open} />
 </Dialog.Root>

@@ -18,6 +18,7 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import X from '@lucide/svelte/icons/x';
 	import Check from '@lucide/svelte/icons/check';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let {
 		users,
@@ -33,9 +34,9 @@
 	);
 	let selectedUser: UserRead | null = $state(null);
 	let userToDelete: UserRead | null = $state(null);
-	let dialogOpen = $state(false);
-	let deleteDialogOpen = $state(false);
-	let createDialogOpen = $state(false);
+	const editDialog = shallowDialog('editUser');
+	const deleteDialog = shallowDialog('deleteUser');
+	const createDialog = shallowDialog('createUser');
 	let createEmail: string = $state('');
 	let createDisplayName: string = $state('');
 	let createPassword: string = $state('');
@@ -67,7 +68,7 @@
 				return;
 			}
 			toast.success(`User ${createEmail} created successfully.`);
-			createDialogOpen = false;
+			createDialog.open = false;
 			await invalidateAll();
 		} finally {
 			isCreating = false;
@@ -138,7 +139,7 @@
 			toast.error(`Failed to delete user ${userToDelete.email}: ${error}`);
 		} else {
 			toast.success(`User ${userToDelete.email} deleted successfully.`);
-			deleteDialogOpen = false;
+			deleteDialog.open = false;
 			userToDelete = null;
 		}
 		await invalidateAll();
@@ -146,7 +147,7 @@
 </script>
 
 <div class="mb-4 flex justify-end">
-	<Button onclick={() => (createDialogOpen = true)}>
+	<Button onclick={() => (createDialog.open = true)}>
 		<UserPlus class="mr-2 size-4" />Add User
 	</Button>
 </div>
@@ -188,7 +189,7 @@
 								variant="secondary"
 								onclick={() => {
 									selectedUser = user;
-									dialogOpen = true;
+									editDialog.open = true;
 								}}
 							>
 								<Pencil class="mr-2 size-4" />Edit
@@ -197,7 +198,7 @@
 								variant="destructive"
 								onclick={() => {
 									userToDelete = user;
-									deleteDialogOpen = true;
+									deleteDialog.open = true;
 								}}
 							>
 								<Trash2 class="mr-2 size-4" />Delete
@@ -211,10 +212,10 @@
 </Table.Root>
 <Dialog.Root
 	onOpenChange={(open) => {
-		dialogOpen = open;
+		editDialog.open = open;
 		if (!open) selectedUser = null;
 	}}
-	open={dialogOpen}
+	open={editDialog.open}
 >
 	<Dialog.Content class="w-full max-w-[600px] rounded-lg p-6 shadow-lg">
 		<Dialog.Header>
@@ -269,13 +270,13 @@
 			</div>
 		{/if}
 		<div class="mt-8 flex justify-end gap-2">
-			<Button onclick={() => (dialogOpen = false)} variant="outline">
+			<Button onclick={() => (editDialog.open = false)} variant="outline">
 				<X class="mr-2 size-4" />Close
 			</Button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>
-<AlertDialog.Root bind:open={deleteDialogOpen}>
+<AlertDialog.Root bind:open={() => deleteDialog.open, (v) => (deleteDialog.open = v)}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
 			<AlertDialog.Title>Delete User</AlertDialog.Title>
@@ -287,7 +288,7 @@
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel
 				onclick={() => {
-					deleteDialogOpen = false;
+					deleteDialog.open = false;
 					userToDelete = null;
 				}}><X class="mr-2 size-4" />Cancel</AlertDialog.Cancel
 			>
@@ -300,9 +301,9 @@
 	</AlertDialog.Content>
 </AlertDialog.Root>
 <Dialog.Root
-	open={createDialogOpen}
+	open={createDialog.open}
 	onOpenChange={(open) => {
-		createDialogOpen = open;
+		createDialog.open = open;
 		if (!open) resetCreateForm();
 	}}
 >
@@ -359,7 +360,7 @@
 			/>
 		</div>
 		<div class="mt-8 flex justify-end gap-2">
-			<Button onclick={() => (createDialogOpen = false)} variant="outline">
+			<Button onclick={() => (createDialog.open = false)} variant="outline">
 				<X class="mr-2 size-4" />Cancel
 			</Button>
 			<Button onclick={() => createUser()} disabled={!createEmail || isCreating}>

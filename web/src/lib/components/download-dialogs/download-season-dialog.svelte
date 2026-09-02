@@ -23,9 +23,10 @@
 	import TorrentScoreCell from '$lib/components/download-dialogs/torrent-score-cell.svelte';
 	import TorrentPickCard from '$lib/components/download-dialogs/torrent-pick-card.svelte';
 	import { groupIntoSlots } from '$lib/components/download-dialogs/torrent-grouping';
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let { show }: { show: Show } = $props();
-	let dialogueState = $state(false);
+	const dialogueState = shallowDialog('downloadSeason');
 	let selectedSeasonNumber: number = $state(1);
 	let torrentsError: string | null = $state(null);
 	let queryOverride: string = $state('');
@@ -68,7 +69,7 @@
 			const errorMessage = `There already is a Season File using the Filepath Suffix '${filePathSuffix}'. Try again with a different Filepath Suffix.`;
 			console.warn(errorMessage);
 			torrentsError = errorMessage;
-			if (dialogueState) toast.info(errorMessage);
+			if (dialogueState.open) toast.info(errorMessage);
 		} else if (!response.ok) {
 			const errorMessage = `Failed to download torrent for show ${show.id} and season ${selectedSeasonNumber}: ${response.statusText}`;
 			console.error(errorMessage);
@@ -105,7 +106,7 @@
 </script>
 
 <DownloadDialogWrapper
-	bind:open={dialogueState}
+	bind:open={() => dialogueState.open, (v) => (dialogueState.open = v)}
 	triggerText="Download Seasons"
 	title="Download a Season"
 	description="Search and download torrents for a specific season or season packs."
@@ -209,6 +210,7 @@
 							bind:filePathSuffix
 							media={show}
 							callback={() => downloadTorrent(torrent.id as string)}
+							dialogKey={`downloadSeason:${torrent.id}`}
 						/>
 					</Table.Cell>
 				{/snippet}
@@ -221,6 +223,7 @@
 				bind:filePathSuffix
 				media={show}
 				callback={() => downloadTorrent(selectedResultId as string)}
+				dialogKey="downloadSeason:hero"
 				size="lg"
 			>
 				{#snippet triggerIcon()}
