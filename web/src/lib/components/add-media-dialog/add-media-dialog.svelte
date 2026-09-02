@@ -3,19 +3,13 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-	import ArrowRight from '@lucide/svelte/icons/arrow-right';
-	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
-	import CircleCheck from '@lucide/svelte/icons/circle-check';
-	import Download from '@lucide/svelte/icons/download';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import Plus from '@lucide/svelte/icons/plus';
-	import SearchX from '@lucide/svelte/icons/search-x';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import Film from '@lucide/svelte/icons/film';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import type { IndexerQueryResult, MetaDataProviderSearchResult, Movie, Show } from '$lib/api/api';
+	import type { MetaDataProviderSearchResult, Movie, Show } from '$lib/api/api';
 	import client from '$lib/api';
 	import { fetchMediaDetailsCached } from '$lib/api/media-details';
 	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
@@ -28,31 +22,11 @@
 	import Skeleton from '$lib/components/ui/skeleton/skeleton.svelte';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import DetailsPage from './details-page.svelte';
-	import DownloadPage from './download-page.svelte';
-	import {
-		bucketTorrentQuality,
-		getBestAvailableQuality,
-		getBestTorrentPerQuality,
-		getQualitySummaryLabel,
-		getUpcomingReleaseLabel,
-		isReleaseUpcoming,
-		type AddMediaPageId,
-		type MediaQuality,
-		type QualityCounts
-	} from './types';
 
-	// Ordered pages of the dialog. To add a page (e.g. a "seasons" step for
-	// shows), add its id here, render it alongside the others in the sliding
-	// track below, and add a matching branch to the footer.
-	const pages: AddMediaPageId[] = ['details', 'download'];
-
-	let loadingAction: 'add' | 'download' | null = $state(null);
-	let loading = $derived(loadingAction !== null);
+	let loading = $state(false);
 	let errorMessage = $state<string | null>(null);
 	let backdropImageLoaded = $state(false);
 	let posterImageLoaded = $state(false);
-	let currentPageIndex = $state(0);
-	let selectedQuality = $state<MediaQuality | undefined>(undefined);
 	let {
 		result,
 		isShow = true,
@@ -65,34 +39,6 @@
 	let details = $state<Show | Movie | null>(null);
 	let detailsFetched = false;
 	let detailsLoaded = $state(false);
-
-	// Torrent search kicks off as soon as the dialog opens (movies only, and
-	// only if the movie isn't already in the library) so results are ready by
-	// the time the user reaches the download page.
-	let torrentSearchState = $state<'idle' | 'loading' | 'done' | 'error'>('idle');
-	let torrents = $state<IndexerQueryResult[] | null>(null);
-	let torrentsFetched = false;
-
-	let qualityCounts = $derived.by(() => {
-		const counts: QualityCounts = { '4k': 0, '1080p': 0, '720p': 0, lower: 0 };
-		for (const torrent of torrents ?? []) {
-			counts[bucketTorrentQuality(torrent.quality)]++;
-		}
-		return counts;
-	});
-	let totalTorrentsFound = $derived(torrents?.length ?? 0);
-	let bestAvailableQuality = $derived(getBestAvailableQuality(qualityCounts));
-	let noTorrentsFound = $derived(torrentSearchState === 'done' && totalTorrentsFound === 0);
-	let selectedTorrents = $derived(getBestTorrentPerQuality(torrents ?? []));
-
-	let isUnreleased = $derived(!isShow && isReleaseUpcoming(details?.release_date));
-	let releaseLabel = $derived(
-		details?.release_date ? getUpcomingReleaseLabel(details.release_date) : null
-	);
-
-	// Skip the quality/download page entirely when there's nothing to download
-	// yet: the movie hasn't released, or the search came back empty.
-	let skipDownloadFlow = $derived(isUnreleased || noTorrentsFound);
 
 	let overview = $derived(details?.overview ?? result.overview);
 	let runtime = $derived(details?.runtime ?? result.runtime);
@@ -111,8 +57,6 @@
 
 	$effect(() => {
 		if (open) {
-			currentPageIndex = 0;
-			selectedQuality = undefined;
 			if (!detailsFetched) {
 				detailsFetched = true;
 				fetchDetails();
@@ -126,43 +70,10 @@
 			details = data;
 			detailsLoaded = true;
 		}
-		// Wait for the release date before searching torrents: there's nothing
-		// to find for a movie that hasn't come out yet.
-		if (!isShow && !result.added && !isReleaseUpcoming(data?.release_date) && !torrentsFetched) {
-			torrentsFetched = true;
-			searchTorrents();
-		}
 	}
 
-	async function searchTorrents() {
-		torrentSearchState = 'loading';
-		const { data } = await client.GET('/api/v1/movies/external/{movie_id}/torrents', {
-			params: {
-				path: { movie_id: result.external_id },
-				query: {
-					metadata_provider: result.metadata_provider as 'tmdb' | 'tvdb',
-					language: result.original_language ?? undefined
-				}
-			}
-		});
-		if (data) {
-			torrents = data;
-			torrentSearchState = 'done';
-		} else {
-			torrentSearchState = 'error';
-		}
-	}
-
-	function goToDownloadPage() {
-		currentPageIndex = pages.indexOf('download');
-	}
-
-	function goToDetailsPage() {
-		currentPageIndex = pages.indexOf('details');
-	}
-
-	async function addMedia(action: 'add' | 'download' = 'add') {
-		loadingAction = action;
+	async function addMedia() {
+		loading = true;
 		const query = {
 			metadata_provider: result.metadata_provider as 'tmdb' | 'tvdb',
 			language: result.original_language ?? undefined
@@ -181,7 +92,7 @@
 			errorMessage =
 				`Failed to add ${isShow ? 'show' : 'movie'} to the library. ` +
 				(error?.detail ? String(error.detail) : 'Please try again later.');
-			loadingAction = null;
+			loading = false;
 			return;
 		}
 
@@ -194,13 +105,7 @@
 			),
 			{ invalidateAll: true }
 		);
-		loadingAction = null;
-	}
-
-	// Backend torrent search/download by quality isn't wired up yet, so this
-	// just adds the media for now, same as "Add without downloading".
-	async function downloadMedia() {
-		await addMedia('download');
+		loading = false;
 	}
 </script>
 
@@ -320,23 +225,7 @@
 	</div>
 
 	<div class="relative flex-1 overflow-hidden">
-		<div
-			class="flex h-full transition-transform duration-300 ease-in-out"
-			style={`width: ${pages.length * 100}%; transform: translateX(-${
-				(currentPageIndex * 100) / pages.length
-			}%);`}
-		>
-			<div class="h-full shrink-0" style={`width: ${100 / pages.length}%`}>
-				<DetailsPage {detailsLoaded} {tagline} {overview} />
-			</div>
-			<div class="h-full shrink-0" style={`width: ${100 / pages.length}%`}>
-				<DownloadPage
-					bind:selectedQuality
-					{torrentSearchState}
-					selectedTorrents={torrentSearchState === 'done' ? selectedTorrents : undefined}
-				/>
-			</div>
-		</div>
+		<DetailsPage {detailsLoaded} {tagline} {overview} />
 	</div>
 
 	<Dialog.Footer class="shrink-0 flex-col items-stretch gap-2 p-6 sm:flex-col">
@@ -353,87 +242,16 @@
 			>
 				{isShow ? 'Show already exists' : 'Movie already exists'}
 			</Button>
-		{:else if currentPageIndex === 0}
-			<div class="flex items-center gap-2">
-				{#if isUnreleased && releaseLabel}
-					<p class="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-						<CalendarClock class="size-4" />
-						{releaseLabel}
-					</p>
-				{:else if torrentSearchState === 'loading'}
-					<p class="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-						<Spinner class="size-4" />
-						Searching for torrents...
-					</p>
-				{:else if torrentSearchState === 'done' && totalTorrentsFound > 0 && bestAvailableQuality}
-					<p class="flex items-center gap-1.5 text-sm font-medium text-green-600">
-						<CircleCheck class="size-4" />
-						{totalTorrentsFound}
-						{totalTorrentsFound === 1 ? 'torrent' : 'torrents'} available
-						<span aria-hidden="true">&middot;</span>
-						{getQualitySummaryLabel(bestAvailableQuality)}
-					</p>
-				{:else if noTorrentsFound}
-					<p class="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-						<SearchX class="size-4" />
-						No torrents found
-					</p>
-				{/if}
-				<Button
-					class="ml-auto font-semibold"
-					disabled={loading}
-					onclick={skipDownloadFlow ? () => addMedia('add') : goToDownloadPage}
-				>
-					{#if skipDownloadFlow}
-						{#if loadingAction === 'add'}
-							<LoaderCircle class="animate-spin" />
-							<span class="animate-pulse">Adding...</span>
-						{:else}
-							<Plus />
-							{`Add ${isShow ? 'Show' : 'Movie'}`}
-						{/if}
-					{:else}
-						{`Add ${isShow ? 'Show' : 'Movie'}`}
-						<ArrowRight />
-					{/if}
-				</Button>
-			</div>
 		{:else}
-			<div class="flex items-center justify-between gap-2">
-				<Button variant="ghost" class="font-semibold" disabled={loading} onclick={goToDetailsPage}>
-					<ArrowLeft />
-					Back
-				</Button>
-				<div class="flex items-center gap-2">
-					<Button
-						variant="secondary"
-						class="font-semibold"
-						disabled={loading}
-						onclick={() => addMedia('add')}
-					>
-						{#if loadingAction === 'add'}
-							<LoaderCircle class="animate-spin" />
-							<span class="animate-pulse">Adding...</span>
-						{:else}
-							<Plus />
-							Add without downloading
-						{/if}
-					</Button>
-					<Button
-						class="font-semibold"
-						disabled={loading || !selectedQuality}
-						onclick={downloadMedia}
-					>
-						{#if loadingAction === 'download'}
-							<LoaderCircle class="animate-spin" />
-							<span class="animate-pulse">Downloading...</span>
-						{:else}
-							<Download />
-							Download
-						{/if}
-					</Button>
-				</div>
-			</div>
+			<Button class="w-full font-semibold" disabled={loading} onclick={addMedia}>
+				{#if loading}
+					<LoaderCircle class="animate-spin" />
+					<span class="animate-pulse">Adding...</span>
+				{:else}
+					<Plus />
+					{`Add ${isShow ? 'Show' : 'Movie'}`}
+				{/if}
+			</Button>
 		{/if}
 	</Dialog.Footer>
 </Dialog.Content>
