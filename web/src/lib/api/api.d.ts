@@ -401,6 +401,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/tv/importable/candidates': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Importable Show Candidates
+		 * @description Search results for one importable directory, for correcting the match the
+		 *     scan resolved for it. GET /importable only carries that single match.
+		 */
+		get: operations['get_importable_show_candidates_api_v1_tv_importable_candidates_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/tv/importable/rescan': {
 		parameters: {
 			query?: never;
@@ -899,6 +920,27 @@ export interface paths {
 		 *     use POST /importable/rescan to force an immediate re-scan.
 		 */
 		get: operations['get_all_importable_movies_api_v1_movies_importable_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/movies/importable/candidates': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Importable Movie Candidates
+		 * @description Search results for one importable directory, for correcting the match the
+		 *     scan resolved for it. GET /importable only carries that single match.
+		 */
+		get: operations['get_importable_movie_candidates_api_v1_movies_importable_candidates_get'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1584,6 +1626,12 @@ export interface components {
 			 */
 			update_available: boolean;
 		};
+		/**
+		 * ImportMatchConfidence
+		 * @description How sure the import scan is that a directory holds the media it matched.
+		 * @enum {string}
+		 */
+		ImportMatchConfidence: 'exact_id' | 'confident' | 'best_guess' | 'none';
 		/** IndexerQueryResult */
 		IndexerQueryResult: {
 			/**
@@ -1640,6 +1688,31 @@ export interface components {
 			/** Path */
 			path: string;
 		};
+		/**
+		 * MediaFileDetails
+		 * @description What the file on disk itself says about the media, as opposed to what the
+		 *     database row claims. Populated by probing the file; every field is
+		 *     optional because probing is best-effort.
+		 */
+		MediaFileDetails: {
+			/** Size Bytes */
+			size_bytes?: number | null;
+			probed_quality?: components['schemas']['Quality'] | null;
+			/** Duration Seconds */
+			duration_seconds?: number | null;
+			/** Width */
+			width?: number | null;
+			/** Height */
+			height?: number | null;
+			/** Video Codec */
+			video_codec?: string | null;
+			/** Audio Codec */
+			audio_codec?: string | null;
+			/** Audio Channels */
+			audio_channels?: number | null;
+			/** Container */
+			container?: string | null;
+		};
 		/** MediaImportSuggestion */
 		MediaImportSuggestion: {
 			/**
@@ -1647,8 +1720,9 @@ export interface components {
 			 * Format: path
 			 */
 			directory: string;
-			/** Candidates */
-			candidates: components['schemas']['MetaDataProviderSearchResult'][];
+			match?: components['schemas']['MetaDataProviderSearchResult'] | null;
+			/** @default none */
+			confidence: components['schemas']['ImportMatchConfidence'];
 		};
 		/**
 		 * MediaType
@@ -1826,16 +1900,34 @@ export interface components {
 			torrent_id?: string | null;
 			/** File Path Suffix */
 			file_path_suffix: string;
-			/**
-			 * Episode Id
-			 * Format: uuid
-			 */
-			episode_id: string;
+			/** Relative Path */
+			relative_path?: string | null;
 			/**
 			 * Downloaded
 			 * @default false
 			 */
 			downloaded: boolean;
+			/**
+			 * Imported
+			 * @default false
+			 */
+			imported: boolean;
+			/**
+			 * File Path
+			 * @default
+			 */
+			file_path: string;
+			/**
+			 * Exists On Disk
+			 * @default false
+			 */
+			exists_on_disk: boolean;
+			details?: components['schemas']['MediaFileDetails'] | null;
+			/**
+			 * Episode Id
+			 * Format: uuid
+			 */
+			episode_id: string;
 		};
 		/** PublicMovie */
 		PublicMovie: {
@@ -1901,11 +1993,13 @@ export interface components {
 			torrent_id?: string | null;
 			/** File Path Suffix */
 			file_path_suffix: string;
+			/** Relative Path */
+			relative_path?: string | null;
 			/**
-			 * Movie Id
-			 * Format: uuid
+			 * Downloaded
+			 * @default false
 			 */
-			movie_id: string;
+			downloaded: boolean;
 			/**
 			 * Imported
 			 * @default false
@@ -1916,6 +2010,17 @@ export interface components {
 			 * @default
 			 */
 			file_path: string;
+			/**
+			 * Exists On Disk
+			 * @default false
+			 */
+			exists_on_disk: boolean;
+			details?: components['schemas']['MediaFileDetails'] | null;
+			/**
+			 * Movie Id
+			 * Format: uuid
+			 */
+			movie_id: string;
 		};
 		/** PublicSeason */
 		PublicSeason: {
@@ -2600,8 +2705,10 @@ export type ErrorModel = components['schemas']['ErrorModel'];
 export type ExternalPosterImage = components['schemas']['ExternalPosterImage'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
 export type HealthResponse = components['schemas']['HealthResponse'];
+export type ImportMatchConfidence = components['schemas']['ImportMatchConfidence'];
 export type IndexerQueryResult = components['schemas']['IndexerQueryResult'];
 export type LibraryItem = components['schemas']['LibraryItem'];
+export type MediaFileDetails = components['schemas']['MediaFileDetails'];
 export type MediaImportSuggestion = components['schemas']['MediaImportSuggestion'];
 export type MediaType = components['schemas']['MediaType'];
 export type MetaDataProviderSearchResult = components['schemas']['MetaDataProviderSearchResult'];
@@ -3541,6 +3648,38 @@ export interface operations {
 			};
 		};
 	};
+	get_importable_show_candidates_api_v1_tv_importable_candidates_get: {
+		parameters: {
+			query: {
+				metadata_provider?: 'tmdb' | 'tvdb';
+				directory: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['MetaDataProviderSearchResult'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
 	rescan_importable_shows_api_v1_tv_importable_rescan_post: {
 		parameters: {
 			query?: never;
@@ -4381,6 +4520,38 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['MediaImportSuggestion'][];
+				};
+			};
+		};
+	};
+	get_importable_movie_candidates_api_v1_movies_importable_candidates_get: {
+		parameters: {
+			query: {
+				metadata_provider?: 'tmdb' | 'tvdb';
+				directory: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['MetaDataProviderSearchResult'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
 				};
 			};
 		};

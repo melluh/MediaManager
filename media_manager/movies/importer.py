@@ -1,33 +1,45 @@
 import asyncio
 import logging
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Sequence
 from pathlib import Path
 
 from media_manager.common.import_scan_cache import (
     ImportScanMediaType,
     set_cached_importable_media,
 )
+from media_manager.common.import_sidecar import delete_import_sidecar
+from media_manager.common.library_scan import (
+    AdoptionOwner,
+    MediaScanPlan,
+    ScanRecord,
+    ScanTarget,
+    scan_media_targets,
+)
+from media_manager.common.media_files import movie_file_stem
 from media_manager.common.service import BaseMediaService
-from media_manager.config import MediaManagerConfig
+from media_manager.config import MediaManagerConfig, get_config
 from media_manager.exceptions import BadRequestError, ConflictError
 from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
 from media_manager.metadataProvider.dependencies import get_metadata_provider
+from media_manager.metadataProvider.schemas import (
+    MediaType,
+    MetaDataProviderSearchResult,
+)
 from media_manager.movies.metadata import MovieMetadataService
 from media_manager.movies.repository import MovieRepository
 from media_manager.movies.schemas import Movie, MovieFile
 from media_manager.notification.service import NotificationService
 from media_manager.schemas import MediaImportSuggestion
-from media_manager.torrent.schemas import ImportErrorKind, Quality, Torrent
+from media_manager.torrent.schemas import ImportErrorKind, Torrent
 from media_manager.torrent.service import TorrentService
 from media_manager.torrent.utils import (
     get_files_for_import,
     get_torrent_filepath,
     import_file,
     list_torrent_media_files,
-    remove_special_characters,
 )
 
 log = logging.getLogger(__name__)
@@ -51,7 +63,9 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         self.movie_metadata_service = movie_metadata_service
 
     def get_media_root_path(self, media: Movie) -> Path:
-        misc_config = MediaManagerConfig().misc
+        # Cached: a library-wide scan resolves one root per media item, and
+        # re-parsing config.toml for each of them is pure waste.
+        misc_config = get_config().misc
         return self.get_root_directory(
             media=media,
             default_dir=misc_config.movie_directory,
@@ -64,17 +78,27 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         video_files: list[Path],
         subtitle_files: list[Path],
         file_path_suffix: str = "",
-    ) -> bool:
+    ) -> tuple[bool, str | None]:
+        """
+        Imports a movie's files into its root directory.
+
+        :return: Whether anything was imported, and the video file's path
+            relative to the movie's root directory (None when only subtitles
+            were imported).
+        """
         if not video_files and not subtitle_files:
             log.error(f"No video or subtitle files found for movie {movie.name}")
-            return False
+            return False, None
 
-        movie_file_name = f"{remove_special_characters(movie.name)} ({movie.year})"
+        movie_file_name = movie_file_stem(
+            movie_name=movie.name,
+            year=movie.year,
+            file_path_suffix=file_path_suffix,
+        )
         movie_root_path = self.get_media_root_path(media=movie)
-        if file_path_suffix:
-            movie_file_name += f" - {file_path_suffix}"
 
         imported_any = False
+        video_relative_path: str | None = None
         try:
             movie_root_path.mkdir(parents=True, exist_ok=True)
             if video_files:
@@ -87,6 +111,7 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
                     source_file=video_files[0],
                 )
                 imported_any = True
+                video_relative_path = target_video_file.name
 
             for subtitle_file in subtitle_files:
                 match = re.search(
@@ -101,9 +126,9 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
                     imported_any = True
         except Exception:
             log.exception(f"Failed to import movie {movie.name}")
-            return False
+            return False, None
         else:
-            return imported_any
+            return imported_any, video_relative_path
 
     async def import_torrent_files(self, torrent: Torrent, movie: Movie) -> None:
         # Filesystem scan + archive extraction; offload off the event loop.
@@ -190,14 +215,22 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             )
             return False
 
-        success = [
-            await self.import_movie(
-                movie, video_files, subtitle_files, mf.file_path_suffix
+        imported_all = True
+        for movie_file in movie_files:
+            imported, relative_path = await self.import_movie(
+                movie, video_files, subtitle_files, movie_file.file_path_suffix
             )
-            for mf in movie_files
-        ]
+            imported_all = imported_all and imported
+            # The file record was created when the download started, so where
+            # the file ended up is only known now.
+            if relative_path:
+                await self.movie_repository.set_movie_file_relative_path(
+                    movie_id=movie.id,
+                    file_path_suffix=movie_file.file_path_suffix,
+                    relative_path=relative_path,
+                )
 
-        if all(success):
+        if imported_all:
             torrent.imported = True
             torrent.import_error = None
             torrent.import_error_kind = None
@@ -210,38 +243,158 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         )
         return False
 
-    async def get_import_candidates(
+    async def get_import_suggestion(
         self, movie_path: Path, metadata_provider: AbstractMetadataProvider
     ) -> MediaImportSuggestion:
+        return await super().get_import_suggestion(
+            directory=movie_path,
+            metadata_provider=metadata_provider,
+            search_func=self.movie_metadata_service.search_for_movie,
+            get_metadata_func=metadata_provider.get_movie_metadata,
+            get_images_func=metadata_provider.get_movie_images,
+            media_type=MediaType.movie,
+        )
+
+    async def get_import_candidates(
+        self, movie_path: Path, metadata_provider: AbstractMetadataProvider
+    ) -> list[MetaDataProviderSearchResult]:
         return await super().get_import_candidates(
             directory=movie_path,
             metadata_provider=metadata_provider,
             search_func=self.movie_metadata_service.search_for_movie,
         )
 
-    async def import_existing_movie(self, movie: Movie, source_directory: Path) -> bool:
-        async def _logic(
-            m: Movie, path: Path, add_cb: Callable[[MovieFile], Awaitable[None]]
-        ) -> bool:
-            v, s, _ = await asyncio.to_thread(get_files_for_import, directory=path)
-            res = await self.import_movie(m, v, s, "IMPORTED")
-            if res:
-                await add_cb(
-                    MovieFile(
-                        movie_id=m.id,
-                        file_path_suffix="IMPORTED",
-                        torrent_id=None,
-                        quality=Quality.unknown,
-                    )
-                )
-            return res
+    def build_scan_target(
+        self, movie: Movie, movie_files: Sequence[MovieFile]
+    ) -> ScanTarget:
+        """
+        The scan target for one movie, shared by the library-wide scan and by
+        the single-movie scan an import runs.
 
-        return await self.import_existing_media(
-            media=movie,
-            source_directory=source_directory,
-            import_func=_logic,
-            add_file_record_func=self.movie_repository.add_movie_file,
+        :param movie: The movie to scan.
+        :param movie_files: The movie's existing file records.
+        :return: The target describing what to look for and what is on record.
+        """
+        movie_root = self.get_media_root_path(media=movie)
+        canonical_stem = movie_file_stem(movie_name=movie.name, year=movie.year)
+
+        def adopt(_path: Path) -> AdoptionOwner:
+            # Every video file under a movie's own directory is a file of that
+            # movie; there is nothing else it could belong to.
+            return AdoptionOwner(key=movie.id, canonical_stem=canonical_stem)
+
+        return ScanTarget(
+            media_root=movie_root,
+            records=[
+                ScanRecord(
+                    owner_key=movie.id,
+                    stem=movie_file_stem(
+                        movie_name=movie.name,
+                        year=movie.year,
+                        file_path_suffix=movie_file.file_path_suffix,
+                    ),
+                    file_path_suffix=movie_file.file_path_suffix,
+                    relative_path=movie_file.relative_path,
+                )
+                for movie_file in movie_files
+            ],
+            adopt=adopt,
         )
+
+    async def apply_scan_plan(self, movie: Movie, plan: MediaScanPlan) -> None:
+        """
+        Writes what a scan decided for one movie.
+
+        :param movie: The scanned movie.
+        :param plan: The changes the scan planned for it.
+        """
+        for path_update in [*plan.relinked, *plan.cleared]:
+            await self.movie_repository.set_movie_file_relative_path(
+                movie_id=movie.id,
+                file_path_suffix=path_update.record.file_path_suffix,
+                relative_path=path_update.relative_path,
+            )
+        for adoption in plan.adoptions:
+            await self.movie_repository.add_movie_file(
+                movie_file=MovieFile(
+                    movie_id=movie.id,
+                    quality=adoption.quality,
+                    torrent_id=None,
+                    file_path_suffix=adoption.file_path_suffix,
+                    relative_path=adoption.relative_path,
+                )
+            )
+
+    async def scan_movie_files(self, movie: Movie) -> MediaScanPlan:
+        """
+        Scans a single movie's directory and applies what it finds.
+
+        :param movie: The movie to scan.
+        :return: The changes that were applied.
+        """
+        movie_files = await self.movie_repository.get_movie_files_by_movie_id(
+            movie_id=movie.id
+        )
+        target = self.build_scan_target(movie=movie, movie_files=movie_files)
+        plan = (await scan_media_targets([target]))[0]
+        await self.apply_scan_plan(movie=movie, plan=plan)
+        return plan
+
+    async def import_existing_movie(self, movie: Movie, source_directory: Path) -> bool:
+        """
+        Adopts a movie that is already on disk, without moving a single file:
+        the movie is pointed at the directory the user already has, and a scan
+        of that directory records the files in it.
+
+        :param movie: The movie to attach the existing directory to.
+        :param source_directory: The directory the movie's files are in.
+        :return: Whether any file was adopted.
+        :raises ConflictError: If the movie already has file records, which
+            re-pointing its directory would orphan, or if the directory does
+            not sit in the library the movie is assigned to.
+        """
+        existing_files = await self.movie_repository.get_movie_files_by_movie_id(
+            movie_id=movie.id
+        )
+        if existing_files:
+            msg = (
+                f"{movie.name} already has files in the library; "
+                "importing an existing directory would orphan them."
+            )
+            raise ConflictError(msg)
+
+        # The parent of a media item's directory comes from its library, while
+        # the import source always sits in the default root. If those disagree
+        # the scan would look in a directory that does not exist, so refuse
+        # before storing a directory name that points nowhere.
+        expected_root = self.get_media_root_path(
+            media=movie.model_copy(update={"directory_name": source_directory.name})
+        )
+        if expected_root != source_directory:
+            msg = (
+                f"{movie.name} is assigned to the '{movie.library}' library, "
+                f"which does not contain {source_directory}. Move the directory "
+                f"into that library, or reassign the movie to the default library."
+            )
+            raise ConflictError(msg)
+
+        await self.movie_repository.set_directory_name(
+            entity_id=movie.id, directory_name=source_directory.name
+        )
+        # The scan resolves the movie's root from its directory name, so it has
+        # to see the name that was just stored rather than the stale one.
+        movie = movie.model_copy(update={"directory_name": source_directory.name})
+
+        plan = await self.scan_movie_files(movie=movie)
+        if plan.adoptions:
+            log.info(
+                f"Imported {movie.name} in place from {source_directory}: "
+                f"{len(plan.adoptions)} file(s) adopted"
+            )
+            # The directory now belongs to a media item, so the scan will skip
+            # it from here on and its cached match is dead weight.
+            await asyncio.to_thread(delete_import_sidecar, source_directory)
+        return bool(plan.adoptions)
 
     async def get_importable_movies(
         self, metadata_provider: AbstractMetadataProvider
@@ -249,7 +402,7 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         return await self.get_importable_media(
             root_path=MediaManagerConfig().misc.movie_directory,
             metadata_provider=metadata_provider,
-            get_candidates_func=self.get_import_candidates,
+            get_suggestion_func=self.get_import_suggestion,
         )
 
     async def rescan_importable_movies(self) -> list[MediaImportSuggestion]:

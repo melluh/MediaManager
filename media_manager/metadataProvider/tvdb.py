@@ -9,6 +9,7 @@ import media_manager.metadataProvider.utils
 from media_manager.common.cache import AsyncTTLCache
 from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.abstract_metadata_provider import (
+    DEFAULT_SEARCH_MAX_PAGES,
     AbstractMetadataProvider,
 )
 from media_manager.metadataProvider.schemas import (
@@ -297,9 +298,29 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
         )
 
     @override
+    async def get_show_images(
+        self, show_id: int
+    ) -> tuple[list[ExternalPosterImage], list[ExternalPosterImage]]:
+        series = await self.__get_show(show_id)
+        # TVDB backdrop artwork is not exposed by the relay - see
+        # `get_available_image_types`.
+        return self.__get_poster_images(series.get("image")), []
+
+    @override
+    async def get_movie_images(
+        self, movie_id: int
+    ) -> tuple[list[ExternalPosterImage], list[ExternalPosterImage]]:
+        movie = await self.__get_movie(movie_id)
+        return self.__get_poster_images(movie.get("image")), []
+
+    @override
     async def search_show(
-        self, query: str | None = None
+        self, query: str | None = None, max_pages: int = DEFAULT_SEARCH_MAX_PAGES
     ) -> list[MetaDataProviderSearchResult]:
+        """
+        `max_pages` is accepted for interface parity only: TVDB's search
+        returns a single, unpaginated response.
+        """
         if query:
             results = await self.__search_tv(query=query)
             formatted_results = []
@@ -362,8 +383,12 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
 
     @override
     async def search_movie(
-        self, query: str | None = None
+        self, query: str | None = None, max_pages: int = DEFAULT_SEARCH_MAX_PAGES
     ) -> list[MetaDataProviderSearchResult]:
+        """
+        `max_pages` is accepted for interface parity only: TVDB's search
+        returns a single, unpaginated response.
+        """
         if query:
             results = await self.__search_movie(query=query)
             results = [r for r in results[0:20] if r["type"] == "movie"]

@@ -9,6 +9,7 @@ import media_manager.metadataProvider.utils
 from media_manager.common.cache import AsyncTTLCache
 from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.abstract_metadata_provider import (
+    DEFAULT_SEARCH_MAX_PAGES,
     AbstractMetadataProvider,
 )
 from media_manager.metadataProvider.schemas import (
@@ -494,8 +495,28 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         )
 
     @override
+    async def get_show_images(
+        self, show_id: int
+    ) -> tuple[list[ExternalPosterImage], list[ExternalPosterImage]]:
+        show_metadata = await self.__get_show_metadata(show_id)
+        return (
+            self.__get_poster_images(show_metadata.get("poster_path")),
+            self.__get_backdrop_images(show_metadata.get("backdrop_path")),
+        )
+
+    @override
+    async def get_movie_images(
+        self, movie_id: int
+    ) -> tuple[list[ExternalPosterImage], list[ExternalPosterImage]]:
+        movie_metadata = await self.__get_movie_metadata(movie_id=movie_id)
+        return (
+            self.__get_poster_images(movie_metadata.get("poster_path")),
+            self.__get_backdrop_images(movie_metadata.get("backdrop_path")),
+        )
+
+    @override
     async def search_show(
-        self, query: str | None = None, max_pages: int = 5
+        self, query: str | None = None, max_pages: int = DEFAULT_SEARCH_MAX_PAGES
     ) -> list[MetaDataProviderSearchResult]:
         """
         Search for shows using TMDB API.
@@ -609,7 +630,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
 
     @override
     async def search_movie(
-        self, query: str | None = None, max_pages: int = 5
+        self, query: str | None = None, max_pages: int = DEFAULT_SEARCH_MAX_PAGES
     ) -> list[MetaDataProviderSearchResult]:
         """
         Search for movies using TMDB API.
@@ -671,7 +692,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
 
     @override
     async def search_multi(
-        self, query: str, max_pages: int = 5
+        self, query: str, max_pages: int = DEFAULT_SEARCH_MAX_PAGES
     ) -> list[MetaDataProviderSearchResult]:
         """
         Search for movies and TV shows together using TMDB's combined

@@ -3,6 +3,7 @@ import logging
 from media_manager.common.schemas import CURRENT_METADATA_VERSION
 from media_manager.common.service import BaseMetadataService
 from media_manager.metadataProvider.abstract_metadata_provider import (
+    DEFAULT_SEARCH_MAX_PAGES,
     AbstractMetadataProvider,
 )
 from media_manager.metadataProvider.schemas import (
@@ -48,13 +49,16 @@ class MovieMetadataService(BaseMetadataService[Movie, Movie]):
         )
 
     async def search_for_movie(
-        self, query: str, metadata_provider: AbstractMetadataProvider
+        self,
+        query: str,
+        metadata_provider: AbstractMetadataProvider,
+        max_pages: int = DEFAULT_SEARCH_MAX_PAGES,
     ) -> list[MetaDataProviderSearchResult]:
         return await self.search_for_media_base(
             query=query,
             metadata_provider=metadata_provider,
             search_func=metadata_provider.search_movie,
-            get_by_external_id_func=self.movie_repository.get_movie_by_external_id,
+            max_pages=max_pages,
         )
 
     async def get_popular_movies(

@@ -113,6 +113,22 @@ async def rescan_downloaded_episodes_task(
 
 
 @broker.task
+async def scan_movie_library_files_task(
+    movie_service: MovieService = TaskiqDepends(get_movie_service),
+) -> None:
+    log.info("Scanning movie library files")
+    await movie_service.scan_library_files()
+
+
+@broker.task
+async def scan_show_library_files_task(
+    tv_service: TvService = TaskiqDepends(get_tv_service),
+) -> None:
+    log.info("Scanning TV library files")
+    await tv_service.scan_library_files()
+
+
+@broker.task
 async def delete_expired_indexer_query_results_task(
     db: AsyncSession = TaskiqDepends(get_async_session),
 ) -> None:
@@ -135,6 +151,11 @@ _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
     scan_importable_shows_task.task_name: [{"cron": "*/5 * * * *"}],
     rescan_downloaded_movies_task.task_name: [{"cron": "*/5 * * * *"}],
     rescan_downloaded_episodes_task.task_name: [{"cron": "*/5 * * * *"}],
+    # Hourly rather than every few minutes: this walks every media directory
+    # on disk, and nothing depends on it being immediate - imports record
+    # their own paths, and an admin can trigger a scan on demand.
+    scan_movie_library_files_task.task_name: [{"cron": "17 * * * *"}],
+    scan_show_library_files_task.task_name: [{"cron": "47 * * * *"}],
     delete_expired_indexer_query_results_task.task_name: [{"cron": "*/30 * * * *"}],
 }
 

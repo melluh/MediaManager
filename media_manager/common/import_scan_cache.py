@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 
 from media_manager.schemas import MediaImportSuggestion
 
@@ -33,3 +34,18 @@ def set_cached_importable_media(
     media_type: ImportScanMediaType, suggestions: list[MediaImportSuggestion]
 ) -> None:
     _cache[media_type] = _ImportScanCacheEntry(suggestions)
+
+
+def remove_cached_importable_media_entry(
+    media_type: ImportScanMediaType, directory: str
+) -> None:
+    """
+    Drops one directory from the cached scan results, e.g. right after it's
+    been imported, so it disappears from GET /importable without waiting for
+    the next periodic or manual rescan.
+    """
+    entry = _cache.get(media_type)
+    if entry is None:
+        return
+    target = Path(directory)
+    entry.suggestions = [s for s in entry.suggestions if s.directory != target]

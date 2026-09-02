@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import mimetypes
 import shutil
 from pathlib import Path
 from uuid import UUID
@@ -11,6 +10,16 @@ from media_manager.common.downloaded_status_cache import (
     DownloadedMediaType,
     get_cached_downloaded,
     set_cached_downloaded_statuses,
+)
+from media_manager.common.library_scan import (
+    LibraryScanCounts,
+    count_plans,
+    scan_media_targets,
+)
+from media_manager.common.media_files import (
+    MediaFileLocation,
+    attach_media_file_details,
+    movie_file_stem,
 )
 from media_manager.common.service import BaseMediaService
 from media_manager.config import get_config
@@ -108,7 +117,8 @@ class MovieService(BaseMediaService[Movie, Movie]):
 
     async def get_public_movie_files(self, movie: Movie) -> list[PublicMovieFile]:
         """
-        Get all public movie files for a given movie.
+        Get all public movie files for a given movie, enriched with their
+        resolved path on disk and the details probed from the file itself.
 
         :param movie: The movie object.
         :return: A list of public movie files.
@@ -117,41 +127,78 @@ class MovieService(BaseMediaService[Movie, Movie]):
             movie_id=movie.id
         )
         public_movie_files = [PublicMovieFile.model_validate(x) for x in movie_files]
-        result = []
         for movie_file in public_movie_files:
-            movie_file.imported = await self.movie_file_exists_on_file(movie_file=movie_file)
-            movie_file.file_path = await asyncio.to_thread(
-                self.get_movie_file_relative_path, movie, movie_file
-            )
-            result.append(movie_file)
-        return result
+            imported = await self.movie_file_exists_on_file(movie_file=movie_file)
+            movie_file.imported = imported
+            movie_file.downloaded = imported
 
-    def get_movie_file_relative_path(self, movie: Movie, movie_file: MovieFile) -> str:
+        await attach_media_file_details(
+            public_movie_files,
+            [
+                self.get_movie_file_location(movie=movie, movie_file=movie_file)
+                for movie_file in public_movie_files
+            ],
+        )
+        return public_movie_files
+
+    def get_movie_file_location(
+        self, movie: Movie, movie_file: MovieFile
+    ) -> MediaFileLocation:
         """
-        Resolve a movie file's on-disk path, relative to the parent movies
-        folder (the default movie directory, or the movie's library root if
-        it belongs to one). Scans the movie's directory for the actual file
-        matching the expected name to recover its extension; falls back to
-        the expected filename stem (without extension) if it hasn't been
-        imported yet.
+        Where a movie file is expected on disk: directly inside the movie's
+        own directory, named after the movie, reported relative to the parent
+        movies folder (the default movie directory, or the movie's library
+        root if it belongs to one).
         """
         movie_root_path = self.get_movie_root_path(movie=movie)
-        stem = f"{remove_special_characters(movie.name)} ({movie.year})"
-        if movie_file.file_path_suffix:
-            stem += f" - {movie_file.file_path_suffix}"
+        return MediaFileLocation(
+            directory=movie_root_path,
+            stem=movie_file_stem(
+                movie_name=movie.name,
+                year=movie.year,
+                file_path_suffix=movie_file.file_path_suffix,
+            ),
+            relative_to=movie_root_path.parent,
+            media_root=movie_root_path,
+        )
 
-        matched_file: Path | None = None
-        if movie_root_path.is_dir():
-            candidates = sorted(movie_root_path.glob(f"{stem}.*"))
-            video_candidates = [
-                f
-                for f in candidates
-                if (mimetypes.guess_type(f.name)[0] or "").startswith("video")
+    async def scan_library_files(self) -> LibraryScanCounts:
+        """
+        Reconcile every movie's file records with the files on disk: relink
+        records that lost track of their file, clear the path of records whose
+        file is gone, and adopt video files sitting anywhere under a movie's
+        directory without a record of their own.
+
+        Movies whose root directory does not exist are skipped untouched - a
+        library that isn't mounted must not be mistaken for a library that
+        emptied itself.
+
+        :return: What the scan changed.
+        """
+        movies = await self.movie_repository.get_movies()
+        files_by_movie = (
+            await self.movie_repository.get_all_movie_files_grouped_by_movie()
+        )
+        plans = await scan_media_targets(
+            [
+                self.movie_import_service.build_scan_target(
+                    movie=movie, movie_files=files_by_movie.get(movie.id, [])
+                )
+                for movie in movies
             ]
-            matched_file = (video_candidates or candidates or [None])[0]
+        )
+        for movie, plan in zip(movies, plans, strict=True):
+            await self.movie_import_service.apply_scan_plan(movie=movie, plan=plan)
 
-        resolved_path = matched_file or (movie_root_path / stem)
-        return str(resolved_path.relative_to(movie_root_path.parent))
+        counts = count_plans(plans)
+        log.info(
+            f"Movie library scan: {counts.items_scanned} scanned, "
+            f"{counts.items_skipped} skipped (directory missing), "
+            f"{counts.paths_relinked} paths relinked, "
+            f"{counts.paths_cleared} paths cleared, "
+            f"{counts.files_adopted} files adopted"
+        )
+        return counts
 
     async def get_all_available_torrents_for_movie(
         self,
@@ -253,12 +300,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
         :param movie_file: The movie file to check.
         :return: True if the file exists, False otherwise.
         """
-        if movie_file.torrent_id is None:
-            return True
-        torrent_file = await self.torrent_service.get_torrent_by_id(
-            torrent_id=movie_file.torrent_id
-        )
-        return bool(torrent_file.imported)
+        return await self.media_file_is_imported(media_file=movie_file)
 
     async def get_movie_by_external_id(
         self, external_id: int, metadata_provider: str

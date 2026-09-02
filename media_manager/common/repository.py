@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from typing import Any, TypeVar
 from uuid import UUID
 
@@ -70,10 +70,58 @@ class BaseRepository[T, S]:
         result = (await self.db.execute(stmt)).scalar_one_or_none()
         return result is not None
 
+    async def get_ids_by_external_ids(
+        self, external_ids: Collection[int], metadata_provider: str
+    ) -> dict[int, tuple[EntityId, str | None]]:
+        """
+        The internal id and slug of every stored item among the given external
+        ids, keyed by external id. One query for a whole page of search
+        results, which is otherwise two queries per result.
+
+        :param external_ids: External ids to look up, e.g. of search results.
+        :param metadata_provider: Provider the external ids belong to.
+        :return: Mapping of external id to (internal id, slug); missing keys
+            are items not in the library.
+        """
+        if not external_ids:
+            return {}
+        stmt = select(
+            self.model.external_id, self.model.id, self.model.slug
+        ).where(
+            self.model.external_id.in_(external_ids),
+            self.model.metadata_provider == metadata_provider,
+        )
+        rows = (await self.db.execute(stmt)).all()
+        return {row[0]: (row[1], row[2]) for row in rows}
+
     async def slug_exists(self, slug: str) -> bool:
         stmt = select(self.model.id).where(self.model.slug == slug)
         result = (await self.db.execute(stmt)).scalar_one_or_none()
         return result is not None
+
+    async def get_all_directory_names(self) -> set[str]:
+        """
+        Every stored `directory_name` for this repository's model, i.e. the
+        directories on disk the library already owns.
+        """
+        stmt = select(self.model.directory_name)
+        rows = (await self.db.execute(stmt)).scalars().all()
+        return {name for name in rows if name}
+
+    async def set_directory_name(
+        self, entity_id: EntityId, directory_name: str
+    ) -> None:
+        """
+        Points a media item at the directory on disk its files live in. Used
+        when importing media that is already on disk, which is adopted where
+        it is rather than copied into a directory of this app's naming.
+        """
+        obj = await self.db.get(self.model, entity_id)
+        if not obj:
+            msg = f"{self.model.__name__} with id {entity_id} not found."
+            raise NotFoundError(msg)
+        obj.directory_name = directory_name
+        await self.db.commit()
 
     async def get_all(self) -> list[S]:
         stmt = select(self.model)

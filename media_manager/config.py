@@ -45,6 +45,11 @@ class BasicConfig(BaseSettings):
     cors_urls: list[str] = []
     development: bool = False
 
+    write_import_sidecars: bool = True
+    """Whether the import scan may cache its resolved match in a
+    `.mediamanager` file inside each scanned directory. Turn off for
+    read-only libraries; scans then simply resolve every directory again."""
+
     tv_libraries: list[LibraryItem] = []
     movie_libraries: list[LibraryItem] = []
 

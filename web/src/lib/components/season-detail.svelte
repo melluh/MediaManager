@@ -1,0 +1,145 @@
+<script lang="ts">
+	import * as Table from '$lib/components/ui/table/index.js';
+	import type { PublicEpisodeFile, Season, Show } from '$lib/api/api';
+	import MediaFileTable from '$lib/components/media-file-table.svelte';
+	import { getFullyQualifiedMediaName } from '$lib/utils';
+	import MediaImage from '$lib/components/media-image.svelte';
+	import { resolve } from '$app/paths';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { getContext } from 'svelte';
+	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
+
+	let { season, episodeFiles }: { season: Season; episodeFiles: PublicEpisodeFile[] } = $props();
+	// Provided by the [showId] layout, which resolves it without blocking first paint.
+	const getShow: () => Show = getContext('show');
+	let show: Show = $derived(getShow());
+
+	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
+	$effect(() => {
+		setCrumbs([
+			{ label: 'Shows', href: resolve('/dashboard/tv', {}) },
+			{
+				label: `${show.name} ${show.year == null ? '' : '(' + show.year + ')'}`,
+				href: resolve('/dashboard/tv/[showId]', { showId: show.slug! })
+			},
+			{ label: `Season ${season.number}` }
+		]);
+	});
+
+	let episodeById = $derived(
+		Object.fromEntries(
+			season.episodes.map((ep) => [ep.id, `E${String(ep.number).padStart(2, '0')}`])
+		)
+	);
+
+	// Seasons don't always have their own poster (not every provider/season has
+	// one) - fall back to the show's poster, reusing its cache-bust timestamp
+	// since season posters are downloaded in the same metadata-refresh pass.
+	let seasonPosterMedia = $derived({
+		id: season.id,
+		name: season.name,
+		year: show.year,
+		metadata_updated_at: show.metadata_updated_at,
+		images: season.images?.poster ? season.images : show.images
+	});
+</script>
+
+<svelte:head>
+	<title>{getFullyQualifiedMediaName(show)} - Season {season.number} - MediaManager</title>
+	<meta
+		content="View episodes and manage downloads for {getFullyQualifiedMediaName(
+			show
+		)} Season {season.number} in MediaManager"
+		name="description"
+	/>
+</svelte:head>
+
+{#snippet episodeCell(file: PublicEpisodeFile)}
+	{episodeById[file.episode_id] ?? 'E??'}
+{/snippet}
+
+<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
+	{getFullyQualifiedMediaName(show)} - Season {season.number}
+</h1>
+<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
+	<div class="flex flex-col gap-4 md:flex-row md:items-stretch">
+		<div class="w-full overflow-hidden rounded-xl bg-muted/50 md:w-1/3 md:max-w-sm">
+			<MediaImage media={seasonPosterMedia} />
+		</div>
+		<div class="h-full w-full flex-auto rounded-xl md:w-1/4">
+			<Card.Root class="h-full w-full">
+				<Card.Content class="flex flex-col gap-6">
+					<div>
+						<Card.Title class="mb-2 text-base">Series Overview</Card.Title>
+						<p class="text-justify text-sm leading-6 hyphens-auto text-muted-foreground">
+							{show.overview}
+						</p>
+					</div>
+					<div class="border-t border-border"></div>
+					<div>
+						<Card.Title class="mb-2 text-base">Season Overview</Card.Title>
+						<p class="text-justify text-sm leading-6 hyphens-auto text-muted-foreground">
+							{season.overview}
+						</p>
+					</div>
+				</Card.Content>
+			</Card.Root>
+		</div>
+		<div
+			class="flex h-full w-full flex-auto flex-col items-center justify-start gap-4 rounded-xl md:w-1/3 md:max-w-[40em]"
+		>
+			<Card.Root class="h-full w-full">
+				<Card.Header>
+					<Card.Title>Season Details</Card.Title>
+					<Card.Description>
+						A list of all downloaded/downloading versions of this season.
+					</Card.Description>
+				</Card.Header>
+				<Card.Content>
+					<MediaFileTable
+						files={episodeFiles}
+						caption="A list of all downloaded/downloading versions of this season."
+						leadingLabel="Episode"
+						leadingCell={episodeCell}
+						emptyMessage="You haven't downloaded episodes of this season yet."
+						dialogKeyPrefix="episodeFileDetails"
+					/>
+				</Card.Content>
+			</Card.Root>
+		</div>
+	</div>
+	<div class="flex-1 rounded-xl">
+		<Card.Root class="w-full">
+			<Card.Header>
+				<Card.Title>Episodes</Card.Title>
+				<Card.Description
+					>A list of all episodes for {getFullyQualifiedMediaName(show)} Season {season.number}
+					.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content class="w-full overflow-x-auto">
+				<Table.Root class="w-full table-fixed">
+					<Table.Caption>A list of all episodes.</Table.Caption>
+					<Table.Header>
+						<Table.Row>
+							<Table.Head class="w-[80px]">Number</Table.Head>
+							<Table.Head class="w-[240px]">Title</Table.Head>
+							<Table.Head>Overview</Table.Head>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{#each season.episodes as episode (episode.id)}
+							<Table.Row>
+								<Table.Cell class="w-[100px] font-medium"
+									>E{String(episode.number).padStart(2, '0')}</Table.Cell
+								>
+								<Table.Cell class="min-w-[50px]">{episode.title}</Table.Cell>
+								<Table.Cell class="truncate">{episode.overview}</Table.Cell>
+							</Table.Row>
+						{/each}
+					</Table.Body>
+				</Table.Root>
+			</Card.Content>
+		</Card.Root>
+	</div>
+</main>

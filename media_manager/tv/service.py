@@ -12,6 +12,17 @@ from media_manager.common.downloaded_status_cache import (
     get_cached_downloaded,
     set_cached_downloaded_statuses,
 )
+from media_manager.common.library_scan import (
+    LibraryScanCounts,
+    count_plans,
+    scan_media_targets,
+)
+from media_manager.common.media_files import (
+    MediaFileLocation,
+    attach_media_file_details,
+    episode_file_stem,
+    season_directory_name,
+)
 from media_manager.common.service import BaseMediaService
 from media_manager.config import get_config
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
@@ -124,7 +135,8 @@ class TvService(BaseMediaService[Show, Show]):
         self, season: Season
     ) -> list[PublicEpisodeFile]:
         """
-        Get all public episode files for a given season.
+        Get all public episode files for a given season, enriched with their
+        resolved path on disk and the details probed from the file itself.
 
         :param season: The season object.
         :return: A list of public episode files.
@@ -135,12 +147,101 @@ class TvService(BaseMediaService[Show, Show]):
         public_episode_files = [
             PublicEpisodeFile.model_validate(x) for x in episode_files
         ]
-        result = []
         for episode_file in public_episode_files:
-            if await self.episode_file_exists_on_file(episode_file=episode_file):
-                episode_file.downloaded = True
-            result.append(episode_file)
-        return result
+            exists = await self.episode_file_exists_on_file(episode_file=episode_file)
+            episode_file.downloaded = exists
+            episode_file.imported = exists
+
+        show = await self.tv_repository.get_show_summary_by_season_id(
+            season_id=season.id
+        )
+        episode_numbers_by_id = {
+            episode.id: episode.number for episode in season.episodes
+        }
+        # A file whose episode isn't part of this season can't be located, so
+        # it is left without a path rather than pointed at a made-up one.
+        locatable = [
+            (episode_file, episode_numbers_by_id[episode_file.episode_id])
+            for episode_file in public_episode_files
+            if episode_file.episode_id in episode_numbers_by_id
+        ]
+        await attach_media_file_details(
+            [episode_file for episode_file, _ in locatable],
+            [
+                self.get_episode_file_location(
+                    show=show,
+                    season_number=season.number,
+                    episode_number=episode_number,
+                    episode_file=episode_file,
+                )
+                for episode_file, episode_number in locatable
+            ],
+        )
+        return public_episode_files
+
+    def get_episode_file_location(
+        self,
+        show: ShowSummary,
+        season_number: int,
+        episode_number: int,
+        episode_file: EpisodeFile,
+    ) -> MediaFileLocation:
+        """
+        Where an episode file is expected on disk: inside the show's season
+        directory, named after the show and its season/episode numbers,
+        reported relative to the parent TV folder (the default TV directory,
+        or the show's library root if it belongs to one).
+        """
+        show_root_path = self.get_root_show_directory(show=show)
+        return MediaFileLocation(
+            directory=show_root_path / season_directory_name(season_number),
+            stem=episode_file_stem(
+                show_name=show.name,
+                season_number=season_number,
+                episode_number=episode_number,
+                file_path_suffix=episode_file.file_path_suffix,
+            ),
+            relative_to=show_root_path.parent,
+            media_root=show_root_path,
+        )
+
+    async def scan_library_files(self) -> LibraryScanCounts:
+        """
+        Reconcile every show's episode file records with the files on disk:
+        relink records that lost track of their file, clear the path of records
+        whose file is gone, and adopt video files sitting anywhere under the
+        show's directory without a record of their own.
+
+        Shows whose root directory does not exist are skipped untouched - a
+        library that isn't mounted must not be mistaken for a library that
+        emptied itself.
+
+        :return: What the scan changed.
+        """
+        shows = await self.tv_repository.get_shows()
+        files_by_episode = (
+            await self.tv_repository.get_all_episode_files_grouped_by_episode()
+        )
+        plans = await scan_media_targets(
+            [
+                self.tv_import_service.build_scan_target(
+                    show=show, files_by_episode=files_by_episode
+                )
+                for show in shows
+            ]
+        )
+        for plan in plans:
+            await self.tv_import_service.apply_scan_plan(plan=plan)
+
+        counts = count_plans(plans)
+        log.info(
+            f"TV library scan: {counts.items_scanned} scanned, "
+            f"{counts.items_skipped} skipped (directory missing), "
+            f"{counts.paths_relinked} paths relinked, "
+            f"{counts.paths_cleared} paths cleared, "
+            f"{counts.files_adopted} files adopted"
+        )
+        return counts
 
     async def get_all_available_torrents_for_a_season(
         self,
@@ -288,7 +389,7 @@ class TvService(BaseMediaService[Show, Show]):
 
         for (
             show_id,
-            show_name,
+            show_directory_name,
             show_library,
             season_number,
             episode_id,
@@ -303,11 +404,13 @@ class TvService(BaseMediaService[Show, Show]):
             if filenames is None:
                 misc_config = get_config().misc
                 show_dir = self.get_root_directory(
-                    media=SimpleNamespace(name=show_name, library=show_library),
+                    media=SimpleNamespace(
+                        directory_name=show_directory_name, library=show_library
+                    ),
                     default_dir=misc_config.tv_directory,
                     libraries=misc_config.tv_libraries,
                 )
-                season_dir = show_dir / f"Season {season_number}"
+                season_dir = show_dir / season_directory_name(season_number)
                 try:
                     filenames = (
                         [f.name.lower() for f in season_dir.iterdir() if f.is_file()]
@@ -334,19 +437,7 @@ class TvService(BaseMediaService[Show, Show]):
         :param episode_file: The episode file to check.
         :return: True if the file exists, False otherwise.
         """
-        if episode_file.torrent_id is None:
-            return True
-        try:
-            torrent_file = await self.torrent_service.get_torrent_by_id(
-                torrent_id=episode_file.torrent_id
-            )
-
-            if torrent_file.imported:
-                return True
-        except RuntimeError:
-            log.exception("Error retrieving torrent")
-
-        return False
+        return await self.media_file_is_imported(media_file=episode_file)
 
     async def get_show_by_external_id(
         self, external_id: int, metadata_provider: str
@@ -522,7 +613,7 @@ class TvService(BaseMediaService[Show, Show]):
 
         return show_torrent
 
-    def get_root_show_directory(self, show: Show) -> Path:
+    def get_root_show_directory(self, show: ShowSummary) -> Path:
         misc_config = get_config().misc
         return self.get_root_directory(
             media=show,

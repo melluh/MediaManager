@@ -18,6 +18,9 @@ class MediaMixin:
     metadata_provider: Mapped[str]
     name: Mapped[str]
     slug: Mapped[str]
+    directory_name: Mapped[str]
+    """Basename of the media's own directory on disk; the parent directory is
+    resolved from `library` at read time, so a library can still be moved."""
     overview: Mapped[str]
     year: Mapped[int | None]
     library: Mapped[str] = mapped_column(default="Default")
@@ -41,6 +44,9 @@ class MediaFileMixin:
 
     file_path_suffix: Mapped[str]
     quality: Mapped[Quality]
+    relative_path: Mapped[str | None] = mapped_column(default=None)
+    """Path of the file relative to the media's root directory, or NULL when no
+    file is known to have been written yet."""
     torrent_id: Mapped[UUID | None] = mapped_column(
         ForeignKey(column="torrent.id", ondelete="SET NULL"),
     )

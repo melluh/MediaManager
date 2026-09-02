@@ -17,6 +17,7 @@ class BaseMedia(BaseModel):
     id: UUID = Field(default_factory=uuid.uuid4)
     name: str
     slug: str | None = None
+    directory_name: str | None = None
     overview: str
     year: int | None
     external_id: int
@@ -46,8 +47,38 @@ class BaseMediaFile(BaseModel):
     quality: Quality
     torrent_id: UUID | None = None
     file_path_suffix: str
+    relative_path: str | None = None
+
+
+class MediaFileDetails(BaseModel):
+    """
+    What the file on disk itself says about the media, as opposed to what the
+    database row claims. Populated by probing the file; every field is
+    optional because probing is best-effort.
+    """
+
+    size_bytes: int | None = None
+    probed_quality: Quality | None = None
+    """Quality measured from the video stream, which can differ from the recorded `quality`."""
+    duration_seconds: int | None = None
+    width: int | None = None
+    height: int | None = None
+    video_codec: str | None = None
+    audio_codec: str | None = None
+    audio_channels: int | None = None
+    container: str | None = None
 
 
 class PublicMediaFile(BaseMediaFile):
     downloaded: bool = False
     imported: bool = False
+    file_path: str = ""
+    """Path of the file on disk, relative to the media type's library root.
+
+    Falls back to the expected path (without extension) when the file has not
+    been imported yet.
+    """
+    exists_on_disk: bool = False
+    """Whether a file was actually found at `file_path`."""
+    details: MediaFileDetails | None = None
+    """File facts read from disk; None when the file isn't there."""

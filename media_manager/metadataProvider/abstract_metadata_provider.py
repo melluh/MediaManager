@@ -6,6 +6,7 @@ from typing import Any
 
 from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.schemas import (
+    ExternalPosterImage,
     MediaImageType,
     MediaType,
     MetaDataProviderSearchResult,
@@ -14,6 +15,10 @@ from media_manager.movies.schemas import Movie
 from media_manager.tv.schemas import Season, Show
 
 log = logging.getLogger(__name__)
+
+DEFAULT_SEARCH_MAX_PAGES = 5
+"""Pages fetched by an interactive search, where a deep result list is worth
+the extra requests."""
 
 _MAX_CONCURRENT_IMAGE_DOWNLOADS = 8
 """Caps concurrent image downloads per add/update - a show can have an
@@ -41,15 +46,50 @@ class AbstractMetadataProvider(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    async def get_show_images(
+        self, show_id: int
+    ) -> tuple[list[ExternalPosterImage], list[ExternalPosterImage]]:
+        """
+        Poster and backdrop images for a show, resolved by id rather than by
+        search - used to illustrate a match found via an id already known
+        (e.g. one embedded in a directory name), without a full detail fetch.
+
+        :return: (poster_images, backdrop_images)
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def get_movie_images(
+        self, movie_id: int
+    ) -> tuple[list[ExternalPosterImage], list[ExternalPosterImage]]:
+        """
+        Poster and backdrop images for a movie, resolved by id. See
+        `get_show_images`.
+
+        :return: (poster_images, backdrop_images)
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     async def search_show(
-        self, query: str | None = None
+        self, query: str | None = None, max_pages: int = DEFAULT_SEARCH_MAX_PAGES
     ) -> list[MetaDataProviderSearchResult]:
+        """
+        :param max_pages: How many pages of results to fetch, for providers
+            that paginate. Each page is one request, so callers that only need
+            the top results (the import scan) should ask for one.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     async def search_movie(
-        self, query: str | None = None
+        self, query: str | None = None, max_pages: int = DEFAULT_SEARCH_MAX_PAGES
     ) -> list[MetaDataProviderSearchResult]:
+        """
+        :param max_pages: How many pages of results to fetch, for providers
+            that paginate. Each page is one request, so callers that only need
+            the top results (the import scan) should ask for one.
+        """
         raise NotImplementedError()
 
     @abstractmethod

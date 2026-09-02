@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,6 +70,26 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             file_schema=movie_file, model_class=MovieFile, schema_class=MovieFileSchema
         )
 
+    async def set_movie_file_relative_path(
+        self, movie_id: MovieId, file_path_suffix: str, relative_path: str | None
+    ) -> None:
+        """
+        Records where a movie file was actually written, for a record that was
+        created before its file existed. None means no file is known for the
+        record, which is what the library scan writes when the file it pointed
+        at is gone.
+        """
+        stmt = (
+            update(MovieFile)
+            .where(
+                MovieFile.movie_id == movie_id,
+                MovieFile.file_path_suffix == file_path_suffix,
+            )
+            .values(relative_path=relative_path)
+        )
+        await self.db.execute(stmt)
+        await self.db.commit()
+
     async def remove_movie_files_by_torrent_id(self, torrent_id: TorrentId) -> int:
         return await self.remove_files_by_torrent_id_base(
             torrent_id=torrent_id, model_class=MovieFile
@@ -87,6 +107,21 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
                 f"Database error retrieving movie files for movie_id {movie_id}"
             )
             raise
+
+    async def get_all_movie_files_grouped_by_movie(
+        self,
+    ) -> dict[MovieId, list[MovieFileSchema]]:
+        """
+        Every movie file in the library, grouped by movie - one query for the
+        whole library scan instead of one per movie.
+        """
+        results = (await self.db.execute(select(MovieFile))).scalars().all()
+        grouped: dict[MovieId, list[MovieFileSchema]] = {}
+        for movie_file in results:
+            grouped.setdefault(MovieId(movie_file.movie_id), []).append(
+                MovieFileSchema.model_validate(movie_file)
+            )
+        return grouped
 
     async def get_movie_downloaded_statuses(self) -> dict[MovieId, bool]:
         """

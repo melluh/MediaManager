@@ -8,7 +8,9 @@ from media_manager.auth.users import current_active_user, current_superuser
 from media_manager.common.import_scan_cache import (
     ImportScanMediaType,
     get_cached_importable_media,
+    remove_cached_importable_media_entry,
 )
+from media_manager.common.library_scan import LibraryScanCounts
 from media_manager.config import LibraryItem, MediaManagerConfig
 from media_manager.exceptions import MediaAlreadyExistsError, NotFoundError
 from media_manager.indexer.schemas import (
@@ -117,6 +119,46 @@ async def get_all_importable_shows() -> list[MediaImportSuggestion]:
     return get_cached_importable_media(ImportScanMediaType.tv)
 
 
+@router.get(
+    "/importable/candidates",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(current_superuser)],
+)
+async def get_importable_show_candidates(
+    tv_import_service: tv_import_service_dep,
+    metadata_provider: metadata_provider_dep,
+    directory: str,
+) -> list[MetaDataProviderSearchResult]:
+    """
+    Search results for one importable directory, for correcting the match the
+    scan resolved for it. GET /importable only carries that single match.
+    """
+    source_directory = Path(directory)
+    if source_directory not in get_importable_media_directories(
+        MediaManagerConfig().misc.tv_directory,
+        await tv_import_service.get_claimed_directory_names(),
+    ):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No such directory")
+    return await tv_import_service.get_import_candidates(
+        tv_path=source_directory, metadata_provider=metadata_provider
+    )
+
+
+@router.post(
+    "/files/scan",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(current_superuser)],
+)
+async def scan_show_library_files(
+    tv_service: tv_service_dep,
+) -> LibraryScanCounts:
+    """
+    Immediately reconcile every show's episode file records with the files on disk, and
+    adopt video files that have no record yet. Also runs on a schedule.
+    """
+    return await tv_service.scan_library_files()
+
+
 @router.post(
     "/importable/rescan",
     status_code=status.HTTP_200_OK,
@@ -142,15 +184,32 @@ async def import_detected_show(
 ) -> None:
     """
     Import a detected show from the specified directory into the library.
+
+    Nothing is moved or copied: the show is pointed at the directory and the
+    episode files already in it are recorded. Returns 409 if the show already
+    has files in the library.
     """
     source_directory = Path(directory)
+    claimed_directories = await tv_import_service.get_claimed_directory_names()
+    # The import flow creates the media item first, so its own canonical
+    # directory name is already claimed by the time we get here - and for a
+    # library already using that naming it *is* the directory being imported.
+    # Only a directory belonging to some other item is off limits.
+    if tv_show.directory_name:
+        claimed_directories.discard(tv_show.directory_name)
     if source_directory not in get_importable_media_directories(
-        MediaManagerConfig().misc.tv_directory
+        MediaManagerConfig().misc.tv_directory, claimed_directories
     ):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No such directory")
-    await tv_import_service.import_existing_tv_show(
+    success = await tv_import_service.import_existing_tv_show(
         tv_show=tv_show, source_directory=source_directory
     )
+    if not success:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "No episode files matching this show were found in that directory.",
+        )
+    remove_cached_importable_media_entry(ImportScanMediaType.tv, directory)
 
 
 # -----------------------------------------------------------------------------

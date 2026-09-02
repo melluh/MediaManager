@@ -9,6 +9,7 @@ from media_manager.common.schemas import (
     CURRENT_METADATA_VERSION,
     BaseMedia,
     BaseMediaFile,
+    PublicMediaFile,
 )
 from media_manager.torrent.models import Quality
 from media_manager.torrent.schemas import TorrentId, TorrentStatus
@@ -62,8 +63,8 @@ class EpisodeFile(BaseMediaFile):
     episode_id: EpisodeId
 
 
-class PublicEpisodeFile(EpisodeFile):
-    downloaded: bool = False
+class PublicEpisodeFile(EpisodeFile, PublicMediaFile):
+    pass
 
 
 class RichSeasonTorrent(BaseModel):

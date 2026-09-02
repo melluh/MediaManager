@@ -2,91 +2,76 @@
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { toast } from 'svelte-sonner';
-	import client from '$lib/api';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import SuggestedMediaCard from '$lib/components/import-media/suggested-media-card.svelte';
-	import { invalidateAll } from '$app/navigation';
 	import type { Snippet } from 'svelte';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
+	import { getImportCandidates, importMatchedMedia } from '$lib/api/importable';
+	import { getDirectoryName } from '$lib/utils';
 
 	let {
-		isTv,
-		name,
-		candidates,
+		isShow,
+		directory,
+		triggerVariant = 'default',
 		children
 	}: {
-		isTv: boolean;
-		name: string;
-		candidates: MetaDataProviderSearchResult[];
+		isShow: boolean;
+		directory: string;
+		triggerVariant?: 'default' | 'outline';
 		children?: Snippet;
 	} = $props();
-	const dialogState = $derived(shallowDialog(`importCandidates:${name}`));
-	let submitRequestError = $state<string | null>(null);
-	let isImporting = $state<boolean>(false);
+
+	const dialogState = $derived(shallowDialog(`importCandidates:${directory}`));
+	let candidates = $state<MetaDataProviderSearchResult[] | null>(null);
+	let loadFailed = $state(false);
+	let isLoading = $state(false);
+	let isImporting = $state(false);
+
+	// Deliberately not `$state`: the effect below must depend on the dialog's
+	// open state alone, not on the guard it writes.
+	let hasRequested = false;
+
+	async function loadCandidates() {
+		isLoading = true;
+		loadFailed = false;
+		const results = await getImportCandidates(isShow, directory);
+		candidates = results;
+		loadFailed = results == null;
+		isLoading = false;
+	}
+
+	// Candidates cost a metadata-provider search per directory, so they are only
+	// fetched once the user actually opens the picker for this one.
+	$effect(() => {
+		if (dialogState.open && !hasRequested) {
+			hasRequested = true;
+			void loadCandidates();
+		}
+	});
+
+	function retry() {
+		hasRequested = true;
+		void loadCandidates();
+	}
 
 	async function handleImportMedia(media: MetaDataProviderSearchResult) {
 		isImporting = true;
-		submitRequestError = null;
-		let errored = null;
-		if (isTv) {
-			let { data } = await client.POST('/api/v1/tv/shows', {
-				params: {
-					query: {
-						metadata_provider: media.metadata_provider as 'tmdb' | 'tvdb',
-						show_id: media.external_id
-					}
-				}
-			});
-			let showId = data?.id ?? 'no_id';
-			const { error } = await client.POST('/api/v1/tv/importable/{show_id}', {
-				params: {
-					path: {
-						show_id: showId
-					},
-					query: {
-						directory: name
-					}
-				}
-			});
-			errored = error;
-		} else {
-			let { data } = await client.POST('/api/v1/movies', {
-				params: {
-					query: {
-						metadata_provider: media.metadata_provider as 'tmdb' | 'tvdb',
-						movie_id: media.external_id
-					}
-				}
-			});
-			let movieId = data?.id ?? 'no_id';
-			const { error } = await client.POST('/api/v1/movies/importable/{movie_id}', {
-				params: {
-					path: {
-						movie_id: movieId
-					},
-					query: {
-						directory: name
-					}
-				}
-			});
-			errored = error;
-		}
+		const failed = await importMatchedMedia(isShow, media, directory);
 		isImporting = false;
 
-		if (errored) {
+		if (failed) {
 			toast.error('Failed to import');
 		} else {
 			toast.success('Imported successfully!');
 		}
-		await invalidateAll();
 		dialogState.open = false;
 	}
 </script>
 
 <Dialog.Root bind:open={() => dialogState.open, (v) => (dialogState.open = v)}>
 	<Dialog.Trigger
-		class={buttonVariants({ variant: 'default' })}
+		class={buttonVariants({ variant: triggerVariant, size: 'sm' })}
 		onclick={() => {
 			dialogState.open = true;
 		}}
@@ -95,32 +80,36 @@
 	</Dialog.Trigger>
 	<Dialog.Content class="max-h-[90vh] w-fit min-w-[80vw] overflow-y-auto">
 		<Dialog.Header>
-			<Dialog.Title>Import unknown {isTv ? 'show' : 'movie'} "{name}"</Dialog.Title>
-			<Dialog.Description
-				>Select the {isTv ? 'show' : 'movie'} that is in this directory to import it!
+			<Dialog.Title>
+				Pick the {isShow ? 'show' : 'movie'} in "{getDirectoryName(directory)}"
+			</Dialog.Title>
+			<Dialog.Description>
+				Importing replaces whatever the scan matched for
+				<code class="rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-xs">{directory}</code>
 			</Dialog.Description>
 		</Dialog.Header>
-		<div
-			class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4"
-		>
-			{#if !isImporting}
-				{#each candidates as candidate (candidate.external_id)}
-					<SuggestedMediaCard result={candidate} action={() => handleImportMedia(candidate)}
-					></SuggestedMediaCard>
+		{#if isImporting || isLoading}
+			<div class="flex justify-center py-12">
+				<Spinner class="size-8" />
+			</div>
+		{:else if loadFailed}
+			<div class="flex flex-col items-center gap-3 py-12">
+				<p class="text-sm text-red-500">Failed to search for this directory.</p>
+				<Button variant="outline" size="sm" onclick={retry}>Try again</Button>
+			</div>
+		{:else}
+			<div
+				class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4"
+			>
+				{#each candidates ?? [] as candidate (candidate.external_id)}
+					<SuggestedMediaCard result={candidate} action={() => handleImportMedia(candidate)} />
 				{:else}
-					No {isTv ? 'shows' : 'movies'} were found, change the directory's name for better search results!
+					<p class="col-span-full py-8 text-center text-sm text-muted-foreground">
+						No {isShow ? 'shows' : 'movies'} were found, change the directory's name for better search
+						results!
+					</p>
 				{/each}
-			{:else}
-				<Spinner class="size-8"></Spinner>
-			{/if}
-			{#if submitRequestError}
-				<p class="col-span-full text-center text-sm text-red-500">{submitRequestError}</p>
-			{/if}
-		</div>
-		<Dialog.Footer>
-			<Button disabled={isImporting} onclick={() => (dialogState.open = false)} variant="outline"
-				>Cancel
-			</Button>
-		</Dialog.Footer>
+			</div>
+		{/if}
 	</Dialog.Content>
 </Dialog.Root>

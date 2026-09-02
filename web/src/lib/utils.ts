@@ -318,3 +318,13 @@ export function saveDirectoryPreview(media: Show | Movie, filePathSuffix: string
 	}
 	return path;
 }
+
+/**
+ * The last segment of a filesystem path, which is the part of an importable
+ * directory that actually identifies the media. Falls back to the full path
+ * for anything without a usable segment.
+ */
+export function getDirectoryName(directory: string): string {
+	const segments = directory.split('/').filter((segment) => segment.length > 0);
+	return segments.at(-1) ?? directory;
+}

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from media_manager.common.schemas import BaseMedia, BaseMediaFile
+from media_manager.common.schemas import BaseMedia, BaseMediaFile, PublicMediaFile
 from media_manager.torrent.models import Quality
 from media_manager.torrent.schemas import TorrentId, TorrentStatus
 
@@ -19,9 +19,8 @@ class MovieFile(BaseMediaFile):
     movie_id: MovieId
 
 
-class PublicMovieFile(MovieFile):
-    imported: bool = False
-    file_path: str = ""
+class PublicMovieFile(MovieFile, PublicMediaFile):
+    pass
 
 
 class MovieTorrent(BaseModel):

@@ -15,6 +15,12 @@ tv_directory = "/data/tv"
 movie_directory = "/data/movies"
 torrent_directory = "/data/torrents" # this is where MediaManager will search for the downloaded torrents and usenet files
 
+# When scanning for importable media, MediaManager caches what it matched each
+# directory to in a ".mediamanager" file inside that directory, so a rescan
+# doesn't ask the metadata provider about the same folders again. Set this to
+# false for read-only libraries; matching then simply runs on every scan.
+write_import_sidecars = true
+
 # you probaly don't need to change this
 development = false
 

@@ -81,6 +81,24 @@ def get_torrent_filepath(torrent: Torrent) -> Path:
 
 
 def import_file(target_file: Path, source_file: Path) -> None:
+    """
+    Places a source file at its target path, by hardlink where possible so the
+    import costs no extra disk space, falling back to a copy across
+    filesystems.
+    """
+    # The source can already *be* the target: a library directory offered for
+    # import again (its media item was removed, or it was named canonically by
+    # hand) imports into itself. Unlinking first would then delete the only
+    # copy before the hardlink could be made, and the copy fallback would find
+    # nothing to copy. Nothing to do when the file is already in place.
+    try:
+        if target_file.exists() and target_file.samefile(source_file):
+            return
+    except OSError:
+        log.debug(
+            f"Could not compare {target_file} with {source_file}", exc_info=True
+        )
+
     if target_file.exists():
         target_file.unlink()
 
@@ -259,7 +277,20 @@ def remove_special_chars_and_parentheses(title: str) -> str:
     return re.sub(r"\s+", " ", sanitized).strip()
 
 
-def get_importable_media_directories(path: Path) -> list[Path]:
+def get_importable_media_directories(
+    path: Path, claimed_directory_names: set[str] | None = None
+) -> list[Path]:
+    """
+    Directories directly under `path` that could hold media not yet in the
+    library.
+
+    :param claimed_directory_names: Basenames of directories the library
+        already owns (the `directory_name` of every stored media item).
+        Without them, a media item's own directory would be offered as
+        something to import over itself.
+    """
+    claimed = claimed_directory_names or set()
+
     libraries = [
         *MediaManagerConfig().misc.movie_libraries,
         *MediaManagerConfig().misc.tv_libraries,
@@ -274,6 +305,7 @@ def get_importable_media_directories(path: Path) -> list[Path]:
         for media_dir in unfiltered_dirs
         if media_dir.absolute() not in library_paths
         and not media_dir.name.startswith(".")
+        and media_dir.name not in claimed
     ]
 
 

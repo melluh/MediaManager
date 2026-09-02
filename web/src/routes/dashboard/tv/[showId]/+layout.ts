@@ -1,53 +1,45 @@
 import type { LayoutLoad } from './$types';
 import client from '$lib/api';
-import { error, redirect } from '@sveltejs/kit';
+import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { validate as uuidValidate } from 'uuid';
+import type { PublicShow, RichShowTorrent } from '$lib/api/api';
+import { ShowLoadError } from './show-load-error';
 
-function getShowTorrents(showId: string, fetch: typeof globalThis.fetch) {
-	return client
-		.GET('/api/v1/tv/shows/{show_id}/torrents', {
-			fetch: fetch,
-			params: { path: { show_id: showId } }
-		})
-		.then((x) => x.data);
-}
+export type ShowDetails = { show: PublicShow; torrents: RichShowTorrent };
 
-export const load: LayoutLoad = async ({ params, fetch }) => {
-	if (uuidValidate(params.showId)) {
-		const { data: show, response } = await client.GET('/api/v1/tv/shows/{show_id}', {
-			fetch: fetch,
-			params: { path: { show_id: params.showId } }
-		});
-		if (!show) {
-			if (response.status === 404) {
-				error(404, 'This show could not be found. It may have been deleted.');
-			}
-			error(response.status, 'Failed to load this show. Please try again.');
-		}
-		if (show.slug) {
-			redirect(301, resolve('/dashboard/tv/[showId]', { showId: show.slug }));
-		}
-		return {
-			showData: show,
-			torrentsData: await getShowTorrents(params.showId, fetch)
-		};
-	}
-
-	const { data: show, response } = await client.GET('/api/v1/tv/shows/slug/{slug}', {
-		fetch: fetch,
-		params: { path: { slug: params.showId } }
-	});
+async function fetchDetails(showId: string, fetch: typeof globalThis.fetch): Promise<ShowDetails> {
+	const byId = uuidValidate(showId);
+	const { data: show, response } = byId
+		? await client.GET('/api/v1/tv/shows/{show_id}', {
+				fetch: fetch,
+				params: { path: { show_id: showId } }
+			})
+		: await client.GET('/api/v1/tv/shows/slug/{slug}', {
+				fetch: fetch,
+				params: { path: { slug: showId } }
+			});
 
 	if (!show) {
-		if (response.status === 404) {
-			error(404, 'This show could not be found. It may have been deleted.');
-		}
-		error(response.status, 'Failed to load this show. Please try again.');
+		throw new ShowLoadError(response.status);
 	}
 
-	return {
-		showData: show,
-		torrentsData: await getShowTorrents(show.id!, fetch)
-	};
+	// Canonicalise UUID urls onto the slug. This used to be a `redirect()` thrown from
+	// `load`; now that the fetch is deferred it has to be a client-side navigation.
+	if (byId && show.slug) {
+		goto(resolve('/dashboard/tv/[showId]', { showId: show.slug }), { replaceState: true });
+	}
+
+	const { data: torrents } = await client.GET('/api/v1/tv/shows/{show_id}/torrents', {
+		fetch: fetch,
+		params: { path: { show_id: show.id! } }
+	});
+
+	return { show, torrents: torrents as RichShowTorrent };
+}
+
+// Deliberately not awaited - the layout renders a loading state instead of blocking
+// first paint. See `routes/dashboard/+layout.ts`.
+export const load: LayoutLoad = ({ params, fetch }) => {
+	return { show: fetchDetails(params.showId, fetch) };
 };

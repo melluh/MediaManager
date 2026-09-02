@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import distinct, func, select
+from sqlalchemy import distinct, func, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -254,6 +254,62 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         results = (await self.db.execute(stmt)).scalars().all()
         return [EpisodeFileSchema.model_validate(sf) for sf in results]
 
+    async def set_episode_file_relative_path(
+        self, episode_id: EpisodeId, file_path_suffix: str, relative_path: str | None
+    ) -> None:
+        """
+        Records where an episode file was actually written, for a record that
+        was created before its file existed. None means no file is known for
+        the record, which is what the library scan writes when the file it
+        pointed at is gone.
+        """
+        stmt = (
+            update(EpisodeFile)
+            .where(
+                EpisodeFile.episode_id == episode_id,
+                EpisodeFile.file_path_suffix == file_path_suffix,
+            )
+            .values(relative_path=relative_path)
+        )
+        await self.db.execute(stmt)
+        await self.db.commit()
+
+    async def get_episode_files_by_show_id(
+        self, show_id: ShowId
+    ) -> dict[EpisodeId, list[EpisodeFileSchema]]:
+        """
+        Every episode file of one show, grouped by episode - the single-show
+        equivalent of `get_all_episode_files_grouped_by_episode`.
+        """
+        stmt = (
+            select(EpisodeFile)
+            .join(Episode, Episode.id == EpisodeFile.episode_id)
+            .join(Season, Season.id == Episode.season_id)
+            .where(Season.show_id == show_id)
+        )
+        results = (await self.db.execute(stmt)).scalars().all()
+        grouped: dict[EpisodeId, list[EpisodeFileSchema]] = {}
+        for episode_file in results:
+            grouped.setdefault(EpisodeId(episode_file.episode_id), []).append(
+                EpisodeFileSchema.model_validate(episode_file)
+            )
+        return grouped
+
+    async def get_all_episode_files_grouped_by_episode(
+        self,
+    ) -> dict[EpisodeId, list[EpisodeFileSchema]]:
+        """
+        Every episode file in the library, grouped by episode - one query for
+        the whole library scan instead of one per show or season.
+        """
+        results = (await self.db.execute(select(EpisodeFile))).scalars().all()
+        grouped: dict[EpisodeId, list[EpisodeFileSchema]] = {}
+        for episode_file in results:
+            grouped.setdefault(EpisodeId(episode_file.episode_id), []).append(
+                EpisodeFileSchema.model_validate(episode_file)
+            )
+        return grouped
+
     async def get_episode_ids_with_files(self) -> set[EpisodeId]:
         """
         IDs of every episode that has at least one EpisodeFile row, in a
@@ -268,7 +324,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         self,
     ) -> Sequence[tuple[ShowId, str, str | None, int, EpisodeId, int]]:
         """
-        Minimal (show_id, show_name, show_library, season_number,
+        Minimal (show_id, show_directory_name, show_library, season_number,
         episode_id, episode_number) rows for every episode, for the
         downloaded-status scan. Avoids hydrating full Show/Season/Episode
         ORM objects and Pydantic schemas for every show in the library.
@@ -280,7 +336,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         stmt = (
             select(
                 Show.id,
-                Show.name,
+                Show.directory_name,
                 Show.library,
                 Season.number,
                 Episode.id,
@@ -343,6 +399,25 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         )
         episode_numbers = (await self.db.execute(stmt)).scalars().all()
         return [EpisodeNumber(n) for n in episode_numbers]
+
+    async def get_show_summary_by_season_id(
+        self, season_id: SeasonId
+    ) -> ShowSummarySchema:
+        """
+        The owning show without its season/episode tree - for callers that
+        only need the show's own fields (name, library, directory name) and
+        would otherwise pay for eager-loading every episode of every season.
+        """
+        stmt = (
+            select(Show)
+            .join(Season, Show.id == Season.show_id)
+            .where(Season.id == season_id)
+        )
+        result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
+        if not result:
+            msg = f"Show for season {season_id} not found"
+            raise NotFoundError(msg)
+        return ShowSummarySchema.model_validate(result)
 
     async def get_show_by_season_id(self, season_id: SeasonId) -> ShowSchema:
         stmt = (

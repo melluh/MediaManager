@@ -8,7 +8,9 @@ from media_manager.auth.users import current_active_user, current_superuser
 from media_manager.common.import_scan_cache import (
     ImportScanMediaType,
     get_cached_importable_media,
+    remove_cached_importable_media_entry,
 )
+from media_manager.common.library_scan import LibraryScanCounts
 from media_manager.config import LibraryItem, MediaManagerConfig
 from media_manager.exceptions import ConflictError, NotFoundError
 from media_manager.indexer.schemas import (
@@ -136,6 +138,46 @@ async def get_all_importable_movies() -> list[MediaImportSuggestion]:
     return get_cached_importable_media(ImportScanMediaType.movie)
 
 
+@router.get(
+    "/importable/candidates",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(current_superuser)],
+)
+async def get_importable_movie_candidates(
+    movie_import_service: movie_import_service_dep,
+    metadata_provider: metadata_provider_dep,
+    directory: str,
+) -> list[MetaDataProviderSearchResult]:
+    """
+    Search results for one importable directory, for correcting the match the
+    scan resolved for it. GET /importable only carries that single match.
+    """
+    source_directory = Path(directory)
+    if source_directory not in get_importable_media_directories(
+        MediaManagerConfig().misc.movie_directory,
+        await movie_import_service.get_claimed_directory_names(),
+    ):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No such directory")
+    return await movie_import_service.get_import_candidates(
+        movie_path=source_directory, metadata_provider=metadata_provider
+    )
+
+
+@router.post(
+    "/files/scan",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(current_superuser)],
+)
+async def scan_movie_library_files(
+    movie_service: movie_service_dep,
+) -> LibraryScanCounts:
+    """
+    Immediately reconcile every movie's file records with the files on disk, and
+    adopt video files that have no record yet. Also runs on a schedule.
+    """
+    return await movie_service.scan_library_files()
+
+
 @router.post(
     "/importable/rescan",
     status_code=status.HTTP_200_OK,
@@ -161,17 +203,32 @@ async def import_detected_movie(
 ) -> None:
     """
     Import a detected movie from the specified directory into the library.
+
+    Nothing is moved or copied: the movie is pointed at the directory and the
+    files already in it are recorded. Returns 409 if the movie already has
+    files in the library.
     """
     source_directory = Path(directory)
+    claimed_directories = await movie_import_service.get_claimed_directory_names()
+    # The import flow creates the media item first, so its own canonical
+    # directory name is already claimed by the time we get here - and for a
+    # library already using that naming it *is* the directory being imported.
+    # Only a directory belonging to some other item is off limits.
+    if movie.directory_name:
+        claimed_directories.discard(movie.directory_name)
     if source_directory not in get_importable_media_directories(
-        MediaManagerConfig().misc.movie_directory
+        MediaManagerConfig().misc.movie_directory, claimed_directories
     ):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No such directory")
     success = await movie_import_service.import_existing_movie(
         movie=movie, source_directory=source_directory
     )
     if not success:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Error on importing")
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "No video files were found in that directory.",
+        )
+    remove_cached_importable_media_entry(ImportScanMediaType.movie, directory)
 
 
 # -----------------------------------------------------------------------------
@@ -426,7 +483,10 @@ async def resolve_movie_torrent_import(
         torrent=torrent, movie=movie, relative_path=relative_path
     )
     if not success:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Error on importing")
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "No video files were found in that directory.",
+        )
     # `torrent` was mutated in place by the successful import - return it
     # directly rather than re-fetching, which would round-trip the download
     # client and could fail even though the import itself already succeeded.

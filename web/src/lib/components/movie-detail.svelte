@@ -1,0 +1,83 @@
+<script lang="ts">
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import { buttonVariants } from '$lib/components/ui/button/index.js';
+	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
+	import { getContext } from 'svelte';
+	import type { PublicMovie, PublicMovieFile, UserRead } from '$lib/api/api';
+	import { getFullyQualifiedMediaName } from '$lib/utils';
+	import TorrentTable from '$lib/components/torrents/torrent-table.svelte';
+	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
+	import DownloadMovieDialog from '$lib/components/download-dialogs/download-movie-dialog.svelte';
+	import LibraryCombobox from '$lib/components/library-combobox.svelte';
+	import { resolve } from '$app/paths';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import DeleteMediaDialog from '$lib/components/delete-media-dialog.svelte';
+	import MediaFileTable from '$lib/components/media-file-table.svelte';
+	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
+
+	let { movie, movieFiles }: { movie: PublicMovie; movieFiles: PublicMovieFile[] } = $props();
+	let hasImportedFile = $derived(movieFiles.some((file) => file.imported));
+	let user: () => UserRead = getContext('user');
+
+	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
+	$effect(() => {
+		setCrumbs([
+			{ label: 'Movies', href: resolve('/dashboard/movies', {}) },
+			{ label: getFullyQualifiedMediaName(movie) }
+		]);
+	});
+</script>
+
+{#snippet filePathCell(file: PublicMovieFile)}
+	<span class="font-mono text-sm break-all">{file.file_path}</span>
+{/snippet}
+
+<MediaHeroHeader media={movie} isShow={false}>
+	{#snippet actions()}
+		{#if user().is_superuser}
+			<DownloadMovieDialog {movie} {hasImportedFile} />
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'icon' })}>
+					<EllipsisVertical class="size-4" />
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end" class="w-48">
+					<LibraryCombobox media={movie} mediaType="movie" />
+					<DropdownMenu.Separator />
+					<DeleteMediaDialog isShow={false} media={movie} />
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
+		{/if}
+	{/snippet}
+
+	<div class="flex-1 rounded-xl">
+		<Card.Root class="h-full w-full">
+			<Card.Header>
+				<Card.Title>Movie files</Card.Title>
+				<Card.Description>
+					A list of all downloaded/downloading versions of this movie.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<MediaFileTable
+					files={movieFiles}
+					caption="A list of all downloaded/downloading versions of this movie."
+					leadingLabel="File Path"
+					leadingCell={filePathCell}
+					emptyMessage="You haven't downloaded this movie yet."
+					dialogKeyPrefix="movieFileDetails"
+				/>
+			</Card.Content>
+		</Card.Root>
+	</div>
+	<div class="flex-1 rounded-xl">
+		<Card.Root class="h-full w-full">
+			<Card.Header>
+				<Card.Title>Torrent Information</Card.Title>
+				<Card.Description>A list of all torrents associated with this movie.</Card.Description>
+			</Card.Header>
+			<Card.Content class="flex flex-col gap-4">
+				<TorrentTable isShow={false} torrents={movie.torrents ?? []} movieSlug={movie.slug} />
+			</Card.Content>
+		</Card.Root>
+	</div>
+</MediaHeroHeader>

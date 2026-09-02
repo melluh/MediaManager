@@ -12,7 +12,6 @@
 	import DownloadSelectedEpisodesDialog from '$lib/components/download-dialogs/download-selected-episodes-dialog.svelte';
 	import DownloadCustomDialog from '$lib/components/download-dialogs/download-custom-dialog.svelte';
 	import CheckmarkX from '$lib/components/checkmark-x.svelte';
-	import { page } from '$app/state';
 	import TorrentTable from '$lib/components/torrents/torrent-table.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
 	import MediaImage from '$lib/components/media-image.svelte';
@@ -30,8 +29,11 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 
-	let show: PublicShow = $derived(page.data.showData);
-	let torrents: RichShowTorrent = $derived(page.data.torrentsData);
+	// Provided by +layout.svelte, which resolves them without blocking first paint.
+	const getShow: () => PublicShow = getContext('show');
+	const getTorrents: () => RichShowTorrent = getContext('showTorrents');
+	let show: PublicShow = $derived(getShow());
+	let torrents: RichShowTorrent = $derived(getTorrents());
 	let user: () => UserRead = getContext('user');
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
