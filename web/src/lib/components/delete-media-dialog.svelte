@@ -104,8 +104,7 @@
 				>
 					Delete torrents from my download client<br />
 					<span class="text-sm text-muted-foreground"
-						>Removes the torrent from your download client and deletes the data it downloaded
-						there.</span
+						>Removes the torrent from your download client and deletes the data it downloaded there.</span
 					>
 				</Label>
 			</div>
