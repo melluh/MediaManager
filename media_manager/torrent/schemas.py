@@ -116,6 +116,10 @@ class TorrentWithProgress(Torrent):
     """Live progress from the download client, if it supports reporting one."""
     media: TorrentMedia | None = None
     """The movie/show this torrent belongs to, if one has been linked yet."""
+    seasons: list[int] = Field(default_factory=list)
+    """Season numbers this torrent covers; empty for movie torrents."""
+    episodes: list[int] = Field(default_factory=list)
+    """Episode numbers this torrent covers, only when it covers a single season."""
 
 
 class TorrentImportCandidate(BaseModel):

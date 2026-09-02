@@ -28,6 +28,7 @@
 		formatDownloadSpeed,
 		formatLastUpdated,
 		formatSecondsToOptimalUnit,
+		formatTorrentSeasonEpisodeRange,
 		getTorrentQualityString
 	} from '$lib/utils';
 
@@ -54,6 +55,9 @@
 	let seedersLabel = $derived(progress?.seeders != null ? String(progress.seeders) : undefined);
 	let leechersLabel = $derived(progress?.leechers != null ? String(progress.leechers) : undefined);
 	let addedLabel = $derived(formatLastUpdated(torrent.initiated_at));
+	let seasonEpisodeLabel = $derived(
+		formatTorrentSeasonEpisodeRange(torrent.seasons, torrent.episodes)
+	);
 	let showLiveProgress = $derived(
 		statusBadge.variant !== 'destructive' && statusBadge.variant !== 'default'
 	);
@@ -148,7 +152,9 @@
 <Dialog.Content class="w-full max-w-[500px] rounded-lg p-6 shadow-lg">
 	<Dialog.Header class="min-w-0">
 		<Dialog.Title class="mb-1 text-xl font-semibold">
-			{torrent.media?.name ?? torrent.title}
+			{torrent.media?.name ?? torrent.title}{#if seasonEpisodeLabel}
+				<span class="text-muted-foreground">({seasonEpisodeLabel})</span>
+			{/if}
 		</Dialog.Title>
 		<Dialog.Description class="font-mono text-sm">
 			{torrent.title}

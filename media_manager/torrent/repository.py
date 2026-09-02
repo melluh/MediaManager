@@ -131,6 +131,35 @@ class TorrentRepository:
         rows = (await self.db.execute(stmt)).all()
         return {row[0]: MovieSchema.model_validate(row[1]) for row in rows}
 
+    async def get_season_and_episode_numbers_of_torrents(
+        self, torrent_ids: list[TorrentId]
+    ) -> dict[TorrentId, tuple[list[int], list[int]]]:
+        """
+        Bulk-resolve the season and episode numbers each of the given torrents
+        covers, in a single query, keyed by torrent id. Movie torrents are
+        simply absent from the result.
+        """
+        if not torrent_ids:
+            return {}
+        stmt = (
+            select(EpisodeFile.torrent_id, Season.number, Episode.number)
+            .distinct()
+            .join(Episode, Episode.id == EpisodeFile.episode_id)
+            .join(Season, Season.id == Episode.season_id)
+            .where(EpisodeFile.torrent_id.in_(torrent_ids))
+            .order_by(Season.number, Episode.number)
+        )
+        rows = (await self.db.execute(stmt)).all()
+
+        numbers: dict[TorrentId, tuple[list[int], list[int]]] = {}
+        for torrent_id, season_number, episode_number in rows:
+            seasons, episodes = numbers.setdefault(torrent_id, ([], []))
+            if season_number not in seasons:
+                seasons.append(season_number)
+            if episode_number not in episodes:
+                episodes.append(episode_number)
+        return numbers
+
     async def get_shows_of_torrents(
         self, torrent_ids: list[TorrentId]
     ) -> dict[TorrentId, ShowSummarySchema]:

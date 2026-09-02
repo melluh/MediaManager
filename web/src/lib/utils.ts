@@ -98,6 +98,38 @@ export function convertTorrentEpisodeRangeToIntegerRange(episodes: number[]): st
 	}
 }
 
+function padSeasonOrEpisodeNumber(n: number): string {
+	return String(n).padStart(2, '0');
+}
+
+/**
+ * Formats the seasons/episodes a torrent covers as a compact label, e.g.
+ * "S01", "S01-S03" or "S01E01-E10". Returns null for anything without seasons
+ * (movie torrents).
+ */
+export function formatTorrentSeasonEpisodeRange(
+	seasons: number[] | undefined | null,
+	episodes: number[] | undefined | null
+): string | null {
+	if (!seasons || seasons.length === 0) return null;
+
+	const firstSeason = seasons[0]!;
+	const lastSeason = seasons.at(-1)!;
+	if (seasons.length > 1) {
+		return `S${padSeasonOrEpisodeNumber(firstSeason)}-S${padSeasonOrEpisodeNumber(lastSeason)}`;
+	}
+
+	const seasonLabel = `S${padSeasonOrEpisodeNumber(firstSeason)}`;
+	if (!episodes || episodes.length === 0) return seasonLabel;
+
+	const firstEpisode = episodes[0]!;
+	const lastEpisode = episodes.at(-1)!;
+	if (episodes.length === 1) return `${seasonLabel}E${padSeasonOrEpisodeNumber(firstEpisode)}`;
+	return `${seasonLabel}E${padSeasonOrEpisodeNumber(firstEpisode)}-E${padSeasonOrEpisodeNumber(
+		lastEpisode
+	)}`;
+}
+
 export async function handleLogout() {
 	await client.POST('/api/v1/auth/cookie/logout');
 	await goto(resolve('/login', {}));

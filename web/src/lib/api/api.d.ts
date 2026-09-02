@@ -2439,6 +2439,10 @@ export interface components {
 			comments?: string | null;
 			download_progress?: components['schemas']['DownloadProgress'] | null;
 			media?: components['schemas']['TorrentMedia'] | null;
+			/** Seasons */
+			seasons?: number[];
+			/** Episodes */
+			episodes?: number[];
 		};
 		/** UserCreate */
 		UserCreate: {

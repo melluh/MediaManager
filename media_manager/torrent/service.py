@@ -217,15 +217,38 @@ class TorrentService:
         )
         torrents, progress_by_hash = await self._resolve_progress_and_status(own)
         media_by_torrent_id = await self._resolve_media(torrents)
+        numbers_by_torrent_id = await self._resolve_season_and_episode_numbers(torrents)
 
-        return [
-            TorrentWithProgress(
-                **t.model_dump(),
-                download_progress=progress_by_hash.get(t.hash),
-                media=media_by_torrent_id.get(t.id),
+        result = []
+        for t in torrents:
+            seasons, episodes = numbers_by_torrent_id.get(t.id, ([], []))
+            result.append(
+                TorrentWithProgress(
+                    **t.model_dump(),
+                    download_progress=progress_by_hash.get(t.hash),
+                    media=media_by_torrent_id.get(t.id),
+                    seasons=seasons,
+                    # Episode numbers only mean something within a single season.
+                    episodes=episodes if len(seasons) == 1 else [],
+                )
             )
-            for t in torrents
-        ]
+        return result
+
+    async def _resolve_season_and_episode_numbers(
+        self, torrents: list[Torrent]
+    ) -> dict[TorrentId, tuple[list[int], list[int]]]:
+        """
+        Bulk-resolves the season and episode numbers each of the given torrents
+        covers, keyed by torrent id. Movie torrents are absent from the result.
+        """
+        try:
+            repository = self.torrent_repository
+            return await repository.get_season_and_episode_numbers_of_torrents(
+                torrent_ids=[t.id for t in torrents]
+            )
+        except Exception:
+            log.exception("Error resolving seasons/episodes for own torrents")
+            return {}
 
     async def _resolve_progress_and_status(
         self, torrents: list[Torrent]
