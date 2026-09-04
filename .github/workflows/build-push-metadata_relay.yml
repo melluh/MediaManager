@@ -20,13 +20,12 @@ jobs:
     name:  Lint Python Code
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses:  astral-sh/ruff-action@v3
+      - uses: actions/checkout@v7
+      - uses:  astral-sh/ruff-action@v4
         with:
           src: "./metadata_relay"
 
   build-and-push:
-    needs: lint-code
     strategy:
       fail-fast: false
       matrix:
@@ -43,7 +42,7 @@ jobs:
       QUAY_ORG: ${{ secrets.QUAY_ORG || github.repository_owner }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set repository name to lowercase
         id: repo_name
@@ -53,7 +52,6 @@ jobs:
         uses: docker/setup-buildx-action@v4
         with:
           install: true
-          driver-opts: image=moby/buildkit:rootless
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -114,6 +112,11 @@ jobs:
           push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          sbom: false
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ steps.repo_name.outputs.name }}/metadata_relay:buildcache-${{ matrix.arch }}
+          # Only export cache when we can authenticate to GHCR (i.e. not on fork PRs).
+          cache-to: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && format('type=registry,ref=ghcr.io/{0}/{1}/metadata_relay:buildcache-{2},mode=max', github.repository_owner, steps.repo_name.outputs.name, matrix.arch) || '' }}
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
 
@@ -128,7 +131,7 @@ jobs:
       QUAY_ORG: ${{ secrets.QUAY_ORG || github.repository_owner }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set repository name to lowercase
         id: repo_name
