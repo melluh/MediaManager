@@ -57,7 +57,7 @@
 				? 'Backdrop'
 				: 'Poster'} Image"
 			class={resolvedClassName}
-			src="{apiUrl}{imagePath}.jpeg{versionQuery}"
+			src="{apiUrl}{imagePath}.jpg{versionQuery}"
 			loading={resolvedLoading}
 			decoding="async"
 			onload={() => (loaded = true)}
