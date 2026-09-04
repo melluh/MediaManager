@@ -1,5 +1,7 @@
+import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from urllib.parse import quote
 
 import taskiq_fastapi
@@ -126,6 +128,19 @@ async def scan_show_library_files_task(
 ) -> None:
     log.info("Scanning TV library files")
     await tv_service.scan_library_files()
+
+
+@broker.task
+async def encode_avif_image_task(image_file_path: str) -> None:
+    """
+    Encodes the .avif variant of an image already written to disk as
+    .jpg/.webp. Enqueued (not scheduled) once per downloaded image - see
+    `media_manager.metadataProvider.utils._enqueue_avif_encode` - so avif
+    encoding, which is much slower than jpg/webp, never blocks an import.
+    """
+    from media_manager.metadataProvider.utils import _encode_avif
+
+    await asyncio.to_thread(_encode_avif, Path(image_file_path))
 
 
 @broker.task

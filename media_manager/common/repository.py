@@ -279,6 +279,30 @@ class BaseRepository[T, S]:
         else:
             return schema_class.model_validate(db_model)
 
+    async def add_media_files_bulk_base(
+        self, file_schemas: Sequence[S], model_class: type[T]
+    ) -> None:
+        """
+        Adds many media file records in a single transaction.
+
+        Skips the per-row refresh `add_media_file_base` does, since callers
+        that import dozens or hundreds of files at once don't need the
+        generated rows back, only the write to land.
+        """
+        if not file_schemas:
+            return
+        try:
+            self.db.add_all(
+                [model_class(**file_schema.model_dump()) for file_schema in file_schemas]
+            )
+            await self.db.commit()
+        except IntegrityError:
+            await self.db.rollback()
+            raise
+        except SQLAlchemyError:
+            await self.db.rollback()
+            raise
+
     async def remove_files_by_torrent_id_base(
         self, torrent_id: EntityId, model_class: type[T]
     ) -> int:

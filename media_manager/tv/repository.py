@@ -235,6 +235,13 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             schema_class=EpisodeFileSchema,
         )
 
+    async def add_episode_files_bulk(
+        self, episode_files: list[EpisodeFileSchema]
+    ) -> None:
+        await self.add_media_files_bulk_base(
+            file_schemas=episode_files, model_class=EpisodeFile
+        )
+
     async def remove_episode_files_by_torrent_id(self, torrent_id: TorrentId) -> int:
         return await self.remove_files_by_torrent_id_base(
             torrent_id=torrent_id, model_class=EpisodeFile
@@ -272,6 +279,29 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             .values(relative_path=relative_path)
         )
         await self.db.execute(stmt)
+        await self.db.commit()
+
+    async def set_episode_file_relative_paths_bulk(
+        self,
+        updates: list[tuple[EpisodeId, str, str | None]],
+    ) -> None:
+        """
+        Same as `set_episode_file_relative_path`, but applies every update in
+        `updates` (episode_id, file_path_suffix, relative_path triples) in a
+        single transaction instead of one commit per row.
+        """
+        if not updates:
+            return
+        for episode_id, file_path_suffix, relative_path in updates:
+            stmt = (
+                update(EpisodeFile)
+                .where(
+                    EpisodeFile.episode_id == episode_id,
+                    EpisodeFile.file_path_suffix == file_path_suffix,
+                )
+                .values(relative_path=relative_path)
+            )
+            await self.db.execute(stmt)
         await self.db.commit()
 
     async def get_episode_files_by_show_id(

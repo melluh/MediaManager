@@ -45,8 +45,19 @@ def _process_image(image_file_path: Path, content: bytes) -> None:
     image_file_path.write_bytes(content)
 
     original_image = Image.open(image_file_path)
-    original_image.save(image_file_path.with_suffix(".avif"), quality=50)
     original_image.save(image_file_path.with_suffix(".webp"), quality=50)
+
+
+def _encode_avif(image_file_path: Path) -> None:
+    """
+    Encodes the .avif variant of an already-downloaded image.
+
+    Split out from `_process_image` and run afterwards, in a background
+    task: Pillow's avif encoder is far slower than its jpg/webp ones, and
+    nothing needs avif to be ready immediately - `<picture>` clients that
+    don't see it yet fall back to the webp/jpg source that's already there.
+    """
+    Image.open(image_file_path).save(image_file_path.with_suffix(".avif"), quality=50)
 
 
 def media_image_relative_path(media_id: UUID | str, image_type: MediaImageType) -> str:
@@ -66,8 +77,18 @@ async def _download_image(storage_path: Path, image_url: str, relative_path: str
         image_file_path = storage_path.joinpath(relative_path).with_suffix(".jpg")
         await asyncio.to_thread(_process_image, image_file_path, res.content)
         _get_available_media_images_cached.cache_clear()
+        await _enqueue_avif_encode(image_file_path)
         return True
     return False
+
+
+async def _enqueue_avif_encode(image_file_path: Path) -> None:
+    # Imported lazily: media_manager.scheduler transitively imports this
+    # module (via the metadata providers), so importing it at module load
+    # time here would be circular.
+    from media_manager.scheduler import encode_avif_image_task
+
+    await encode_avif_image_task.kiq(str(image_file_path))
 
 
 async def download_media_image(

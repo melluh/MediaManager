@@ -70,6 +70,11 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             file_schema=movie_file, model_class=MovieFile, schema_class=MovieFileSchema
         )
 
+    async def add_movie_files_bulk(self, movie_files: list[MovieFileSchema]) -> None:
+        await self.add_media_files_bulk_base(
+            file_schemas=movie_files, model_class=MovieFile
+        )
+
     async def set_movie_file_relative_path(
         self, movie_id: MovieId, file_path_suffix: str, relative_path: str | None
     ) -> None:
@@ -88,6 +93,28 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             .values(relative_path=relative_path)
         )
         await self.db.execute(stmt)
+        await self.db.commit()
+
+    async def set_movie_file_relative_paths_bulk(
+        self, updates: list[tuple[MovieId, str, str | None]]
+    ) -> None:
+        """
+        Same as `set_movie_file_relative_path`, but applies every update in
+        `updates` (movie_id, file_path_suffix, relative_path triples) in a
+        single transaction instead of one commit per row.
+        """
+        if not updates:
+            return
+        for movie_id, file_path_suffix, relative_path in updates:
+            stmt = (
+                update(MovieFile)
+                .where(
+                    MovieFile.movie_id == movie_id,
+                    MovieFile.file_path_suffix == file_path_suffix,
+                )
+                .values(relative_path=relative_path)
+            )
+            await self.db.execute(stmt)
         await self.db.commit()
 
     async def remove_movie_files_by_torrent_id(self, torrent_id: TorrentId) -> int:

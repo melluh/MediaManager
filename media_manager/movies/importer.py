@@ -318,22 +318,28 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         :param movie: The scanned movie.
         :param plan: The changes the scan planned for it.
         """
-        for path_update in [*plan.relinked, *plan.cleared]:
-            await self.movie_repository.set_movie_file_relative_path(
-                movie_id=movie.id,
-                file_path_suffix=path_update.record.file_path_suffix,
-                relative_path=path_update.relative_path,
-            )
-        for adoption in plan.adoptions:
-            await self.movie_repository.add_movie_file(
-                movie_file=MovieFile(
+        await self.movie_repository.set_movie_file_relative_paths_bulk(
+            [
+                (
+                    movie.id,
+                    path_update.record.file_path_suffix,
+                    path_update.relative_path,
+                )
+                for path_update in [*plan.relinked, *plan.cleared]
+            ]
+        )
+        await self.movie_repository.add_movie_files_bulk(
+            [
+                MovieFile(
                     movie_id=movie.id,
                     quality=adoption.quality,
                     torrent_id=None,
                     file_path_suffix=adoption.file_path_suffix,
                     relative_path=adoption.relative_path,
                 )
-            )
+                for adoption in plan.adoptions
+            ]
+        )
 
     async def scan_movie_files(self, movie: Movie) -> MediaScanPlan:
         """

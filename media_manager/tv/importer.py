@@ -276,22 +276,28 @@ class TvImportService(BaseMediaService[Show, Show]):
 
         :param plan: The changes the scan planned.
         """
-        for path_update in [*plan.relinked, *plan.cleared]:
-            await self.tv_repository.set_episode_file_relative_path(
-                episode_id=EpisodeId(path_update.record.owner_key),
-                file_path_suffix=path_update.record.file_path_suffix,
-                relative_path=path_update.relative_path,
-            )
-        for adoption in plan.adoptions:
-            await self.tv_repository.add_episode_file(
-                episode_file=EpisodeFile(
+        await self.tv_repository.set_episode_file_relative_paths_bulk(
+            [
+                (
+                    EpisodeId(path_update.record.owner_key),
+                    path_update.record.file_path_suffix,
+                    path_update.relative_path,
+                )
+                for path_update in [*plan.relinked, *plan.cleared]
+            ]
+        )
+        await self.tv_repository.add_episode_files_bulk(
+            [
+                EpisodeFile(
                     episode_id=EpisodeId(adoption.owner_key),
                     quality=adoption.quality,
                     torrent_id=None,
                     file_path_suffix=adoption.file_path_suffix,
                     relative_path=adoption.relative_path,
                 )
-            )
+                for adoption in plan.adoptions
+            ]
+        )
 
     async def scan_show_files(self, show: Show) -> MediaScanPlan:
         """
