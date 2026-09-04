@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, PrimaryKeyConstraint, UniqueConstraint
+from sqlalchemy import ForeignKey, PrimaryKeyConstraint, UniqueConstraint, case
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from media_manager.common.models import MediaFileMixin, MediaMixin
@@ -18,7 +18,9 @@ class Show(Base, MediaMixin):
     continuous_download: Mapped[bool] = mapped_column(default=False)
 
     seasons: Mapped[list["Season"]] = relationship(
-        back_populates="show", cascade="all, delete", order_by="Season.number"
+        back_populates="show",
+        cascade="all, delete",
+        order_by=lambda: (case((Season.number == 0, 1), else_=0), Season.number),
     )
 
 
