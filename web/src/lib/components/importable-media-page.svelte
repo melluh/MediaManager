@@ -125,7 +125,7 @@
 
 	function summarize(total: number, needingAttention: number): string {
 		const directories = `${total} ${total === 1 ? 'directory' : 'directories'} detected`;
-		if (needingAttention === 0) return "";
+		if (needingAttention === 0) return '';
 		if (needingAttention === 1) return `${directories}. 1 is not an exact match.`;
 		return `${directories}. ${needingAttention} are not exact matches.`;
 	}
