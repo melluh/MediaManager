@@ -11,6 +11,7 @@
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 	import { formatLastUpdated } from '$lib/utils';
+	import UserPill from '$lib/components/user-pill.svelte';
 
 	let {
 		media,
@@ -70,12 +71,16 @@
 
 		<div class="flex flex-col gap-1 rounded-lg border bg-muted/40 px-3 py-2">
 			<span class="text-xs text-muted-foreground">Added</span>
-			<span class="text-sm font-medium">
-				{formatLastUpdated(media.created_at) ?? 'Unknown'}
+			<div class="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+				<span>{formatLastUpdated(media.created_at) ?? 'Unknown'}</span>
 				{#if media.added_by}
-					by {media.added_by.display_name || media.added_by.email}
+					<span>by</span>
+					<UserPill
+						userId={media.added_by.id}
+						name={media.added_by.display_name || media.added_by.email}
+					/>
 				{/if}
-			</span>
+			</div>
 		</div>
 
 		<Button onclick={rescan} disabled={rescanning} variant="outline" class="w-full">
