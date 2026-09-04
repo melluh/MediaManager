@@ -16,7 +16,6 @@
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
 	import MediaImage from '$lib/components/media-image.svelte';
 	import * as Carousel from '$lib/components/ui/carousel/index.js';
-	import Check from '@lucide/svelte/icons/check';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { toast } from 'svelte-sonner';
 	import { Label } from '$lib/components/ui/label';
@@ -25,6 +24,7 @@
 	import DeleteMediaDialog from '$lib/components/delete-media-dialog.svelte';
 	import { resolve } from '$app/paths';
 	import client from '$lib/api';
+	import { getTorrentStatusString } from '$lib/utils';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
@@ -55,6 +55,37 @@
 			metadata_updated_at: show.metadata_updated_at,
 			images: season.images?.poster ? season.images : show.images
 		};
+	}
+
+	const seasonBannerClasses = {
+		available: 'bg-green-600/90',
+		downloading: 'bg-blue-600/90',
+		partial: 'bg-amber-600/90',
+		missing: 'bg-gray-600/80'
+	} as const;
+
+	function seasonBanner(season: PublicShow['seasons'][number]) {
+		const total = season.episodes.length;
+		const downloadedCount = season.episodes.filter((episode) => episode.downloaded).length;
+		const allDownloaded = season.downloaded || (total > 0 && downloadedCount === total);
+
+		if (allDownloaded) {
+			return { label: 'Available', classes: seasonBannerClasses.available };
+		}
+
+		const isDownloading = torrents.torrents.some(
+			(t) => t.seasons.includes(season.number) && getTorrentStatusString(t.status) === 'downloading'
+		);
+		if (isDownloading) {
+			return {
+				label: downloadedCount > 0 ? `Downloading (${downloadedCount}/${total})` : 'Downloading',
+				classes: seasonBannerClasses.downloading
+			};
+		}
+		if (downloadedCount > 0) {
+			return { label: `Partial (${downloadedCount}/${total})`, classes: seasonBannerClasses.partial };
+		}
+		return { label: 'Missing', classes: seasonBannerClasses.missing };
 	}
 
 	let expandedSeasons = $state<Set<string>>(new Set());
@@ -209,6 +240,7 @@
 					<Carousel.Root class="w-full md:px-10" opts={{ align: 'start' }}>
 						<Carousel.Content>
 							{#each show.seasons as season (season.id)}
+								{@const banner = seasonBanner(season)}
 								<Carousel.Item class="basis-1/3 sm:basis-1/4 md:basis-1/5 lg:basis-1/6">
 									<a
 										href={resolve('/dashboard/tv/[showId]/[seasonId]', {
@@ -222,15 +254,8 @@
 											className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
 											loading="lazy"
 										/>
-										{#if season.downloaded}
-											<div
-												class="absolute top-1.5 right-1.5 z-10 rounded-full bg-black/60 p-1 backdrop-blur-sm"
-											>
-												<Check class="size-3 stroke-green-500" />
-											</div>
-										{/if}
 										<div
-											class="absolute inset-0 flex flex-col justify-end gap-0.5 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2 text-white"
+											class="absolute inset-0 flex flex-col justify-end gap-0.5 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2 pb-6 text-white"
 										>
 											<p class="text-sm leading-tight font-semibold">
 												{season.name}
@@ -238,6 +263,11 @@
 											<p class="truncate text-xs text-white/70">
 												{season.episodes.length} episodes
 											</p>
+										</div>
+										<div
+											class={`absolute inset-x-0 bottom-0 z-10 py-1 text-center text-[10px] font-semibold tracking-wide text-white ${banner.classes}`}
+										>
+											{banner.label}
 										</div>
 									</a>
 								</Carousel.Item>
