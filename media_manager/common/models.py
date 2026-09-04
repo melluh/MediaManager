@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey, String, func
@@ -6,6 +7,9 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
 from media_manager.torrent.models import Quality
+
+if TYPE_CHECKING:
+    from media_manager.auth.db import User
 
 
 class MediaMixin:
@@ -45,7 +49,7 @@ class MediaMixin:
     """The user who added this media item, if known and not since deleted."""
 
     @declared_attr
-    def added_by(cls):  # noqa: N805
+    def added_by(cls) -> Mapped["User"]:  # noqa: N805
         # Declared per-subclass (rather than as a plain mixin attribute)
         # because the FK it joins on (`added_by_user_id`) is also defined on
         # this mixin - a shared relationship object would otherwise be

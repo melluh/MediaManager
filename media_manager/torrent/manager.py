@@ -188,17 +188,15 @@ class DownloadManager:
         if indexer_result.usenet:
             if not self._usenet_client:
                 if self._usenet_error is None:
-                    raise InvalidConfigError(
-                        "No usenet client configured. Configure one (e.g. SABnzbd) in the config file."
-                    )
+                    msg = "No usenet client configured. Configure one (e.g. SABnzbd) in the config file."
+                    raise InvalidConfigError(msg)
                 msg = f"Usenet client unavailable: {self._usenet_error}"
                 raise RuntimeError(msg)
             return self._usenet_client
         if not self._torrent_client:
             if self._torrent_error is None:
-                raise InvalidConfigError(
-                    "No torrent client configured. Configure one (e.g. qBittorrent or Transmission) in the config file."
-                )
+                msg = "No torrent client configured. Configure one (e.g. qBittorrent or Transmission) in the config file."
+                raise InvalidConfigError(msg)
             msg = f"Torrent client unavailable: {self._torrent_error}"
             raise RuntimeError(msg)
         return self._torrent_client

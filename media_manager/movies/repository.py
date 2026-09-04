@@ -159,9 +159,9 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
         endpoint's filters instead of per movie at request time.
         """
         all_movie_ids = (await self.db.execute(select(Movie.id))).scalars().all()
-        info: dict[MovieId, tuple[bool, Quality | None]] = {
-            movie_id: (False, None) for movie_id in all_movie_ids
-        }
+        info: dict[MovieId, tuple[bool, Quality | None]] = dict.fromkeys(
+            all_movie_ids, (False, None)
+        )
 
         stmt = select(
             MovieFile.movie_id, MovieFile.torrent_id, MovieFile.quality, Torrent.imported

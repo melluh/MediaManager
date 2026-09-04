@@ -36,9 +36,8 @@ class IndexerService:
 
     def _require_indexers(self) -> None:
         if not self.indexers:
-            raise InvalidConfigError(
-                "No indexers configured. Configure an indexer (e.g. Prowlarr or Jackett) in the config file."
-            )
+            msg = "No indexers configured. Configure an indexer (e.g. Prowlarr or Jackett) in the config file."
+            raise InvalidConfigError(msg)
 
     async def get_result(self, result_id: IndexerQueryResultId) -> IndexerQueryResult:
         return await self.repository.get_result(result_id=result_id)
