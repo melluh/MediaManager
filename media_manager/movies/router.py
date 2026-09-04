@@ -28,6 +28,7 @@ from media_manager.movies.dependencies import (
 )
 from media_manager.movies.schemas import (
     Movie,
+    MovieListItem,
     PublicMovie,
     PublicMovieFile,
     RichMovieTorrent,
@@ -240,7 +241,7 @@ async def import_detected_movie(
     "",
     dependencies=[Depends(current_active_user)],
 )
-async def get_all_movies(movie_service: movie_service_dep) -> list[Movie]:
+async def get_all_movies(movie_service: movie_service_dep) -> list[MovieListItem]:
     """
     Get all movies in the library.
     """

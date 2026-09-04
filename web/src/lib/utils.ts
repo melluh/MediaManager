@@ -4,7 +4,7 @@ import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { toast } from 'svelte-sonner';
 import client from '$lib/api';
-import type { Show, Movie } from '$lib/api/api';
+import type { Show, Movie, MovieListItem, Quality, ShowSummary } from '$lib/api/api';
 
 export const qualityMap: { [key: number]: string } = {
 	1: '4K/UHD',
@@ -327,4 +327,60 @@ export function saveDirectoryPreview(media: Show | Movie, filePathSuffix: string
 export function getDirectoryName(directory: string): string {
 	const segments = directory.split('/').filter((segment) => segment.length > 0);
 	return segments.at(-1) ?? directory;
+}
+
+export type MediaSortOption = 'alphabetical' | 'newest' | 'oldest';
+export type DownloadedFilter = 'all' | 'yes' | 'no';
+
+export interface MediaLibraryFilters {
+	sortBy: MediaSortOption;
+	genres: string[];
+	downloaded: DownloadedFilter;
+	qualities: Quality[];
+}
+
+export function defaultMediaLibraryFilters(): MediaLibraryFilters {
+	return { sortBy: 'newest', genres: [], downloaded: 'all', qualities: [] };
+}
+
+function isMovieListItem(item: MovieListItem | ShowSummary): item is MovieListItem {
+	return 'downloaded' in item;
+}
+
+/**
+ * Applies the library page's genre/downloaded/quality filters and the chosen
+ * sort order. The downloaded/quality filters only ever narrow anything for
+ * movies (shows don't carry those fields yet), so they're a no-op for shows.
+ */
+export function filterAndSortMedia<T extends MovieListItem | ShowSummary>(
+	items: T[],
+	filters: MediaLibraryFilters
+): T[] {
+	const filtered = items.filter((item) => {
+		if (filters.genres.length > 0) {
+			const itemGenres = item.genres ?? [];
+			if (!filters.genres.some((genre) => itemGenres.includes(genre))) return false;
+		}
+		if (isMovieListItem(item)) {
+			if (filters.downloaded === 'yes' && !item.downloaded) return false;
+			if (filters.downloaded === 'no' && item.downloaded) return false;
+			if (filters.qualities.length > 0) {
+				if (item.quality == null || !filters.qualities.includes(item.quality)) return false;
+			}
+		}
+		return true;
+	});
+
+	const dateValue = (item: T) => (item.created_at ? new Date(item.created_at).getTime() : 0);
+
+	return filtered.sort((a, b) => {
+		switch (filters.sortBy) {
+			case 'alphabetical':
+				return a.name.localeCompare(b.name);
+			case 'newest':
+				return dateValue(b) - dateValue(a);
+			case 'oldest':
+				return dateValue(a) - dateValue(b);
+		}
+	});
 }

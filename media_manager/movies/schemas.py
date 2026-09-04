@@ -15,6 +15,14 @@ class Movie(BaseMedia):
     id: MovieId = Field(default_factory=lambda: MovieId(uuid.uuid4()))
 
 
+class MovieListItem(Movie):
+    """Movie plus the file-derived fields needed to filter the library list
+    (downloaded status, download quality) without a per-movie query."""
+
+    downloaded: bool = False
+    quality: Quality | None = None
+
+
 class MovieFile(BaseMediaFile):
     movie_id: MovieId
 

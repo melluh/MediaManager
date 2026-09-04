@@ -1984,10 +1984,82 @@ export interface components {
 			 * @default 3
 			 */
 			metadata_version: number;
+			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at?: string;
 			/** Images */
 			images?: {
 				[key: string]: string;
 			};
+		};
+		/**
+		 * MovieListItem
+		 * @description Movie plus the file-derived fields needed to filter the library list
+		 *     (downloaded status, download quality) without a per-movie query.
+		 */
+		MovieListItem: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id?: string;
+			/** Name */
+			name: string;
+			/** Slug */
+			slug?: string | null;
+			/** Directory Name */
+			directory_name?: string | null;
+			/** Overview */
+			overview: string;
+			/** Year */
+			year: number | null;
+			/** External Id */
+			external_id: number;
+			/** Metadata Provider */
+			metadata_provider: string;
+			/**
+			 * Library
+			 * @default Default
+			 */
+			library: string;
+			/** Original Language */
+			original_language?: string | null;
+			/** Imdb Id */
+			imdb_id?: string | null;
+			/** Trailer Url */
+			trailer_url?: string | null;
+			/** Tagline */
+			tagline?: string | null;
+			/** Genres */
+			genres?: string[];
+			/** Runtime */
+			runtime?: number | null;
+			/** Release Date */
+			release_date?: string | null;
+			/** Metadata Updated At */
+			metadata_updated_at?: string | null;
+			/**
+			 * Metadata Version
+			 * @default 3
+			 */
+			metadata_version: number;
+			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at?: string;
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
+			/**
+			 * Downloaded
+			 * @default false
+			 */
+			downloaded: boolean;
+			quality?: components['schemas']['Quality'] | null;
 		};
 		/** MovieTorrent */
 		MovieTorrent: {
@@ -2154,6 +2226,11 @@ export interface components {
 			 * @default 3
 			 */
 			metadata_version: number;
+			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at?: string;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2281,6 +2358,11 @@ export interface components {
 			 * @default 3
 			 */
 			metadata_version: number;
+			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at?: string;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2405,6 +2487,11 @@ export interface components {
 			 * @default 3
 			 */
 			metadata_version: number;
+			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at?: string;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2499,6 +2586,11 @@ export interface components {
 			 * @default 3
 			 */
 			metadata_version: number;
+			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at?: string;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2563,6 +2655,11 @@ export interface components {
 			 * @default 3
 			 */
 			metadata_version: number;
+			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at?: string;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2920,6 +3017,7 @@ export type MediaImportSuggestion = components['schemas']['MediaImportSuggestion
 export type MediaType = components['schemas']['MediaType'];
 export type MetaDataProviderSearchResult = components['schemas']['MetaDataProviderSearchResult'];
 export type Movie = components['schemas']['Movie'];
+export type MovieListItem = components['schemas']['MovieListItem'];
 export type MovieTorrent = components['schemas']['MovieTorrent'];
 export type Notification = components['schemas']['Notification'];
 export type OAuth2AuthorizeResponse = components['schemas']['OAuth2AuthorizeResponse'];
@@ -4903,7 +5001,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['Movie'][];
+					'application/json': components['schemas']['MovieListItem'][];
 				};
 			};
 		};

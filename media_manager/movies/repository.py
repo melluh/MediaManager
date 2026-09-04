@@ -21,7 +21,7 @@ from media_manager.movies.schemas import (
     MovieTorrent as MovieTorrentSchema,
 )
 from media_manager.torrent.models import Torrent
-from media_manager.torrent.schemas import TorrentId
+from media_manager.torrent.schemas import Quality, TorrentId
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
 
     async def get_movie_by_slug(self, slug: str) -> MovieSchema:
         stmt = select(Movie).where(Movie.slug == slug)
-        result = (await self.db.execute(stmt)).scalar_one_or_none()
+        result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
         if not result:
             msg = f"Movie with slug {slug} not found."
             raise NotFoundError(msg)
@@ -148,6 +148,35 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             downloaded = torrent_id is None or bool(imported)
             statuses[movie_id] = statuses.get(movie_id, False) or downloaded
         return statuses
+
+    async def get_movie_download_info(
+        self,
+    ) -> dict[MovieId, tuple[bool, Quality | None]]:
+        """
+        For every movie, whether it's downloaded and (if so) the best quality
+        among its downloaded files - the same downloaded semantics as
+        `get_movie_downloaded_statuses`, computed in bulk for the movie list
+        endpoint's filters instead of per movie at request time.
+        """
+        all_movie_ids = (await self.db.execute(select(Movie.id))).scalars().all()
+        info: dict[MovieId, tuple[bool, Quality | None]] = {
+            movie_id: (False, None) for movie_id in all_movie_ids
+        }
+
+        stmt = select(
+            MovieFile.movie_id, MovieFile.torrent_id, MovieFile.quality, Torrent.imported
+        ).select_from(MovieFile).outerjoin(Torrent, MovieFile.torrent_id == Torrent.id)
+        rows = (await self.db.execute(stmt)).all()
+
+        for movie_id, torrent_id, quality, imported in rows:
+            downloaded = torrent_id is None or bool(imported)
+            if not downloaded:
+                continue
+            _, best_quality = info.get(movie_id, (False, None))
+            if best_quality is None or quality.value < best_quality.value:
+                best_quality = quality
+            info[movie_id] = (True, best_quality)
+        return info
 
     async def get_torrents_by_movie_id(
         self, movie_id: MovieId

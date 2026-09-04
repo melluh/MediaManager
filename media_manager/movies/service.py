@@ -33,6 +33,7 @@ from media_manager.movies.schemas import (
     Movie,
     MovieFile,
     MovieId,
+    MovieListItem,
     PublicMovie,
     PublicMovieFile,
     RichMovieTorrent,
@@ -319,11 +320,22 @@ class MovieService(BaseMediaService[Movie, Movie]):
     async def set_movie_library(self, movie: Movie, library: str) -> None:
         await self.movie_repository.set_movie_library(movie.id, library)
 
-    async def get_all_movies(self) -> list[Movie]:
+    async def get_all_movies(self) -> list[MovieListItem]:
         """
-        Get all movies in the library.
+        Get all movies in the library, with the downloaded/quality fields the
+        library page's filters need.
         """
-        return await self.attach_media_images_many(await self.get_all_media())
+        movies = await self.attach_media_images_many(await self.get_all_media())
+        download_info = await self.movie_repository.get_movie_download_info()
+        list_items = []
+        for movie in movies:
+            downloaded, quality = download_info.get(movie.id, (False, None))
+            list_items.append(
+                MovieListItem(
+                    **movie.model_dump(), downloaded=downloaded, quality=quality
+                )
+            )
+        return list_items
 
     async def get_torrents_for_movie(self, movie: Movie) -> RichMovieTorrent:
         """

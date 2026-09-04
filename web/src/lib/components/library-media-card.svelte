@@ -2,7 +2,7 @@
 	import { resolve } from '$app/paths';
 	import MediaCard from '$lib/components/media-card.svelte';
 	import MediaImage from '$lib/components/media-image.svelte';
-	import type { Movie, SearchResult, ShowSummary } from '$lib/api/api';
+	import type { MovieListItem, SearchResult, ShowSummary } from '$lib/api/api';
 	import type { Snippet } from 'svelte';
 
 	let posterLoaded = $state(false);
@@ -11,7 +11,7 @@
 		isShow,
 		indicators
 	}: {
-		media: Movie | ShowSummary | SearchResult;
+		media: MovieListItem | ShowSummary | SearchResult;
 		isShow: boolean;
 		indicators?: Snippet;
 	} = $props();
