@@ -659,7 +659,8 @@ class BaseMetadataService[T, S]:
         return [
             r
             for r in results
-            if not await self.check_if_exists(
+            if r.poster_images
+            and not await self.check_if_exists(
                 external_id=r.external_id,
                 metadata_provider=metadata_provider.name,
             )
