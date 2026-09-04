@@ -32,6 +32,7 @@ The configuration is organized into the following sections:
 * `[torrents]` - Download client settings (qBittorrent, Transmission, SABnzbd)
 * `[indexers]` - Indexer settings (Prowlarr and Jackett )
 * `[metadata]` - TMDB and TVDB settings
+* `[media_server]` - Media server settings (Jellyfin)
 
 ## Configuring Secrets
 

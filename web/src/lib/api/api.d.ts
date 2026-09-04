@@ -656,6 +656,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/tv/shows/{show_id}/watch-url': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Show Watch Url
+		 * @description Get the deep link to this show on the configured media server, if any.
+		 *     Fetched separately from the show's main details so a slow or
+		 *     unconfigured media server never blocks the show page from loading.
+		 */
+		get: operations['get_show_watch_url_api_v1_tv_shows__show_id__watch_url_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/tv/shows/{show_id}/torrents': {
 		parameters: {
 			query?: never;
@@ -1246,6 +1268,28 @@ export interface paths {
 		 *     and adopt video files that have no record yet.
 		 */
 		post: operations['rescan_movie_files_api_v1_movies__movie_id__rescan_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/movies/{movie_id}/watch-url': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Movie Watch Url
+		 * @description Get the deep link to this movie on the configured media server, if any.
+		 *     Fetched separately from the movie's main details so a slow or
+		 *     unconfigured media server never blocks the movie page from loading.
+		 */
+		get: operations['get_movie_watch_url_api_v1_movies__movie_id__watch_url_get'];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2997,6 +3041,13 @@ export interface components {
 			/** Display Name */
 			display_name?: string | null;
 		};
+		/** WatchUrl */
+		WatchUrl: {
+			/** Url */
+			url?: string | null;
+			/** Media Server Name */
+			media_server_name?: string | null;
+		};
 		/** ValidationError */
 		ValidationError: {
 			/** Location */
@@ -4380,6 +4431,38 @@ export interface operations {
 			};
 		};
 	};
+	get_show_watch_url_api_v1_tv_shows__show_id__watch_url_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the show */
+				show_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['WatchUrl'];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
 	get_a_shows_torrents_api_v1_tv_shows__show_id__torrents_get: {
 		parameters: {
 			query?: never;
@@ -5324,6 +5407,38 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['PublicMovieFile'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	get_movie_watch_url_api_v1_movies__movie_id__watch_url_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['WatchUrl'];
 				};
 			};
 			/** @description Validation Error */

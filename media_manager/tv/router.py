@@ -11,6 +11,7 @@ from media_manager.common.import_scan_cache import (
     remove_cached_importable_media_entry,
 )
 from media_manager.common.library_scan import LibraryScanCounts
+from media_manager.common.schemas import WatchUrl
 from media_manager.config import LibraryItem, MediaManagerConfig
 from media_manager.exceptions import MediaAlreadyExistsError, NotFoundError
 from media_manager.indexer.schemas import (
@@ -386,6 +387,21 @@ async def set_library(
     Set the library path for a Show.
     """
     await tv_service.set_show_library(show=show, library=library)
+
+
+@router.get(
+    "/shows/{show_id}/watch-url",
+    dependencies=[Depends(current_active_user)],
+)
+async def get_show_watch_url(
+    tv_service: tv_service_dep, show: show_dep
+) -> WatchUrl:
+    """
+    Get the deep link to this show on the configured media server, if any.
+    Fetched separately from the show's main details so a slow or
+    unconfigured media server never blocks the show page from loading.
+    """
+    return await tv_service.get_watch_url(show)
 
 
 @router.get(

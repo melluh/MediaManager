@@ -46,6 +46,7 @@ nav:
       - Authentication: configuration/authentication.md
       - Database: configuration/database.md
       - Download Clients: configuration/download-clients.md
+      - Media Server: configuration/media-server.md
       - Indexers: configuration/indexers.md
       - Slots & Classification: configuration/slots-and-classification.md
       - Scoring Rulesets: configuration/scoring-rulesets.md

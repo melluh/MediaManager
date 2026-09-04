@@ -95,6 +95,15 @@ enabled = false
 api_key = ""
 user = ""
 
+[media_server]
+# Jellyfin settings - when enabled, downloaded movies/shows that Jellyfin has
+# already scanned in get a "Watch on Jellyfin" button instead of "Download"
+[media_server.jellyfin]
+enabled = false
+url = "http://localhost:8096" # internal URL MediaManager uses to talk to Jellyfin
+# external_url = "https://jellyfin.example.com" # browser-facing URL, only needed if different from `url` (e.g. behind a reverse proxy)
+api_key = "" # create one under Jellyfin's Dashboard -> API Keys
+
 [torrents]
 # qBittorrent settings
 [torrents.qbittorrent]

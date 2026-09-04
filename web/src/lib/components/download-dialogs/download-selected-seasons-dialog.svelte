@@ -22,11 +22,15 @@
 	let {
 		show,
 		selectedSeasonNumbers,
-		triggerText = 'Download Selected Seasons'
+		triggerText = 'Download Selected Seasons',
+		asMenuItem = false,
+		menuLabel
 	}: {
 		show: Show;
 		selectedSeasonNumbers: number[];
 		triggerText?: string;
+		asMenuItem?: boolean;
+		menuLabel?: string;
 	} = $props();
 
 	const dialogueState = shallowDialog('downloadSelectedSeasons');
@@ -152,6 +156,8 @@
 		buttonVariants({ variant: 'default' }),
 		'bg-blue-600 text-white hover:bg-blue-700'
 	)}
+	{asMenuItem}
+	{menuLabel}
 	title="Download Selected Seasons"
 	description="Search and download torrents for the selected seasons."
 >

@@ -20,6 +20,7 @@
   * [Download Clients](configuration/download-clients.md)
   * [Indexers](configuration/indexers.md)
   * [Logging](configuration/logging.md)
+  * [Media Server](configuration/media-server.md)
   * [Notifications](configuration/notifications.md)
   * [Scoring Rulesets](configuration/scoring-rulesets.md)
 * [contributing-to-mediamanager](contributing-to-mediamanager/README.md)

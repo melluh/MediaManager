@@ -11,6 +11,7 @@ from media_manager.common.import_scan_cache import (
     remove_cached_importable_media_entry,
 )
 from media_manager.common.library_scan import LibraryScanCounts
+from media_manager.common.schemas import WatchUrl
 from media_manager.config import LibraryItem, MediaManagerConfig
 from media_manager.exceptions import ConflictError, NotFoundError
 from media_manager.indexer.schemas import (
@@ -375,6 +376,21 @@ async def set_library(
     Set the library path for a Movie.
     """
     await movie_service.set_movie_library(movie=movie, library=library)
+
+
+@router.get(
+    "/{movie_id}/watch-url",
+    dependencies=[Depends(current_active_user)],
+)
+async def get_movie_watch_url(
+    movie_service: movie_service_dep, movie: movie_dep
+) -> WatchUrl:
+    """
+    Get the deep link to this movie on the configured media server, if any.
+    Fetched separately from the movie's main details so a slow or
+    unconfigured media server never blocks the movie page from loading.
+    """
+    return await movie_service.get_watch_url(movie)
 
 
 @router.get(

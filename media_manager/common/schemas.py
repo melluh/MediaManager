@@ -85,6 +85,17 @@ class MediaFileDetails(BaseModel):
     container: str | None = None
 
 
+class WatchUrl(BaseModel):
+    """Response for the movie/show "watch-url" endpoint, fetched separately
+    from the media's main details so a slow or unconfigured media server
+    never blocks the movie/show page from loading."""
+
+    url: str | None = None
+    media_server_name: str | None = None
+    """Display name of the media server the url points to (e.g. "Jellyfin"),
+    for labeling a "Watch on <name>" button. None whenever `url` is None."""
+
+
 class PublicMediaFile(BaseMediaFile):
     downloaded: bool = False
     imported: bool = False

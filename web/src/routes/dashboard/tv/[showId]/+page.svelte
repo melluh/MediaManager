@@ -4,7 +4,9 @@
 	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import { buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import Play from '@lucide/svelte/icons/play';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { getContext } from 'svelte';
 	import type { PublicShow, RichShowTorrent, UserRead } from '$lib/api/api';
 	import { getFullyQualifiedMediaName } from '$lib/utils';
@@ -36,6 +38,30 @@
 	let show: PublicShow = $derived(getShow());
 	let torrents: RichShowTorrent = $derived(getTorrents());
 	let user: () => UserRead = getContext('user');
+
+	// Fetched separately from the show's own details so a slow/unconfigured
+	// media server never blocks the show page from loading.
+	let anyEpisodeDownloaded = $derived(
+		show.seasons.some((season) => season.episodes.some((episode) => episode.downloaded))
+	);
+	let watchUrl: string | null = $state(null);
+	let watchMediaServerName: string | null = $state(null);
+	let watchUrlLoading = $state(false);
+	$effect(() => {
+		watchUrl = null;
+		watchMediaServerName = null;
+		if (!anyEpisodeDownloaded) return;
+		watchUrlLoading = true;
+		client
+			.GET('/api/v1/tv/shows/{show_id}/watch-url', { params: { path: { show_id: show.id } } })
+			.then(({ data }) => {
+				watchUrl = data?.url ?? null;
+				watchMediaServerName = data?.media_server_name ?? null;
+			})
+			.finally(() => {
+				watchUrlLoading = false;
+			});
+	});
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	$effect(() => {
@@ -192,28 +218,65 @@
 <MediaHeroHeader media={show} isShow={true}>
 	{#snippet actions()}
 		{#if user().is_superuser}
-			{#if selectedSeasonNumbers.length > 0}
-				<DownloadSelectedSeasonsDialog
-					{show}
-					{selectedSeasonNumbers}
-					triggerText={downloadButtonLabel}
-				/>
-			{/if}
-			{#if selectedEpisodeNumbers.length > 0}
-				<DownloadSelectedEpisodesDialog
-					{show}
-					{selectedEpisodeNumbers}
-					triggerText={episodeDownloadLabel}
-				/>
-			{/if}
-			{#if selectedSeasonNumbers.length === 0 && selectedEpisodeNumbers.length === 0}
-				<DownloadCustomDialog {show} />
+			{#if anyEpisodeDownloaded && watchUrlLoading}
+				<Button disabled class="bg-green-600 text-white hover:bg-green-700">
+					<LoaderCircle class="animate-spin" />
+					Watch
+				</Button>
+			{:else if watchUrl}
+				<Button
+					href={watchUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="bg-green-600 text-white hover:bg-green-700"
+				>
+					Watch on {watchMediaServerName}
+					<Play />
+				</Button>
+			{:else}
+				{#if selectedSeasonNumbers.length > 0}
+					<DownloadSelectedSeasonsDialog
+						{show}
+						{selectedSeasonNumbers}
+						triggerText={downloadButtonLabel}
+					/>
+				{/if}
+				{#if selectedEpisodeNumbers.length > 0}
+					<DownloadSelectedEpisodesDialog
+						{show}
+						{selectedEpisodeNumbers}
+						triggerText={episodeDownloadLabel}
+					/>
+				{/if}
+				{#if selectedSeasonNumbers.length === 0 && selectedEpisodeNumbers.length === 0}
+					<DownloadCustomDialog {show} />
+				{/if}
 			{/if}
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'icon' })}>
 					<EllipsisVertical class="size-4" />
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content align="end" class="w-64">
+					{#if watchUrl}
+						{#if selectedSeasonNumbers.length > 0}
+							<DownloadSelectedSeasonsDialog
+								{show}
+								{selectedSeasonNumbers}
+								asMenuItem
+								menuLabel="Download additional"
+							/>
+						{:else if selectedEpisodeNumbers.length > 0}
+							<DownloadSelectedEpisodesDialog
+								{show}
+								{selectedEpisodeNumbers}
+								asMenuItem
+								menuLabel="Download additional"
+							/>
+						{:else}
+							<DownloadCustomDialog {show} asMenuItem menuLabel="Download additional" />
+						{/if}
+						<DropdownMenu.Separator />
+					{/if}
 					{#if !show.ended}
 						<div class="flex items-center gap-3 px-2 py-1.5">
 							<Switch

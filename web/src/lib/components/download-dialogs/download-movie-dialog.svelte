@@ -28,7 +28,17 @@
 	import { getTorrentQualityString } from '$lib/utils';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
-	let { movie, hasImportedFile = false }: { movie: Movie; hasImportedFile?: boolean } = $props();
+	let {
+		movie,
+		hasImportedFile = false,
+		asMenuItem = false,
+		menuLabel
+	}: {
+		movie: Movie;
+		hasImportedFile?: boolean;
+		asMenuItem?: boolean;
+		menuLabel?: string;
+	} = $props();
 	const dialogueState = shallowDialog('downloadMovie');
 	let torrentsError: string | null = $state(null);
 	let queryOverride: string = $state('');
@@ -148,6 +158,8 @@
 	triggerClass={hasImportedFile
 		? buttonVariants({ variant: 'secondary' })
 		: cn(buttonVariants({ variant: 'default' }), 'bg-blue-600 text-white hover:bg-blue-700')}
+	{asMenuItem}
+	{menuLabel}
 	title={`Download ${movie.name}`}
 >
 	{#snippet triggerIcon()}

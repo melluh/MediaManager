@@ -21,11 +21,12 @@ from media_manager.common.import_sidecar import (
 )
 from media_manager.common.media_files import media_directory_name
 from media_manager.common.repository import BaseRepository
-from media_manager.common.schemas import CURRENT_METADATA_VERSION, BaseMediaFile
+from media_manager.common.schemas import CURRENT_METADATA_VERSION, BaseMediaFile, WatchUrl
 from media_manager.common.slug import generate_slug
 from media_manager.config import MediaManagerConfig
 from media_manager.exceptions import InvalidConfigError, NotFoundError
 from media_manager.indexer.service import IndexerService
+from media_manager.mediaServer.manager import get_media_server_provider
 from media_manager.metadataProvider.abstract_metadata_provider import (
     DEFAULT_SEARCH_MAX_PAGES,
     AbstractMetadataProvider,
@@ -110,6 +111,33 @@ class BaseMediaService[T, S]:
         for media in media_list:
             media.images = images_by_id[str(media.id)]
         return media_list
+
+    async def get_watch_url(self, media: S) -> WatchUrl:
+        """
+        Deep link into the configured media server for this item, paired
+        with the server's display name for labeling a "Watch on <name>"
+        button. `url` is None when no media server is configured or it
+        doesn't have the item indexed yet - in which case `media_server_name`
+        is None too.
+        """
+        provider = get_media_server_provider()
+        if provider is None:
+            return WatchUrl()
+        try:
+            url = await provider.find_watch_url(
+                imdb_id=media.imdb_id,
+                external_id=media.external_id,
+                metadata_provider=media.metadata_provider,
+            )
+        except Exception:
+            log.warning(
+                f"Could not resolve media server watch URL for {media.name}",
+                exc_info=True,
+            )
+            return WatchUrl()
+        if url is None:
+            return WatchUrl()
+        return WatchUrl(url=url, media_server_name=provider.display_name)
 
     def get_root_directory(
         self, media: S, default_dir: Path, libraries: list[Any]

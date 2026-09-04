@@ -22,7 +22,11 @@
 	import { getFullyQualifiedMediaName } from '$lib/utils';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
-	let { show }: { show: Show } = $props();
+	let {
+		show,
+		asMenuItem = false,
+		menuLabel
+	}: { show: Show; asMenuItem?: boolean; menuLabel?: string } = $props();
 
 	const dialogueState = shallowDialog('downloadCustom');
 	let torrentsError: string | null = $state(null);
@@ -130,6 +134,8 @@
 		buttonVariants({ variant: 'default' }),
 		'bg-blue-600 text-white hover:bg-blue-700'
 	)}
+	{asMenuItem}
+	{menuLabel}
 	title="Custom Torrent Download"
 	description="Search and download torrents using a fully custom query string."
 >
