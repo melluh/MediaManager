@@ -8,6 +8,7 @@
 		type MediaFile
 	} from '$lib/components/media-file-details-dialog.svelte';
 	import Info from '@lucide/svelte/icons/info';
+	import FileQuestionMark from '@lucide/svelte/icons/file-question-mark';
 	import { getTorrentQualityString } from '$lib/utils';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
@@ -52,14 +53,23 @@
 				<Table.Cell class="w-[10px] font-medium">
 					<CheckmarkX state={file.imported} />
 				</Table.Cell>
-				<Table.Cell class="w-[10px] text-right">
-					<Dialog.Root bind:open={() => detailsDialog.open, (v) => (detailsDialog.open = v)}>
-						<Dialog.Trigger class={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-							<Info class="size-4" />
-							Details
-						</Dialog.Trigger>
-						<MediaFileDetailsDialog {file} />
-					</Dialog.Root>
+				<Table.Cell class="w-[160px] text-right">
+					{#if file.downloaded && !file.exists_on_disk}
+						<span
+							class="inline-flex items-center gap-1 whitespace-nowrap text-sm text-muted-foreground"
+						>
+							<FileQuestionMark class="size-4" />
+							Not found on disk
+						</span>
+					{:else}
+						<Dialog.Root bind:open={() => detailsDialog.open, (v) => (detailsDialog.open = v)}>
+							<Dialog.Trigger class={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+								<Info class="size-4" />
+								Details
+							</Dialog.Trigger>
+							<MediaFileDetailsDialog {file} />
+						</Dialog.Root>
+					{/if}
 				</Table.Cell>
 			</Table.Row>
 		{:else}
