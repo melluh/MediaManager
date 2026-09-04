@@ -54,7 +54,7 @@
 	async function downloadTorrent(result_id: string) {
 		torrentsError = null;
 
-		const { response } = await client.POST('/api/v1/tv/torrents', {
+		const { error, response } = await client.POST('/api/v1/tv/torrents', {
 			params: {
 				query: {
 					show_id: show.id!,
@@ -69,7 +69,9 @@
 			torrentsError = errorMessage;
 			toast.error(errorMessage);
 		} else if (!response.ok) {
-			const errorMessage = `Failed to download torrent: ${response.statusText}`;
+			const errorMessage =
+				(error as { detail?: string } | undefined)?.detail ??
+				`Failed to download torrent: ${response.statusText}`;
 			torrentsError = errorMessage;
 			toast.error(errorMessage);
 		} else {
@@ -116,7 +118,14 @@
 							}
 						}
 					})
-					.then((data) => data?.data ?? [])
+					.then(({ data, error }) => {
+						if (error && !torrentsError) {
+							torrentsError =
+								(error as { detail?: string } | undefined)?.detail ??
+								'Failed to search for torrents.';
+						}
+						return data ?? [];
+					})
 			)
 		)
 			.then((results) => results.flat())
@@ -125,6 +134,7 @@
 
 		try {
 			torrentsData = await torrentsPromise;
+			if (torrentsError) toast.error(torrentsError);
 		} catch (error) {
 			console.error(error);
 			torrentsError =

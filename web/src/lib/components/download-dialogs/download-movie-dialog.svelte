@@ -3,9 +3,11 @@
 	import { toast } from 'svelte-sonner';
 	import { Badge } from '$lib/components/ui/badge';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Download from '@lucide/svelte/icons/download';
 	import List from '@lucide/svelte/icons/list';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+	import SearchX from '@lucide/svelte/icons/search-x';
 	import { cn } from '$lib/utils';
 	import { untrack } from 'svelte';
 
@@ -56,7 +58,7 @@
 		torrentsError = null;
 		downloadingResultId = result_id;
 		try {
-			const { data, response } = await client.POST(`/api/v1/movies/{movie_id}/torrents`, {
+			const { data, error, response } = await client.POST(`/api/v1/movies/{movie_id}/torrents`, {
 				params: {
 					path: {
 						movie_id: movie.id!
@@ -73,7 +75,9 @@
 				torrentsError = errorMessage;
 				if (dialogueState.open) toast.info(errorMessage);
 			} else if (!response.ok) {
-				const errorMessage = `Failed to download torrent for movie ${movie.id}: ${response.statusText}`;
+				const errorMessage =
+					(error as { detail?: string } | undefined)?.detail ??
+					`Failed to download torrent for movie ${movie.id}: ${response.statusText}`;
 				console.error(errorMessage);
 				torrentsError = errorMessage;
 				toast.error(errorMessage);
@@ -104,7 +108,14 @@
 					}
 				}
 			})
-			.then((data) => data?.data)
+			.then(({ data, error }) => {
+				if (error) {
+					torrentsError =
+						(error as { detail?: string } | undefined)?.detail ?? 'Failed to search for torrents.';
+					return undefined;
+				}
+				return data;
+			})
 			.finally(() => (isLoading = false));
 		torrentsData = (await torrentsPromise) ?? null;
 	}
@@ -201,7 +212,21 @@
 			</div>
 		{/if}
 		{#if torrentsError}
-			<div class="my-2 w-full text-center text-red-500">An error occurred: {torrentsError}</div>
+			<div
+				class="my-2 flex flex-col items-center gap-1 rounded-lg border border-dashed border-destructive/50 bg-destructive/10 px-3 py-6 text-center"
+			>
+				<CircleAlert class="size-8 text-destructive" />
+				<p class="text-sm font-medium text-destructive">An error occurred</p>
+				<p class="text-xs text-muted-foreground">{torrentsError}</p>
+			</div>
+		{:else if !isLoading && torrentsData && grouped.allPicks.length === 0}
+			<div
+				class="my-2 flex flex-col items-center gap-1 rounded-lg border border-dashed px-3 py-6 text-center"
+			>
+				<SearchX class="size-8 text-muted-foreground" />
+				<p class="text-sm font-medium">No torrents found</p>
+				<p class="text-xs text-muted-foreground">Try a different search query.</p>
+			</div>
 		{/if}
 		{#if isLoading || (torrentsData && grouped.allPicks.length > 0)}
 			<Carousel.Root class="mx-8 my-4 min-w-0">
@@ -237,7 +262,7 @@
 				{/if}
 			</Carousel.Root>
 		{/if}
-		{#if torrentsData || isLoading}
+		{#if isLoading || (torrentsData && grouped.allPicks.length > 0)}
 			<div class="flex items-center justify-between gap-2 pt-2">
 				<Button
 					variant="secondary"
@@ -253,12 +278,19 @@
 					disabled={isLoading || !selectedResultId || downloadingResultId !== null}
 					onclick={() => downloadTorrent(selectedResultId as string)}
 				>
-					{#if downloadingResultId === selectedResultId}
+					{#if downloadingResultId !== null && downloadingResultId === selectedResultId}
 						<LoaderCircle class="animate-spin" />
 					{:else}
 						<Download />
 					{/if}
 					{selectedResult ? `Download (${formatSize(selectedResult.size)})` : 'Download'}
+				</Button>
+			</div>
+		{:else if torrentsData}
+			<div class="flex justify-end pt-2">
+				<Button variant="secondary" size="sm" onclick={() => (showFullList = true)}>
+					<List />
+					View all torrents
 				</Button>
 			</div>
 		{/if}

@@ -51,7 +51,7 @@
 	async function downloadTorrent(result_id: string) {
 		torrentsError = null;
 
-		const { response } = await client.POST('/api/v1/tv/torrents', {
+		const { error, response } = await client.POST('/api/v1/tv/torrents', {
 			params: {
 				query: {
 					show_id: show.id!,
@@ -67,7 +67,9 @@
 			torrentsError = errorMessage;
 			if (dialogueState.open) toast.info(errorMessage);
 		} else if (!response.ok) {
-			const errorMessage = `Failed to download torrent for show ${show.id}: ${response.statusText}`;
+			const errorMessage =
+				(error as { detail?: string } | undefined)?.detail ??
+				`Failed to download torrent for show ${show.id}: ${response.statusText}`;
 			console.error(errorMessage);
 			torrentsError = errorMessage;
 			toast.error(errorMessage);
@@ -97,14 +99,23 @@
 					}
 				}
 			})
-			.then((data) => data?.data)
+			.then(({ data, error }) => {
+				if (error) {
+					torrentsError =
+						(error as { detail?: string } | undefined)?.detail ?? 'Failed to search for torrents.';
+					return undefined;
+				}
+				return data;
+			})
 			.finally(() => (isLoading = false));
 
 		toast.info('Searching for torrents...');
 
 		torrentsData = (await torrentsPromise) ?? null;
 
-		if (!torrentsData || torrentsData.length === 0) {
+		if (torrentsError) {
+			toast.error(torrentsError);
+		} else if (!torrentsData || torrentsData.length === 0) {
 			toast.info('No torrents found.');
 		} else {
 			toast.success(`Found ${torrentsData.length} torrents.`);

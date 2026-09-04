@@ -4,6 +4,7 @@ import threading
 from datetime import UTC, datetime
 
 from media_manager.config import MediaManagerConfig
+from media_manager.exceptions import InvalidConfigError
 from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.torrent.download_clients.abstract_download_client import (
     AbstractDownloadClient,
@@ -186,11 +187,19 @@ class DownloadManager:
     ) -> AbstractDownloadClient:
         if indexer_result.usenet:
             if not self._usenet_client:
-                msg = f"Usenet client unavailable: {self._usenet_error or 'not configured'}"
+                if self._usenet_error is None:
+                    raise InvalidConfigError(
+                        "No usenet client configured. Configure one (e.g. SABnzbd) in the config file."
+                    )
+                msg = f"Usenet client unavailable: {self._usenet_error}"
                 raise RuntimeError(msg)
             return self._usenet_client
         if not self._torrent_client:
-            msg = f"Torrent client unavailable: {self._torrent_error or 'not configured'}"
+            if self._torrent_error is None:
+                raise InvalidConfigError(
+                    "No torrent client configured. Configure one (e.g. qBittorrent or Transmission) in the config file."
+                )
+            msg = f"Torrent client unavailable: {self._torrent_error}"
             raise RuntimeError(msg)
         return self._torrent_client
 

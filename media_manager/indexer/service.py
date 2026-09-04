@@ -3,6 +3,7 @@ import logging
 
 from media_manager.common.cache import AsyncTTLCache
 from media_manager.config import MediaManagerConfig
+from media_manager.exceptions import InvalidConfigError
 from media_manager.indexer.indexers.generic import GenericIndexer
 from media_manager.indexer.indexers.jackett import Jackett
 from media_manager.indexer.indexers.prowlarr import Prowlarr
@@ -33,6 +34,12 @@ class IndexerService:
         if config.indexers.jackett.enabled:
             self.indexers.append(Jackett())
 
+    def _require_indexers(self) -> None:
+        if not self.indexers:
+            raise InvalidConfigError(
+                "No indexers configured. Configure an indexer (e.g. Prowlarr or Jackett) in the config file."
+            )
+
     async def get_result(self, result_id: IndexerQueryResultId) -> IndexerQueryResult:
         return await self.repository.get_result(result_id=result_id)
 
@@ -44,6 +51,7 @@ class IndexerService:
         :param query: The search query, is used as a fallback in case indexers don't support e.g. TMDB ID based search.
         :return: A list of search results.
         """
+        self._require_indexers()
         log.debug(f"Searching for: {query}")
         normalized_query = query.strip().lower()
         cache_key = ("adhoc", normalized_query, is_tv)
@@ -74,6 +82,7 @@ class IndexerService:
         return [result.model_copy() for result in cached_results]
 
     async def search_movie(self, movie: Movie) -> list[IndexerQueryResult]:
+        self._require_indexers()
         query = f"{movie.name} {movie.year}"
         query = remove_special_chars_and_parentheses(query)
         cache_key = ("movie", query)
@@ -103,6 +112,7 @@ class IndexerService:
     async def search_season(
         self, show: Show, season_number: int
     ) -> list[IndexerQueryResult]:
+        self._require_indexers()
         query = f"{show.name} {show.year} S{season_number:02d}"
         query = remove_special_chars_and_parentheses(query)
         cache_key = ("season", query)
