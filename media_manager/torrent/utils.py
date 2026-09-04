@@ -3,6 +3,7 @@ import logging
 import mimetypes
 import re
 import shutil
+import time
 from pathlib import Path, UnsupportedOperation
 
 import bencoder
@@ -21,6 +22,7 @@ log = logging.getLogger(__name__)
 
 
 def list_files_recursively(path: Path = Path()) -> list[Path]:
+    start = time.monotonic()
     files = list(path.glob("**/*"))
     log.debug(f"Found {len(files)} entries via glob")
     valid_files = []
@@ -31,7 +33,10 @@ def list_files_recursively(path: Path = Path()) -> list[Path]:
             log.debug(f"'{x}' is a symlink")
         else:
             valid_files.append(x)
-    log.debug(f"Returning {len(valid_files)} files after filtering")
+    log.info(
+        f"Listed {len(valid_files)} files under {path} in "
+        f"{time.monotonic() - start:.3f}s ({len(files)} entries scanned)"
+    )
     return valid_files
 
 
@@ -48,6 +53,8 @@ def extract_archives(files: list) -> None:
         "application/x-gzip",
         "application/x-tar",
     }
+    start = time.monotonic()
+    extracted_count = 0
     for file in files:
         file_type = mimetypes.guess_type(file)
         log.debug(f"File: {file}, Size: {file.stat().st_size} bytes, Type: {file_type}")
@@ -56,10 +63,19 @@ def extract_archives(files: list) -> None:
             log.info(
                 f"File {file} is a compressed file, extracting it into directory {file.parent}"
             )
+            extract_start = time.monotonic()
             try:
                 patoolib.extract_archive(str(file), outdir=str(file.parent))
+                extracted_count += 1
             except patoolib.util.PatoolError:
                 log.exception(f"Failed to extract archive {file}")
+            log.info(
+                f"Extracting {file} took {time.monotonic() - extract_start:.3f}s"
+            )
+    log.info(
+        f"Checked {len(files)} files for archives in "
+        f"{time.monotonic() - start:.3f}s ({extracted_count} extracted)"
+    )
 
 
 def sanitize_torrent_title(title: str) -> str:
@@ -91,8 +107,10 @@ def import_file(target_file: Path, source_file: Path) -> None:
     # hand) imports into itself. Unlinking first would then delete the only
     # copy before the hardlink could be made, and the copy fallback would find
     # nothing to copy. Nothing to do when the file is already in place.
+    start = time.monotonic()
     try:
         if target_file.exists() and target_file.samefile(source_file):
+            log.debug(f"{target_file} already points at {source_file}, skipping")
             return
     except OSError:
         log.debug(
@@ -104,13 +122,23 @@ def import_file(target_file: Path, source_file: Path) -> None:
 
     try:
         target_file.hardlink_to(source_file)
+        log.info(
+            f"Hardlinked {source_file} -> {target_file} in "
+            f"{time.monotonic() - start:.3f}s"
+        )
     except FileExistsError:
         log.exception(f"File already exists at {target_file}.")
     except (OSError, UnsupportedOperation, NotImplementedError):
         log.exception(
             f"Failed to create hardlink from {source_file} to {target_file}. Falling back to copying the file."
         )
+        copy_start = time.monotonic()
         shutil.copy(src=source_file, dst=target_file)
+        log.info(
+            f"Copied {source_file} -> {target_file} in "
+            f"{time.monotonic() - copy_start:.3f}s (hardlink unavailable, "
+            f"likely a cross-filesystem import)"
+        )
 
 
 def classify_media_files(all_files: list[Path]) -> tuple[list[Path], list[Path]]:
@@ -143,6 +171,7 @@ def get_files_for_import(
     Extracts all files from the torrent download directory, including extracting archives.
     Returns a tuple containing: seperated video files, subtitle files, and all files found in the torrent directory.
     """
+    start = time.monotonic()
     search_directory = _resolve_search_directory(torrent=torrent, directory=directory)
 
     all_files: list[Path] = list_files_recursively(path=search_directory)
@@ -153,7 +182,8 @@ def get_files_for_import(
     video_files, subtitle_files = classify_media_files(all_files)
 
     log.info(
-        f"Found {len(all_files)} files ({len(video_files)} video files, {len(subtitle_files)} subtitle files) for further processing."
+        f"Found {len(all_files)} files ({len(video_files)} video files, {len(subtitle_files)} subtitle files) "
+        f"in {search_directory} for further processing (took {time.monotonic() - start:.3f}s)."
     )
     return video_files, subtitle_files, all_files
 

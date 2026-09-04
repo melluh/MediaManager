@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
@@ -87,15 +88,26 @@ class TvImportService(BaseMediaService[Show, Show]):
         torrent_id: str | None = None,
         file_path_suffix: str = "",
     ) -> bool:
+        import_start = time.monotonic()
         # Filesystem scan + archive extraction; offload off the event loop.
         video_files, _, _ = await asyncio.to_thread(
             get_files_for_import, directory=source_directory
         )
         if not video_files:
+            log.info(
+                f"No video files found for {show.name} in {source_directory} "
+                f"(scan took {time.monotonic() - import_start:.3f}s)"
+            )
             return False
+
+        log.info(
+            f"Importing {len(video_files)} video file(s) for {show.name} "
+            f"from {source_directory}"
+        )
 
         any_imported = False
         for video_file in video_files:
+            file_start = time.monotonic()
             # Simple heuristic for season/episode from filename
             match = re.search(r"S(\d+)E(\d+)", video_file.name, re.IGNORECASE)
             if match:
@@ -118,6 +130,7 @@ class TvImportService(BaseMediaService[Show, Show]):
                 any_imported = True
 
                 # Update DB
+                db_start = time.monotonic()
                 try:
                     season = await self.tv_repository.get_season_by_number(
                         s_num, show.id
@@ -139,6 +152,19 @@ class TvImportService(BaseMediaService[Show, Show]):
                         )
                 except Exception:
                     log.exception(f"Could not update DB for {video_file.name}")
+                log.info(
+                    f"S{s_num:02d}E{e_num:02d} of {show.name}: DB update took "
+                    f"{time.monotonic() - db_start:.3f}s, total file took "
+                    f"{time.monotonic() - file_start:.3f}s"
+                )
+            else:
+                log.warning(
+                    f"Could not parse season/episode from {video_file.name}, skipping"
+                )
+        log.info(
+            f"Finished importing {len(video_files)} video file(s) for {show.name} "
+            f"in {time.monotonic() - import_start:.3f}s"
+        )
         return any_imported
 
     async def import_torrent_files(self, torrent: Torrent, show: Show) -> None:

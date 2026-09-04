@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import time
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -131,9 +132,14 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             return imported_any, video_relative_path
 
     async def import_torrent_files(self, torrent: Torrent, movie: Movie) -> None:
+        import_start = time.monotonic()
         # Filesystem scan + archive extraction; offload off the event loop.
         video_files, subtitle_files, _ = await asyncio.to_thread(
             get_files_for_import, torrent=torrent
+        )
+        log.info(
+            f"Scanned files for movie {movie.name} in "
+            f"{time.monotonic() - import_start:.3f}s"
         )
         if len(video_files) == 0:
             await self.notify_import_failure(
@@ -155,6 +161,10 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             return
 
         await self._import_resolved_files(torrent, movie, video_files, subtitle_files)
+        log.info(
+            f"Finished importing movie {movie.name} in "
+            f"{time.monotonic() - import_start:.3f}s"
+        )
 
     async def resolve_multiple_video_files(
         self, torrent: Torrent, movie: Movie, relative_path: str

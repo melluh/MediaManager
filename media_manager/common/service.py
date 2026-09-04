@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import time
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -469,17 +470,29 @@ class BaseMediaService[T, S]:
         media_type_name: str,
     ) -> None:
         log.info(f"Importing all torrents for {media_type_name}")
+        start = time.monotonic()
         torrents = await self.torrent_service.get_completed_torrents()
+        imported_count = 0
         for t in torrents:
             if t.imported or t.import_error:
                 continue
+            torrent_start = time.monotonic()
             try:
                 media = await get_media_func(t)
                 if media:
                     await import_torrent_func(t, media)
+                    imported_count += 1
             except Exception:
                 log.exception(f"Error importing torrent {t.title}")
-        log.info(f"Finished importing all torrents for {media_type_name}")
+            log.info(
+                f"Processing torrent '{t.title}' ({media_type_name}) took "
+                f"{time.monotonic() - torrent_start:.3f}s"
+            )
+        log.info(
+            f"Finished importing all torrents for {media_type_name}: "
+            f"{imported_count}/{len(torrents)} candidate(s) imported in "
+            f"{time.monotonic() - start:.3f}s"
+        )
 
 
 class BaseMetadataService[T, S]:
