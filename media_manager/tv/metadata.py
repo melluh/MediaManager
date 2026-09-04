@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from media_manager.common.schemas import CURRENT_METADATA_VERSION
 from media_manager.common.service import BaseMetadataService
@@ -28,6 +29,7 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
         external_id: int,
         metadata_provider: AbstractMetadataProvider,
         language: str | None = None,
+        added_by_user_id: UUID | None = None,
     ) -> Show:
         return await self.add_media_base(
             external_id=external_id,
@@ -37,6 +39,7 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
             save_func=self.tv_repository.save_show,
             language=language,
             include_year_in_slug=False,
+            added_by_user_id=added_by_user_id,
         )
 
     async def get_show_details(

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -9,6 +9,16 @@ from media_manager.torrent.models import Quality
 # Increase to force immediate metadata refresh (regardless of configured metadata refresh interval).
 # Useful when metadata fetching logic changes or a new field is stored from metadata.
 CURRENT_METADATA_VERSION = 3
+
+
+class MediaAddedByUser(BaseModel):
+    """The user a media item is attributed to, as shown alongside `created_at`."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    email: str
+    display_name: str | None = None
 
 
 class BaseMedia(BaseModel):
@@ -32,6 +42,12 @@ class BaseMedia(BaseModel):
     release_date: str | None = None
     metadata_updated_at: datetime | None = None
     metadata_version: int = CURRENT_METADATA_VERSION
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    """When this media item was added to the library."""
+    added_by_user_id: UUID | None = None
+    """Raw FK, settable when creating a media item. Read back via `added_by`."""
+    added_by: MediaAddedByUser | None = None
+    """The user who added this media item, if known and not since deleted."""
     images: dict[str, str] = Field(default_factory=dict) # Image type (e.g. "poster", "backdrop") -> static file path
 
     @field_validator("genres", mode="before")

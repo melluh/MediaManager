@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from media_manager.common.schemas import CURRENT_METADATA_VERSION
 from media_manager.common.service import BaseMetadataService
@@ -28,6 +29,7 @@ class MovieMetadataService(BaseMetadataService[Movie, Movie]):
         external_id: int,
         metadata_provider: AbstractMetadataProvider,
         language: str | None = None,
+        added_by_user_id: UUID | None = None,
     ) -> Movie:
         return await self.add_media_base(
             external_id=external_id,
@@ -36,6 +38,7 @@ class MovieMetadataService(BaseMetadataService[Movie, Movie]):
             get_metadata_func=metadata_provider.get_movie_metadata,
             save_func=self.movie_repository.save_movie,
             language=language,
+            added_by_user_id=added_by_user_id,
         )
 
     async def get_movie_details(

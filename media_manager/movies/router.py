@@ -261,6 +261,7 @@ async def get_all_movies(movie_service: movie_service_dep) -> list[Movie]:
 async def add_a_movie(
     movie_metadata_service: movie_metadata_service_dep,
     metadata_provider: metadata_provider_dep,
+    user: Annotated[User, Depends(current_active_user)],
     movie_id: int,
     language: str | None = None,
 ) -> Movie:
@@ -272,6 +273,7 @@ async def add_a_movie(
             external_id=movie_id,
             metadata_provider=metadata_provider,
             language=language,
+            added_by_user_id=user.id,
         )
     except ConflictError:
         movie = await movie_metadata_service.movie_repository.get_movie_by_external_id(

@@ -1,6 +1,6 @@
 import typing
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -9,6 +9,7 @@ from media_manager.common.schemas import (
     CURRENT_METADATA_VERSION,
     BaseMedia,
     BaseMediaFile,
+    MediaAddedByUser,
     PublicMediaFile,
 )
 from media_manager.torrent.models import Quality
@@ -148,6 +149,10 @@ class PublicShow(BaseModel):
     release_date: str | None = None
     metadata_updated_at: datetime | None = None
     metadata_version: int = CURRENT_METADATA_VERSION
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    """When this show was added to the library."""
+    added_by: MediaAddedByUser | None = None
+    """The user who added this show, if known and not since deleted."""
     images: dict[str, str] = Field(default_factory=dict)
 
     seasons: list[PublicSeason]

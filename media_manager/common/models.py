@@ -1,9 +1,9 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
 from media_manager.torrent.models import Quality
 
@@ -35,6 +35,22 @@ class MediaMixin:
         DateTime(timezone=True), default=None
     )
     metadata_version: Mapped[int] = mapped_column(default=1)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    """When this media item was added to the library."""
+    added_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey(column="user.id", ondelete="SET NULL"), default=None
+    )
+    """The user who added this media item, if known and not since deleted."""
+
+    @declared_attr
+    def added_by(cls):  # noqa: N805
+        # Declared per-subclass (rather than as a plain mixin attribute)
+        # because the FK it joins on (`added_by_user_id`) is also defined on
+        # this mixin - a shared relationship object would otherwise be
+        # copied onto both Movie and Show, which SQLAlchemy rejects.
+        return relationship("User", lazy="joined", viewonly=True)
 
 
 class MediaFileMixin:

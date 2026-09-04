@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeVar
+from uuid import UUID
 
 import media_manager.metadataProvider.utils
 from media_manager.common.import_match import (
@@ -517,6 +518,7 @@ class BaseMetadataService[T, S]:
         save_func: Callable[[S], Awaitable[S]],
         language: str | None = None,
         include_year_in_slug: bool = True,
+        added_by_user_id: UUID | None = None,
     ) -> S:
         media_with_metadata = await get_metadata_func(external_id, language=language)
         if not media_with_metadata:
@@ -533,6 +535,7 @@ class BaseMetadataService[T, S]:
             metadata_provider=metadata_provider.name,
             external_id=external_id,
         )
+        media_with_metadata.added_by_user_id = added_by_user_id
 
         saved_media = await save_func(media_with_metadata)
         await metadata_provider.download_all_media_images(saved_media, media_type)

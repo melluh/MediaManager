@@ -49,7 +49,7 @@ class BaseRepository[T, S]:
             self.model.external_id == external_id,
             self.model.metadata_provider == metadata_provider,
         )
-        result = (await self.db.execute(stmt)).scalar_one_or_none()
+        result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
         if not result:
             msg = f"{self.model.__name__} with external_id {external_id} and provider {metadata_provider} not found."
             raise NotFoundError(msg)
@@ -180,8 +180,9 @@ class BaseRepository[T, S]:
         """
         Generic save method for media models.
         """
-        # `images` is determined at runtime from files on disk, not stored to DB
-        exclude = (exclude or set()) | {"images"}
+        # `images` is determined at runtime from files on disk, not stored to
+        # DB; `added_by` is a read-only joined view of `added_by_user_id`.
+        exclude = (exclude or set()) | {"images", "added_by"}
 
         db_obj = (
             await self.db.get(model_class, media_schema.id) if media_schema.id else None

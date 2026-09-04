@@ -242,6 +242,7 @@ async def get_all_shows(tv_service: tv_service_dep) -> list[ShowSummary]:
 async def add_a_show(
     tv_metadata_service: tv_metadata_service_dep,
     metadata_provider: metadata_provider_dep,
+    user: Annotated[User, Depends(current_active_user)],
     show_id: int,
     language: str | None = None,
 ) -> Show:
@@ -253,6 +254,7 @@ async def add_a_show(
             external_id=show_id,
             metadata_provider=metadata_provider,
             language=language,
+            added_by_user_id=user.id,
         )
     except MediaAlreadyExistsError:
         show = await tv_metadata_service.tv_repository.get_show_by_external_id(
