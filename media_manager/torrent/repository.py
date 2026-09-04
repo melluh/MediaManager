@@ -107,7 +107,11 @@ class TorrentRepository:
     ) -> list[TorrentSchema]:
         stmt = (
             select(Torrent)
-            .where(Torrent.initiated_by_user_id == user_id, ~Torrent.imported)
+            .where(
+                Torrent.initiated_by_user_id == user_id,
+                ~Torrent.imported,
+                ~Torrent.cancelled,
+            )
             .order_by(Torrent.initiated_at.desc().nulls_last())
         )
         result = (await self.db.execute(stmt)).scalars().all()

@@ -1,7 +1,10 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { Badge, type BadgeVariant } from '$lib/components/ui/badge/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 	import { CircularProgress } from '$lib/components/ui/circular-progress/index.js';
 	import { Spinner } from '$lib/components/ui/spinner/index.js';
 	import TorrentStat from '$lib/components/download-dialogs/torrent-stat.svelte';
@@ -17,6 +20,8 @@
 	import Users from '@lucide/svelte/icons/users';
 	import Clock from '@lucide/svelte/icons/clock';
 	import ClockAlert from '@lucide/svelte/icons/clock-alert';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { resolve } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -138,6 +143,30 @@
 		}
 
 		toast.success('Import resolved successfully.');
+		await invalidateAll();
+	}
+
+	let cancelConfirmOpen = $state(false);
+	let removeFromClient = $state(false);
+	let cancelling = $state(false);
+
+	async function cancelDownload() {
+		cancelling = true;
+		const { error } = await client.POST('/api/v1/torrent/{torrent_id}/cancel', {
+			params: {
+				path: { torrent_id: torrent.id! },
+				query: { remove_from_client: removeFromClient }
+			}
+		});
+		cancelling = false;
+
+		if (error) {
+			toast.error('Failed to cancel the download.');
+			return;
+		}
+
+		cancelConfirmOpen = false;
+		toast.success('Download cancelled.');
 		await invalidateAll();
 	}
 
@@ -312,4 +341,66 @@
 			{/if}
 		</div>
 	{/if}
+
+	<div class="border-t pt-3">
+		<Button
+			variant="outline"
+			class="w-full text-destructive hover:text-destructive"
+			onclick={() => (cancelConfirmOpen = true)}
+		>
+			Cancel Download
+		</Button>
+	</div>
 </Dialog.Content>
+
+<AlertDialog.Root bind:open={cancelConfirmOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Cancel this download?</AlertDialog.Title>
+			<AlertDialog.Description>
+				This removes the download from your homepage. It stays on record as cancelled, so it won't
+				be re-imported automatically.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<div class="flex items-start space-x-2 py-2">
+			<Checkbox bind:checked={removeFromClient} id="remove-from-client" class="mt-0.5" />
+			<Label
+				for="remove-from-client"
+				class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+			>
+				Also remove it from the download client
+				<br />
+				<span class="text-sm font-normal text-muted-foreground">
+					The downloaded data is left in place, only the entry in the client is removed.
+				</span>
+			</Label>
+		</div>
+		{#if removeFromClient && !torrent.usenet}
+			<div
+				class="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive"
+			>
+				<TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
+				<span>
+					Removing an unfinished or unseeded torrent from the client may count as a Hit & Run on
+					private trackers, which can lead to warnings or a ban.
+				</span>
+			</div>
+		{/if}
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel disabled={cancelling}>Keep downloading</AlertDialog.Cancel>
+			<AlertDialog.Action
+				onclick={(e) => {
+					e.preventDefault();
+					cancelDownload();
+				}}
+				disabled={cancelling}
+				class={buttonVariants({ variant: 'destructive' })}
+			>
+				{#if cancelling}
+					<LoaderCircle class="animate-spin" />
+				{/if}
+				Cancel Download
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>

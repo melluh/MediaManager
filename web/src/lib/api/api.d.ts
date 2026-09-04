@@ -838,6 +838,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/torrent/{torrent_id}/cancel': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Cancel Torrent
+		 * @description Cancels a torrent the current user initiated: hides it from their
+		 *     homepage without deleting it, and optionally removes it from the
+		 *     download client (without deleting its downloaded data).
+		 */
+		post: operations['cancel_torrent_api_v1_torrent__torrent_id__cancel_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/torrent/{torrent_id}/retry': {
 		parameters: {
 			query?: never;
@@ -2727,6 +2749,11 @@ export interface components {
 			indexer?: string | null;
 			/** Comments */
 			comments?: string | null;
+			/**
+			 * Cancelled
+			 * @default false
+			 */
+			cancelled: boolean;
 		};
 		/** TorrentAttributes */
 		TorrentAttributes: {
@@ -2844,6 +2871,11 @@ export interface components {
 			indexer?: string | null;
 			/** Comments */
 			comments?: string | null;
+			/**
+			 * Cancelled
+			 * @default false
+			 */
+			cancelled: boolean;
 			download_progress?: components['schemas']['DownloadProgress'] | null;
 			media?: components['schemas']['TorrentMedia'] | null;
 			/** Seasons */
@@ -4656,6 +4688,39 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	cancel_torrent_api_v1_torrent__torrent_id__cancel_post: {
+		parameters: {
+			query?: {
+				remove_from_client?: boolean;
+			};
+			header?: never;
+			path: {
+				torrent_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Torrent'];
+				};
 			};
 			/** @description Validation Error */
 			422: {

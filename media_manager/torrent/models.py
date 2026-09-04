@@ -28,6 +28,7 @@ class Torrent(Base):
     )
     indexer: Mapped[str | None] = mapped_column(default=None)
     comments: Mapped[str | None] = mapped_column(default=None)
+    cancelled: Mapped[bool] = mapped_column(default=False)
 
     episode_files = relationship("EpisodeFile", back_populates="torrent")
     movie_files = relationship("MovieFile", back_populates="torrent")

@@ -6,6 +6,7 @@ from fastapi.params import Depends
 
 from media_manager.auth.db import User
 from media_manager.auth.users import current_active_user, current_superuser
+from media_manager.exceptions import InvalidConfigError
 from media_manager.torrent.dependencies import (
     torrent_dep,
     torrent_repository_dep,
@@ -59,10 +60,35 @@ async def delete_torrent(
     if delete_files:
         try:
             await service.cancel_download(torrent=torrent, delete_files=False)
-        except RuntimeError:
+        except (RuntimeError, InvalidConfigError):
             pass
 
     await service.delete_torrent(torrent_id=torrent.id)
+
+
+@router.post(
+    "/{torrent_id}/cancel",
+    status_code=status.HTTP_200_OK,
+)
+async def cancel_torrent(
+    service: torrent_service_dep,
+    torrent: torrent_dep,
+    user: Annotated[User, Depends(current_active_user)],
+    remove_from_client: bool = False,
+) -> Torrent:
+    """
+    Cancels a torrent the current user initiated: hides it from their
+    homepage without deleting it, and optionally removes it from the
+    download client (without deleting its downloaded data).
+    """
+    if torrent.initiated_by_user_id != user.id and not user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only cancel your own downloads",
+        )
+    return await service.cancel_torrent(
+        torrent=torrent, remove_from_client=remove_from_client
+    )
 
 
 @router.post(

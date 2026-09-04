@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import UUID
 
 import media_manager.metadataProvider.utils
+from media_manager.exceptions import InvalidConfigError
 from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.movies.schemas import Movie, MovieFile
 from media_manager.torrent.manager import DownloadManager, get_download_manager
@@ -99,6 +100,32 @@ class TorrentService:
             self.download_manager.remove_torrent, torrent, delete_data=delete_files
         )
         return await self.get_torrent_status(torrent=torrent)
+
+    async def cancel_torrent(
+        self, torrent: Torrent, remove_from_client: bool = False
+    ) -> Torrent:
+        """
+        Marks a torrent as cancelled so it stops showing up on the user's
+        homepage, without deleting it (or its associated media files) from
+        the database.
+
+        :param remove_from_client: Also removes the torrent from the download
+            client, without deleting its downloaded data. Best-effort: a
+            client-side failure to remove it doesn't stop the torrent from
+            being marked cancelled.
+        """
+        log.info(f"Cancelling torrent: {torrent.title}")
+        if remove_from_client:
+            try:
+                await asyncio.to_thread(
+                    self.download_manager.remove_torrent, torrent, delete_data=False
+                )
+            except (RuntimeError, InvalidConfigError):
+                log.exception(
+                    f"Failed to remove torrent from download client: {torrent.title}"
+                )
+        torrent.cancelled = True
+        return await self.torrent_repository.save_torrent(torrent=torrent)
 
     async def pause_download(self, torrent: Torrent) -> Torrent:
         """
