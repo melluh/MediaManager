@@ -129,6 +129,7 @@ class PublicShow(BaseModel):
 
     name: str
     slug: str
+    directory_name: str | None = None
     overview: str
     year: int | None
 

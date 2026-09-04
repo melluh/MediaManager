@@ -12,6 +12,7 @@
 	import { resolve } from '$app/paths';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import DeleteMediaDialog from '$lib/components/delete-media-dialog.svelte';
+	import MediaDetailsDialog from '$lib/components/media-details-dialog.svelte';
 	import MediaFileTable from '$lib/components/media-file-table.svelte';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 
@@ -41,6 +42,8 @@
 					<EllipsisVertical class="size-4" />
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content align="end" class="w-48">
+					<MediaDetailsDialog media={movie} isShow={false} />
+					<DropdownMenu.Separator />
 					<LibraryCombobox media={movie} mediaType="movie" />
 					<DropdownMenu.Separator />
 					<DeleteMediaDialog isShow={false} media={movie} />

@@ -422,6 +422,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/tv/files/scan': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Scan Show Library Files
+		 * @description Immediately reconcile every show's episode file records with the files on disk, and
+		 *     adopt video files that have no record yet. Also runs on a schedule.
+		 */
+		post: operations['scan_show_library_files_api_v1_tv_files_scan_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/tv/importable/rescan': {
 		parameters: {
 			query?: never;
@@ -455,6 +476,10 @@ export interface paths {
 		/**
 		 * Import Detected Show
 		 * @description Import a detected show from the specified directory into the library.
+		 *
+		 *     Nothing is moved or copied: the show is pointed at the directory and the
+		 *     episode files already in it are recorded. Returns 409 if the show already
+		 *     has files in the library.
 		 */
 		post: operations['import_detected_show_api_v1_tv_importable__show_id__post'];
 		delete?: never;
@@ -645,6 +670,27 @@ export interface paths {
 		get: operations['get_a_shows_torrents_api_v1_tv_shows__show_id__torrents_get'];
 		put?: never;
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/tv/shows/{show_id}/rescan': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Rescan Show Files
+		 * @description Immediately reconcile this show's file records with the files on disk,
+		 *     and adopt video files that have no record yet.
+		 */
+		post: operations['rescan_show_files_api_v1_tv_shows__show_id__rescan_post'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -949,6 +995,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/movies/files/scan': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Scan Movie Library Files
+		 * @description Immediately reconcile every movie's file records with the files on disk, and
+		 *     adopt video files that have no record yet. Also runs on a schedule.
+		 */
+		post: operations['scan_movie_library_files_api_v1_movies_files_scan_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/movies/importable/rescan': {
 		parameters: {
 			query?: never;
@@ -982,6 +1049,10 @@ export interface paths {
 		/**
 		 * Import Detected Movie
 		 * @description Import a detected movie from the specified directory into the library.
+		 *
+		 *     Nothing is moved or copied: the movie is pointed at the directory and the
+		 *     files already in it are recorded. Returns 409 if the movie already has
+		 *     files in the library.
 		 */
 		post: operations['import_detected_movie_api_v1_movies_importable__movie_id__post'];
 		delete?: never;
@@ -1138,6 +1209,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/movies/{movie_id}/rescan': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Rescan Movie Files
+		 * @description Immediately reconcile this movie's file records with the files on disk,
+		 *     and adopt video files that have no record yet.
+		 */
+		post: operations['rescan_movie_files_api_v1_movies__movie_id__rescan_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/movies/{movie_id}/torrents': {
 		parameters: {
 			query?: never;
@@ -1156,6 +1248,51 @@ export interface paths {
 		 * @description Trigger a download for a specific torrent for a movie.
 		 */
 		post: operations['download_torrent_for_movie_api_v1_movies__movie_id__torrents_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/movies/{movie_id}/torrents/{torrent_id}/import-candidates': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Movie Torrent Import Candidates
+		 * @description Lists the video files found in a torrent's download directory, so a
+		 *     torrent whose automatic import failed (e.g. because it contained
+		 *     multiple video files) can be resolved manually.
+		 */
+		get: operations['get_movie_torrent_import_candidates_api_v1_movies__movie_id__torrents__torrent_id__import_candidates_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/movies/{movie_id}/torrents/{torrent_id}/import': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Resolve Movie Torrent Import
+		 * @description Manually resolves a torrent that failed automatic import (currently:
+		 *     the "multiple video files found" failure) by importing the given file,
+		 *     identified by its path relative to the torrent's download directory as
+		 *     returned by GET .../import-candidates.
+		 */
+		post: operations['resolve_movie_torrent_import_api_v1_movies__movie_id__torrents__torrent_id__import_post'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1627,6 +1764,14 @@ export interface components {
 			update_available: boolean;
 		};
 		/**
+		 * ImportErrorKind
+		 * @description Structured tag for a `Torrent.import_error`, letting the API offer a
+		 *     targeted resolution flow for failure types it knows how to fix. Left
+		 *     unset for failures that have no such flow (yet).
+		 * @enum {string}
+		 */
+		ImportErrorKind: 'multiple_video_files';
+		/**
 		 * ImportMatchConfidence
 		 * @description How sure the import scan is that a directory holds the media it matched.
 		 * @enum {string}
@@ -1687,6 +1832,37 @@ export interface components {
 			name: string;
 			/** Path */
 			path: string;
+		};
+		/**
+		 * LibraryScanCounts
+		 * @description What a scan of one media type changed.
+		 */
+		LibraryScanCounts: {
+			/**
+			 * Items Scanned
+			 * @default 0
+			 */
+			items_scanned: number;
+			/**
+			 * Items Skipped
+			 * @default 0
+			 */
+			items_skipped: number;
+			/**
+			 * Paths Relinked
+			 * @default 0
+			 */
+			paths_relinked: number;
+			/**
+			 * Paths Cleared
+			 * @default 0
+			 */
+			paths_cleared: number;
+			/**
+			 * Files Adopted
+			 * @default 0
+			 */
+			files_adopted: number;
 		};
 		/**
 		 * MediaFileDetails
@@ -1772,6 +1948,8 @@ export interface components {
 			name: string;
 			/** Slug */
 			slug?: string | null;
+			/** Directory Name */
+			directory_name?: string | null;
 			/** Overview */
 			overview: string;
 			/** Year */
@@ -1940,6 +2118,8 @@ export interface components {
 			name: string;
 			/** Slug */
 			slug: string;
+			/** Directory Name */
+			directory_name?: string | null;
 			/** Overview */
 			overview: string;
 			/** Year */
@@ -2060,6 +2240,8 @@ export interface components {
 			name: string;
 			/** Slug */
 			slug: string;
+			/** Directory Name */
+			directory_name?: string | null;
 			/** Overview */
 			overview: string;
 			/** Year */
@@ -2187,6 +2369,8 @@ export interface components {
 			name: string;
 			/** Slug */
 			slug: string;
+			/** Directory Name */
+			directory_name?: string | null;
 			/** Overview */
 			overview: string;
 			/** Year */
@@ -2279,6 +2463,8 @@ export interface components {
 			name: string;
 			/** Slug */
 			slug?: string | null;
+			/** Directory Name */
+			directory_name?: string | null;
 			/** Overview */
 			overview: string;
 			/** Year */
@@ -2341,6 +2527,8 @@ export interface components {
 			name: string;
 			/** Slug */
 			slug?: string | null;
+			/** Directory Name */
+			directory_name?: string | null;
 			/** Overview */
 			overview: string;
 			/** Year */
@@ -2426,6 +2614,7 @@ export interface components {
 			imported: boolean;
 			/** Import Error */
 			import_error?: string | null;
+			import_error_kind?: components['schemas']['ImportErrorKind'] | null;
 			/** Hash */
 			hash: string;
 			/**
@@ -2480,6 +2669,21 @@ export interface components {
 			subtitles: components['schemas']['SubtitleInfo'][];
 		};
 		/**
+		 * TorrentImportCandidate
+		 * @description A video file found in a torrent's download directory, offered up for manual import resolution.
+		 */
+		TorrentImportCandidate: {
+			/** Relative Path */
+			relative_path: string;
+			/** File Name */
+			file_name: string;
+			/** Size Bytes */
+			size_bytes: number;
+			quality: components['schemas']['Quality'];
+			/** Duration Seconds */
+			duration_seconds?: number | null;
+		};
+		/**
 		 * TorrentMedia
 		 * @description Minimal, client-neutral summary of the movie/show a torrent belongs to -
 		 *     just enough for the dashboard to render a poster and link. Deliberately
@@ -2527,6 +2731,7 @@ export interface components {
 			imported: boolean;
 			/** Import Error */
 			import_error?: string | null;
+			import_error_kind?: components['schemas']['ImportErrorKind'] | null;
 			/** Hash */
 			hash: string;
 			/**
@@ -2705,9 +2910,11 @@ export type ErrorModel = components['schemas']['ErrorModel'];
 export type ExternalPosterImage = components['schemas']['ExternalPosterImage'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
 export type HealthResponse = components['schemas']['HealthResponse'];
+export type ImportErrorKind = components['schemas']['ImportErrorKind'];
 export type ImportMatchConfidence = components['schemas']['ImportMatchConfidence'];
 export type IndexerQueryResult = components['schemas']['IndexerQueryResult'];
 export type LibraryItem = components['schemas']['LibraryItem'];
+export type LibraryScanCounts = components['schemas']['LibraryScanCounts'];
 export type MediaFileDetails = components['schemas']['MediaFileDetails'];
 export type MediaImportSuggestion = components['schemas']['MediaImportSuggestion'];
 export type MediaType = components['schemas']['MediaType'];
@@ -2738,6 +2945,7 @@ export type SubtitleInfo = components['schemas']['SubtitleInfo'];
 export type SystemHealth = components['schemas']['SystemHealth'];
 export type Torrent = components['schemas']['Torrent'];
 export type TorrentAttributes = components['schemas']['TorrentAttributes'];
+export type TorrentImportCandidate = components['schemas']['TorrentImportCandidate'];
 export type TorrentMedia = components['schemas']['TorrentMedia'];
 export type TorrentStatus = components['schemas']['TorrentStatus'];
 export type TorrentWithProgress = components['schemas']['TorrentWithProgress'];
@@ -3651,8 +3859,8 @@ export interface operations {
 	get_importable_show_candidates_api_v1_tv_importable_candidates_get: {
 		parameters: {
 			query: {
-				metadata_provider?: 'tmdb' | 'tvdb';
 				directory: string;
+				metadata_provider?: 'tmdb' | 'tvdb';
 			};
 			header?: never;
 			path?: never;
@@ -3676,6 +3884,26 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	scan_show_library_files_api_v1_tv_files_scan_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['LibraryScanCounts'];
 				};
 			};
 		};
@@ -4041,6 +4269,38 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['RichShowTorrent'];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	rescan_show_files_api_v1_tv_shows__show_id__rescan_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the show */
+				show_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PublicShow'];
 				};
 			};
 			/** @description Validation Error */
@@ -4527,8 +4787,8 @@ export interface operations {
 	get_importable_movie_candidates_api_v1_movies_importable_candidates_get: {
 		parameters: {
 			query: {
-				metadata_provider?: 'tmdb' | 'tvdb';
 				directory: string;
+				metadata_provider?: 'tmdb' | 'tvdb';
 			};
 			header?: never;
 			path?: never;
@@ -4552,6 +4812,26 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	scan_movie_library_files_api_v1_movies_files_scan_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['LibraryScanCounts'];
 				};
 			};
 		};
@@ -4862,6 +5142,38 @@ export interface operations {
 			};
 		};
 	};
+	rescan_movie_files_api_v1_movies__movie_id__rescan_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PublicMovieFile'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
 	search_for_torrents_for_movie_api_v1_movies__movie_id__torrents_get: {
 		parameters: {
 			query?: {
@@ -4917,6 +5229,74 @@ export interface operations {
 		responses: {
 			/** @description Successful Response */
 			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Torrent'];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	get_movie_torrent_import_candidates_api_v1_movies__movie_id__torrents__torrent_id__import_candidates_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+				torrent_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['TorrentImportCandidate'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	resolve_movie_torrent_import_api_v1_movies__movie_id__torrents__torrent_id__import_post: {
+		parameters: {
+			query: {
+				relative_path: string;
+			};
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+				torrent_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
 				headers: {
 					[name: string]: unknown;
 				};

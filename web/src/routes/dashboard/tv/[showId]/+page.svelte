@@ -22,6 +22,7 @@
 	import LibraryCombobox from '$lib/components/library-combobox.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import DeleteMediaDialog from '$lib/components/delete-media-dialog.svelte';
+	import MediaDetailsDialog from '$lib/components/media-details-dialog.svelte';
 	import { resolve } from '$app/paths';
 	import client from '$lib/api';
 	import { getTorrentStatusString } from '$lib/utils';
@@ -83,7 +84,10 @@
 			};
 		}
 		if (downloadedCount > 0) {
-			return { label: `Partial (${downloadedCount}/${total})`, classes: seasonBannerClasses.partial };
+			return {
+				label: `Partial (${downloadedCount}/${total})`,
+				classes: seasonBannerClasses.partial
+			};
 		}
 		return { label: 'Missing', classes: seasonBannerClasses.missing };
 	}
@@ -222,6 +226,8 @@
 						</div>
 						<DropdownMenu.Separator />
 					{/if}
+					<MediaDetailsDialog media={show} isShow={true} />
+					<DropdownMenu.Separator />
 					<LibraryCombobox media={show} mediaType="tv" />
 					<DropdownMenu.Separator />
 					<DeleteMediaDialog isShow={true} media={show} />

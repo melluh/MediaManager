@@ -399,6 +399,24 @@ async def get_a_shows_torrents(
     return await tv_service.get_torrents_for_show(show=show)
 
 
+@router.post(
+    "/shows/{show_id}/rescan",
+    dependencies=[Depends(current_superuser)],
+)
+async def rescan_show_files(
+    tv_import_service: tv_import_service_dep,
+    tv_service: tv_service_dep,
+    show: show_dep,
+) -> PublicShow:
+    """
+    Immediately reconcile this show's file records with the files on disk,
+    and adopt video files that have no record yet.
+    """
+    await tv_import_service.scan_show_files(show=show)
+    updated_show = await tv_service.get_show_by_id(show.id)
+    return await tv_service.get_public_show_by_id(show=updated_show)
+
+
 # -----------------------------------------------------------------------------
 # SEASONS
 # -----------------------------------------------------------------------------

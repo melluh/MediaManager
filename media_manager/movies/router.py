@@ -387,6 +387,23 @@ async def get_movie_files_by_movie_id(
     return await movie_service.get_public_movie_files(movie=movie)
 
 
+@router.post(
+    "/{movie_id}/rescan",
+    dependencies=[Depends(current_superuser)],
+)
+async def rescan_movie_files(
+    movie_import_service: movie_import_service_dep,
+    movie_service: movie_service_dep,
+    movie: movie_dep,
+) -> list[PublicMovieFile]:
+    """
+    Immediately reconcile this movie's file records with the files on disk,
+    and adopt video files that have no record yet.
+    """
+    await movie_import_service.scan_movie_files(movie=movie)
+    return await movie_service.get_public_movie_files(movie=movie)
+
+
 @router.get(
     "/{movie_id}/torrents",
     dependencies=[Depends(current_active_user)],
