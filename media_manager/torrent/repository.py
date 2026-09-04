@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 
 from media_manager.database import DbSessionDependency
@@ -142,7 +142,7 @@ class TorrentRepository:
         if not torrent_ids:
             return {}
         stmt = (
-            select(EpisodeFile.torrent_id, Season.number, Episode.number)
+            select(EpisodeFile.torrent_id, Season.id, Season.number, Episode.number)
             .distinct()
             .join(Episode, Episode.id == EpisodeFile.episode_id)
             .join(Season, Season.id == Episode.season_id)
@@ -152,12 +152,41 @@ class TorrentRepository:
         rows = (await self.db.execute(stmt)).all()
 
         numbers: dict[TorrentId, tuple[list[int], list[int]]] = {}
-        for torrent_id, season_number, episode_number in rows:
+        season_ids: dict[TorrentId, set[UUID]] = {}
+        for torrent_id, season_id, season_number, episode_number in rows:
             seasons, episodes = numbers.setdefault(torrent_id, ([], []))
             if season_number not in seasons:
                 seasons.append(season_number)
             if episode_number not in episodes:
                 episodes.append(episode_number)
+            season_ids.setdefault(torrent_id, set()).add(season_id)
+
+        # A torrent covering every episode of the single season it belongs to
+        # is a full-season download - report it as such (no episode numbers)
+        # rather than spelling out every episode in the range.
+        single_season_ids = {
+            next(iter(ids))
+            for torrent_id, ids in season_ids.items()
+            if len(ids) == 1
+        }
+        if single_season_ids:
+            count_stmt = (
+                select(Episode.season_id, func.count(Episode.id))
+                .where(Episode.season_id.in_(single_season_ids))
+                .group_by(Episode.season_id)
+            )
+            total_episodes_by_season_id = dict(
+                (await self.db.execute(count_stmt)).all()
+            )
+            for torrent_id, ids in season_ids.items():
+                if len(ids) != 1:
+                    continue
+                season_id = next(iter(ids))
+                seasons, episodes = numbers[torrent_id]
+                total = total_episodes_by_season_id.get(season_id)
+                if total is not None and len(episodes) == total:
+                    numbers[torrent_id] = (seasons, [])
+
         return numbers
 
     async def get_shows_of_torrents(
