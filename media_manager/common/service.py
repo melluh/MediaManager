@@ -21,7 +21,11 @@ from media_manager.common.import_sidecar import (
 )
 from media_manager.common.media_files import media_directory_name
 from media_manager.common.repository import BaseRepository
-from media_manager.common.schemas import CURRENT_METADATA_VERSION, BaseMediaFile, WatchUrl
+from media_manager.common.schemas import (
+    CURRENT_METADATA_VERSION,
+    BaseMediaFile,
+    WatchUrl,
+)
 from media_manager.common.slug import generate_slug
 from media_manager.config import MediaManagerConfig
 from media_manager.exceptions import InvalidConfigError, NotFoundError

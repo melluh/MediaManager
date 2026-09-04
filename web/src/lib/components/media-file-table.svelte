@@ -56,7 +56,7 @@
 				<Table.Cell class="w-[160px] text-right">
 					{#if file.downloaded && !file.exists_on_disk}
 						<span
-							class="inline-flex items-center gap-1 whitespace-nowrap text-sm text-muted-foreground"
+							class="inline-flex items-center gap-1 text-sm whitespace-nowrap text-muted-foreground"
 						>
 							<FileQuestionMark class="size-4" />
 							Not found on disk

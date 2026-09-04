@@ -110,9 +110,7 @@ def run_migrations_online() -> None:
         _reflected: bool | None,
         _compare_to: object | None,
     ) -> bool:
-        if type_ == "table" and name == "apscheduler_jobs":
-            return False
-        return True
+        return not (type_ == "table" and name == "apscheduler_jobs")
 
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),

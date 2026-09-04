@@ -20,7 +20,6 @@ class AbstractMediaServerProvider(ABC):
         Human-readable name shown to users, e.g. in "Watch on <display_name>"
         buttons. Unlike `name`, this is never used as an identifier.
         """
-        pass
 
     @abstractmethod
     async def find_watch_url(
