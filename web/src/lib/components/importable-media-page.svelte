@@ -15,6 +15,7 @@
 	import Download from '@lucide/svelte/icons/download';
 	import { toast } from 'svelte-sonner';
 	import PageLoading from '$lib/components/page-loading.svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	let {
 		isShow,
@@ -48,25 +49,23 @@
 			toast.error('Failed to rescan for importable media');
 		}
 		isRescanning = false;
-		selected = new Set();
+		selected.clear();
 	}
 
-	let selected = $state<Set<string>>(new Set());
+	let selected = new SvelteSet<string>();
 	let isBulkImporting = $state(false);
 	let bulkStatuses = $state<Record<string, BulkImportStatus>>({});
 
 	function toggleSelected(directory: string, value: boolean) {
-		const next = new Set(selected);
 		if (value) {
-			next.add(directory);
+			selected.add(directory);
 		} else {
-			next.delete(directory);
+			selected.delete(directory);
 		}
-		selected = next;
 	}
 
 	function deselectAll() {
-		selected = new Set();
+		selected.clear();
 	}
 
 	// Runs sequentially so the UI can show one row importing at a time; each
@@ -104,7 +103,7 @@
 
 		isBulkImporting = false;
 		bulkStatuses = {};
-		selected = new Set();
+		selected.clear();
 	}
 
 	function countNeedingAttention(media: MediaImportSuggestion[]): number {
