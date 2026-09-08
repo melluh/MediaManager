@@ -132,7 +132,7 @@ class TorrentRepository:
             .join(Movie, Movie.id == MovieFile.movie_id)
             .where(MovieFile.torrent_id.in_(torrent_ids))
         )
-        rows = (await self.db.execute(stmt)).all()
+        rows = (await self.db.execute(stmt)).unique().all()
         return {row[0]: MovieSchema.model_validate(row[1]) for row in rows}
 
     async def get_season_and_episode_numbers_of_torrents(
@@ -210,5 +210,5 @@ class TorrentRepository:
             .join(Show, Show.id == Season.show_id)
             .where(EpisodeFile.torrent_id.in_(torrent_ids))
         )
-        rows = (await self.db.execute(stmt)).all()
+        rows = (await self.db.execute(stmt)).unique().all()
         return {row[0]: ShowSummarySchema.model_validate(row[1]) for row in rows}
