@@ -3,7 +3,7 @@ from collections.abc import Collection, Sequence
 from typing import Any, TypeVar
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, inspect, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -139,12 +139,14 @@ class BaseRepository[T, S]:
         loaded (see Show.seasons, which is why TvRepository passes a
         `search_schema` without a `seasons` field). Fields with no matching
         column (e.g. `images`, populated separately from disk after the
-        query) are skipped and fall back to their schema default.
+        query, or `added_by`, a relationship rather than a plain column) are
+        skipped and fall back to their schema default.
         """
+        mapper = inspect(self.model)
         columns = [
             getattr(self.model, field_name)
             for field_name in self.search_schema.model_fields
-            if hasattr(self.model, field_name)
+            if field_name in mapper.columns
         ]
         stmt = (
             select(*columns)
