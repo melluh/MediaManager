@@ -10,7 +10,7 @@
 	import Film from '@lucide/svelte/icons/film';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 	import type { TorrentWithProgress } from '$lib/api/api';
-	import { cn, formatAddedTime, formatBytes } from '$lib/utils';
+	import { cn, formatAddedTime, formatBytes, formatTorrentSeasonEpisodeRange } from '$lib/utils';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let { torrent }: { torrent: TorrentWithProgress } = $props();
@@ -20,6 +20,9 @@
 	let backdropLoaded = $state(false);
 
 	let displayName = $derived(torrent.media?.name ?? torrent.title);
+	let seasonEpisodeLabel = $derived(
+		formatTorrentSeasonEpisodeRange(torrent.seasons, torrent.episodes)
+	);
 	let sizeLabel = $derived(formatBytes(torrent.download_progress?.total_bytes));
 	let addedLabel = $derived(formatAddedTime(torrent.initiated_at));
 	let statusBadge = $derived(getDownloadStatusBadge(torrent));
@@ -76,7 +79,11 @@
 						</div>
 						<div class="flex min-w-0 flex-1 flex-col justify-between gap-2 self-stretch">
 							<div class="min-w-0 space-y-1">
-								<p class="truncate text-sm font-medium" title={displayName}>{displayName}</p>
+								<p class="truncate text-sm font-medium" title={displayName}>
+									{displayName}{#if seasonEpisodeLabel}{' '}<span class="text-muted-foreground"
+											>{seasonEpisodeLabel}</span
+										>{/if}
+								</p>
 								{#if sizeLabel || torrent.indexer}
 									<div class="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
 										{#if sizeLabel}

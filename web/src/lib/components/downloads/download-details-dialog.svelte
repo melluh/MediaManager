@@ -181,9 +181,9 @@
 <Dialog.Content class="w-full max-w-[500px] rounded-lg p-6 shadow-lg">
 	<Dialog.Header class="min-w-0">
 		<Dialog.Title class="mb-1 text-xl font-semibold">
-			{torrent.media?.name ?? torrent.title}{#if seasonEpisodeLabel}
-				<span class="text-muted-foreground"> ({seasonEpisodeLabel})</span>
-			{/if}
+			{torrent.media?.name ?? torrent.title}{#if seasonEpisodeLabel}{' '}<span
+					class="text-muted-foreground">{seasonEpisodeLabel}</span
+				>{/if}
 		</Dialog.Title>
 		<Dialog.Description class="font-mono text-sm">
 			{torrent.title}
