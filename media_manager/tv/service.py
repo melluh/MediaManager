@@ -25,6 +25,7 @@ from media_manager.common.media_files import (
 )
 from media_manager.common.service import BaseMediaService
 from media_manager.config import get_config
+from media_manager.exceptions import MediaAlreadyExistsError
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
 from media_manager.indexer.scoring import slot_and_score_results
 from media_manager.indexer.service import IndexerService
@@ -535,6 +536,61 @@ class TvService(BaseMediaService[Show, Show]):
         shows = await self.tv_repository.get_all_shows_with_torrents()
         return [await self.get_torrents_for_show(show=show) for show in shows]
 
+    async def _resolve_and_check_episode_ids(
+        self,
+        indexer_result: IndexerQueryResult,
+        show_id: ShowId,
+        file_path_suffix: str,
+    ) -> dict[SeasonId, list[EpisodeId]]:
+        """
+        Resolve every episode a torrent for `indexer_result` would cover, and raise
+        if any of them already has a file for `file_path_suffix` (the pair the DB's
+        unique constraint on episode_file is keyed on).
+        """
+        existing_files_by_episode = await self.tv_repository.get_episode_files_by_show_id(
+            show_id=show_id
+        )
+        episode_ids_by_season: dict[SeasonId, list[EpisodeId]] = {}
+        for season_number in indexer_result.season:
+            season = await self.tv_repository.get_season_by_number(
+                season_number=season_number, show_id=show_id
+            )
+            episodes = {episode.number: episode.id for episode in season.episodes}
+
+            if indexer_result.episode:
+                episode_ids = []
+                missing_episodes = []
+                for ep_number in indexer_result.episode:
+                    ep_id = episodes.get(EpisodeNumber(ep_number))
+                    if ep_id is None:
+                        missing_episodes.append(ep_number)
+                        continue
+                    episode_ids.append(ep_id)
+                if missing_episodes:
+                    log.warning(
+                        "Some episodes from indexer result were not found in season %s "
+                        "for show %s and will be skipped: %s",
+                        season.id,
+                        show_id,
+                        ", ".join(str(ep) for ep in missing_episodes),
+                    )
+            else:
+                episode_ids = [episode.id for episode in season.episodes]
+
+            episode_ids_by_season[season.id] = episode_ids
+
+            for episode_id in episode_ids:
+                existing_files = existing_files_by_episode.get(episode_id, [])
+                if any(ef.file_path_suffix == file_path_suffix for ef in existing_files):
+                    msg = (
+                        f"Episode file for episode {episode_id} of season {season.id} "
+                        "already exists, refusing to start download."
+                    )
+                    log.error(msg)
+                    raise MediaAlreadyExistsError(msg)
+
+        return episode_ids_by_season
+
     async def download_torrent(
         self,
         public_indexer_result_id: IndexerQueryResultId,
@@ -555,38 +611,20 @@ class TvService(BaseMediaService[Show, Show]):
         indexer_result = await self.indexer_service.get_result(
             result_id=public_indexer_result_id
         )
+
+        episode_ids_by_season = await self._resolve_and_check_episode_ids(
+            indexer_result=indexer_result,
+            show_id=show_id,
+            file_path_suffix=override_show_file_path_suffix,
+        )
+
         show_torrent = await self.torrent_service.download(
             indexer_result=indexer_result, user_id=user_id
         )
         await self.torrent_service.pause_download(torrent=show_torrent)
 
         try:
-            for season_number in indexer_result.season:
-                season = await self.tv_repository.get_season_by_number(
-                    season_number=season_number, show_id=show_id
-                )
-                episodes = {episode.number: episode.id for episode in season.episodes}
-
-                if indexer_result.episode:
-                    episode_ids = []
-                    missing_episodes = []
-                    for ep_number in indexer_result.episode:
-                        ep_id = episodes.get(EpisodeNumber(ep_number))
-                        if ep_id is None:
-                            missing_episodes.append(ep_number)
-                            continue
-                        episode_ids.append(ep_id)
-                    if missing_episodes:
-                        log.warning(
-                            "Some episodes from indexer result were not found in season %s "
-                            "for show %s and will be skipped: %s",
-                            season.id,
-                            show_id,
-                            ", ".join(str(ep) for ep in missing_episodes),
-                        )
-                else:
-                    episode_ids = [episode.id for episode in season.episodes]
-
+            for episode_ids in episode_ids_by_season.values():
                 for episode_id in episode_ids:
                     episode_file = EpisodeFile(
                         episode_id=episode_id,
@@ -598,7 +636,7 @@ class TvService(BaseMediaService[Show, Show]):
 
         except IntegrityError:
             log.error(
-                f"Episode file for episode {episode_id} of season {season.id} and quality {indexer_result.quality} already exists, skipping."
+                f"Episode file for episode {episode_id} and quality {indexer_result.quality} already exists, skipping."
             )
             await self.tv_repository.remove_episode_files_by_torrent_id(show_torrent.id)
             await self.torrent_service.cancel_download(

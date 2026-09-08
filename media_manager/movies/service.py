@@ -23,6 +23,7 @@ from media_manager.common.media_files import (
 )
 from media_manager.common.service import BaseMediaService
 from media_manager.config import get_config
+from media_manager.exceptions import MediaAlreadyExistsError
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
 from media_manager.indexer.scoring import resolve_slot_label, slot_and_score_results
 from media_manager.indexer.service import IndexerService
@@ -365,6 +366,17 @@ class MovieService(BaseMediaService[Movie, Movie]):
         movies = await self.movie_repository.get_all_movies_with_torrents()
         return [await self.get_torrents_for_movie(movie=movie) for movie in movies]
 
+    async def _check_movie_file_does_not_exist(
+        self, movie: Movie, file_path_suffix: str
+    ) -> None:
+        existing_files = await self.movie_repository.get_movie_files_by_movie_id(
+            movie_id=movie.id
+        )
+        if any(mf.file_path_suffix == file_path_suffix for mf in existing_files):
+            msg = f"Movie file for movie {movie.name} already exists, refusing to start download."
+            log.warning(msg)
+            raise MediaAlreadyExistsError(msg)
+
     async def download_torrent(
         self,
         public_indexer_result_id: IndexerQueryResultId,
@@ -388,6 +400,11 @@ class MovieService(BaseMediaService[Movie, Movie]):
         file_path_suffix = override_movie_file_path_suffix or self._default_file_path_suffix(
             indexer_result
         )
+
+        await self._check_movie_file_does_not_exist(
+            movie=movie, file_path_suffix=file_path_suffix
+        )
+
         movie_torrent = await self.torrent_service.download(
             indexer_result=indexer_result, user_id=user_id
         )
