@@ -87,7 +87,14 @@ class TvImportService(BaseMediaService[Show, Show]):
         quality: Quality = Quality.unknown,
         torrent_id: str | None = None,
         file_path_suffix: str = "",
-    ) -> bool:
+    ) -> tuple[bool, str | None]:
+        """
+        :return: Whether the whole torrent was imported cleanly, and an error
+            message when it wasn't. A file that copied to disk but couldn't be
+            recorded in the DB (unmatched episode, DB failure) counts as a
+            failure - otherwise the torrent would be marked imported with no
+            EpisodeFile row for that episode.
+        """
         import_start = time.monotonic()
         # Filesystem scan + archive extraction; offload off the event loop.
         video_files, _, _ = await asyncio.to_thread(
@@ -98,7 +105,7 @@ class TvImportService(BaseMediaService[Show, Show]):
                 f"No video files found for {show.name} in {source_directory} "
                 f"(scan took {time.monotonic() - import_start:.3f}s)"
             )
-            return False
+            return False, "No video files found."
 
         log.info(
             f"Importing {len(video_files)} video file(s) for {show.name} "
@@ -106,6 +113,7 @@ class TvImportService(BaseMediaService[Show, Show]):
         )
 
         any_imported = False
+        failures: list[str] = []
         for video_file in video_files:
             file_start = time.monotonic()
             # Simple heuristic for season/episode from filename
@@ -150,14 +158,25 @@ class TvImportService(BaseMediaService[Show, Show]):
                                 ),
                             )
                         )
-                except Exception:
+                    else:
+                        msg = (
+                            f"S{s_num:02d}E{e_num:02d} of {show.name} has no "
+                            "matching episode in the database"
+                        )
+                        log.warning(msg)
+                        failures.append(msg)
+                except Exception as e:
                     log.exception(f"Could not update DB for {video_file.name}")
+                    failures.append(f"Could not record {video_file.name}: {e}")
                 log.info(
                     f"S{s_num:02d}E{e_num:02d} of {show.name}: DB update took "
                     f"{time.monotonic() - db_start:.3f}s, total file took "
                     f"{time.monotonic() - file_start:.3f}s"
                 )
             else:
+                # Not every file in a torrent is an episode (samples, extras,
+                # etc.) - an unparseable name is expected noise, not a failure,
+                # as long as the episodes that do parse import cleanly.
                 log.warning(
                     f"Could not parse season/episode from {video_file.name}, skipping"
                 )
@@ -165,10 +184,12 @@ class TvImportService(BaseMediaService[Show, Show]):
             f"Finished importing {len(video_files)} video file(s) for {show.name} "
             f"in {time.monotonic() - import_start:.3f}s"
         )
-        return any_imported
+        if failures:
+            return False, "; ".join(failures)
+        return any_imported, None
 
     async def import_torrent_files(self, torrent: Torrent, show: Show) -> None:
-        success = await self.import_tv_show(
+        success, error_msg = await self.import_tv_show(
             show=show,
             source_directory=get_torrent_filepath(torrent),
             quality=torrent.quality,
@@ -180,7 +201,9 @@ class TvImportService(BaseMediaService[Show, Show]):
             await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
             await self.notify_import_success(show.name, "TV show")
         else:
-            await self.notify_import_failure(torrent, show.name, "TV show")
+            await self.notify_import_failure(
+                torrent, show.name, "TV show", error_msg or ""
+            )
 
     async def get_import_suggestion(
         self, tv_path: Path, metadata_provider: AbstractMetadataProvider
@@ -233,9 +256,7 @@ class TvImportService(BaseMediaService[Show, Show]):
             match = SEASON_EPISODE_TOKEN.search(path.name)
             if match is None:
                 return None
-            found = episodes_by_number.get(
-                (int(match.group(1)), int(match.group(2)))
-            )
+            found = episodes_by_number.get((int(match.group(1)), int(match.group(2))))
             if found is None:
                 return None
             season_number, episode = found

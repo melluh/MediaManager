@@ -264,7 +264,8 @@ class BaseMediaService[T, S]:
         ],
         get_metadata_func: Callable[[int], Awaitable[Any]],
         get_images_func: Callable[
-            [int], Awaitable[tuple[list[ExternalPosterImage], list[ExternalPosterImage]]]
+            [int],
+            Awaitable[tuple[list[ExternalPosterImage], list[ExternalPosterImage]]],
         ],
         media_type: MediaType,
     ) -> MediaImportSuggestion:
@@ -324,7 +325,8 @@ class BaseMediaService[T, S]:
         ],
         get_metadata_func: Callable[[int], Awaitable[Any]],
         get_images_func: Callable[
-            [int], Awaitable[tuple[list[ExternalPosterImage], list[ExternalPosterImage]]]
+            [int],
+            Awaitable[tuple[list[ExternalPosterImage], list[ExternalPosterImage]]],
         ],
         media_type: MediaType,
     ) -> MediaImportSuggestion:
@@ -391,7 +393,8 @@ class BaseMediaService[T, S]:
         external_id: int,
         get_metadata_func: Callable[[int], Awaitable[Any]],
         get_images_func: Callable[
-            [int], Awaitable[tuple[list[ExternalPosterImage], list[ExternalPosterImage]]]
+            [int],
+            Awaitable[tuple[list[ExternalPosterImage], list[ExternalPosterImage]]],
         ],
         media_type: MediaType,
     ) -> MetaDataProviderSearchResult | None:
@@ -510,13 +513,29 @@ class BaseMediaService[T, S]:
             if t.imported or t.import_error:
                 continue
             torrent_start = time.monotonic()
+            media: S | None = None
             try:
                 media = await get_media_func(t)
                 if media:
                     await import_torrent_func(t, media)
                     imported_count += 1
-            except Exception:
+            except Exception as e:
                 log.exception(f"Error importing torrent {t.title}")
+                # An unexpected exception (as opposed to the handled failure
+                # paths inside import_torrent_func, which already call
+                # notify_import_failure themselves) must still leave a
+                # visible trace - otherwise the torrent just retries this
+                # same failure every cron pass forever, stuck on "Waiting
+                # for import" with nothing in the UI to show why.
+                try:
+                    media_name = getattr(media, "name", None) or t.title
+                    await self.notify_import_failure(
+                        t, media_name, media_type_name, f"{type(e).__name__}: {e}"
+                    )
+                except Exception:
+                    log.exception(
+                        f"Error recording import failure for torrent {t.title}"
+                    )
             log.info(
                 f"Processing torrent '{t.title}' ({media_type_name}) took "
                 f"{time.monotonic() - torrent_start:.3f}s"

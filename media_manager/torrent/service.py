@@ -8,6 +8,7 @@ import media_manager.metadataProvider.utils
 from media_manager.exceptions import InvalidConfigError
 from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.movies.schemas import Movie, MovieFile
+from media_manager.notification.service import NotificationService
 from media_manager.torrent.manager import DownloadManager, get_download_manager
 from media_manager.torrent.repository import TorrentRepository
 from media_manager.torrent.schemas import (
@@ -36,9 +37,7 @@ class TorrentService:
         self.torrent_repository = torrent_repository
         self.download_manager = download_manager or get_download_manager()
 
-    async def get_episode_files_of_torrent(
-        self, torrent: Torrent
-    ) -> list[EpisodeFile]:
+    async def get_episode_files_of_torrent(self, torrent: Torrent) -> list[EpisodeFile]:
         """
         Returns all episode files of a torrent
         :param torrent: the torrent to get the episode files of
@@ -68,7 +67,9 @@ class TorrentService:
         self, indexer_result: IndexerQueryResult, user_id: UUID | None = None
     ) -> Torrent:
         log.info(f"Starting download for torrent: {indexer_result.title}")
-        torrent = await asyncio.to_thread(self.download_manager.download, indexer_result)
+        torrent = await asyncio.to_thread(
+            self.download_manager.download, indexer_result
+        )
 
         if user_id is not None:
             torrent.initiated_by_user_id = user_id
@@ -163,6 +164,56 @@ class TorrentService:
             for t in await self.get_all_torrents()
             if t.status == TorrentStatus.finished and not t.imported
         ]
+
+    async def flag_orphaned_completed_torrents(
+        self, notification_service: NotificationService | None = None
+    ) -> None:
+        """
+        Flags completed torrents linked to neither a movie nor a show as
+        failed imports. This happens when the media (or its file record) was
+        deleted without also removing the torrent, or a file-record insert
+        failed after the torrent's own row was already committed - such
+        torrents have nothing left to import into and would otherwise retry
+        "Waiting for import" forever with no visible indication why.
+        """
+        # A pure DB read, deliberately not get_completed_torrents(): that
+        # round-trips to the download client and re-saves every torrent's
+        # status, and import_all_torrents_base already does that work every
+        # 2 minutes - this sweep only needs the persisted flags, which are at
+        # most a few minutes stale.
+        candidates = [
+            t
+            for t in await self.torrent_repository.get_all_torrents()
+            if t.status == TorrentStatus.finished
+            and not t.imported
+            and not t.import_error
+        ]
+        if not candidates:
+            return
+        torrent_ids = [t.id for t in candidates]
+        movies_by_torrent_id = await self.torrent_repository.get_movies_of_torrents(
+            torrent_ids=torrent_ids
+        )
+        shows_by_torrent_id = await self.torrent_repository.get_shows_of_torrents(
+            torrent_ids=torrent_ids
+        )
+        for t in candidates:
+            if t.id in movies_by_torrent_id or t.id in shows_by_torrent_id:
+                continue
+            log.error(
+                f"Torrent '{t.title}' is linked to no movie or show; "
+                "flagging import as failed"
+            )
+            t.import_error = (
+                "This torrent isn't linked to any movie or show, so it can't "
+                "be imported. Delete it and re-download if you still need it."
+            )
+            await self.torrent_repository.save_torrent(torrent=t)
+            if notification_service:
+                await notification_service.send_notification_to_all_providers(
+                    title="Import Failed",
+                    message=f"Torrent '{t.title}' isn't linked to any movie or show.",
+                )
 
     async def get_torrent_by_id(self, torrent_id: TorrentId) -> Torrent:
         return await self.get_torrent_status(

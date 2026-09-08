@@ -20,6 +20,10 @@ from media_manager.movies.dependencies import (
 )
 from media_manager.movies.importer import MovieImportService
 from media_manager.movies.service import MovieService
+from media_manager.notification.dependencies import get_notification_service
+from media_manager.notification.service import NotificationService
+from media_manager.torrent.dependencies import get_torrent_service
+from media_manager.torrent.service import TorrentService
 from media_manager.tv.dependencies import get_tv_import_service, get_tv_service
 from media_manager.tv.importer import TvImportService
 from media_manager.tv.service import TvService
@@ -66,6 +70,17 @@ async def import_all_show_torrents_task(
 ) -> None:
     log.info("Importing all Show torrents")
     await tv_service.import_all_torrents()
+
+
+@broker.task
+async def flag_orphaned_torrents_task(
+    torrent_service: TorrentService = TaskiqDepends(get_torrent_service),
+    notification_service: NotificationService = TaskiqDepends(get_notification_service),
+) -> None:
+    log.info("Flagging orphaned completed torrents")
+    await torrent_service.flag_orphaned_completed_torrents(
+        notification_service=notification_service
+    )
 
 
 @broker.task
@@ -160,6 +175,9 @@ async def delete_expired_indexer_query_results_task(
 _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
     import_all_movie_torrents_task.task_name: [{"cron": "*/2 * * * *"}],
     import_all_show_torrents_task.task_name: [{"cron": "*/2 * * * *"}],
+    # Runs less often than the imports above: it only needs to catch torrents
+    # neither importer ever claims, not race the normal import window.
+    flag_orphaned_torrents_task.task_name: [{"cron": "*/5 * * * *"}],
     update_all_movies_metadata_task.task_name: [{"cron": "0 * * * *"}],
     update_all_non_ended_shows_metadata_task.task_name: [{"cron": "0 * * * *"}],
     scan_importable_movies_task.task_name: [{"cron": "*/5 * * * *"}],
