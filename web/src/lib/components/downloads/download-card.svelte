@@ -81,7 +81,7 @@
 							<div class="min-w-0 space-y-1">
 								<p class="truncate text-sm font-medium" title={displayName}>
 									{displayName}{#if seasonEpisodeLabel}
-										<span class="text-muted-foreground"> {seasonEpisodeLabel}</span>{/if}
+										<span class="text-muted-foreground">&nbsp;{seasonEpisodeLabel}</span>{/if}
 								</p>
 								{#if sizeLabel || torrent.indexer}
 									<div class="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
