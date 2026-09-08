@@ -78,4 +78,8 @@ def test_an_unexpected_exception_is_recorded_as_an_import_error():
     assert len(torrent_service.torrent_repository.saved) == 1
     saved = torrent_service.torrent_repository.saved[0]
     assert saved.imported is False
-    assert saved.import_error == "RuntimeError: disk unavailable"
+    # The exception's own message must never reach the user-facing field -
+    # only its type name, as a safe, generic hint.
+    assert saved.import_error is not None
+    assert "disk unavailable" not in saved.import_error
+    assert "RuntimeError" in saved.import_error

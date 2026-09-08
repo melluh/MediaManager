@@ -147,17 +147,31 @@ class TvImportService(BaseMediaService[Show, Show]):
                         (e for e in season.episodes if e.number == e_num), None
                     )
                     if episode:
-                        await self.tv_repository.add_episode_file(
-                            EpisodeFile(
+                        relative_path = str(Path(season_dir_name) / target_file.name)
+                        # download_torrent already created this episode's row
+                        # (with no relative_path yet) before the download even
+                        # started - update it in place rather than inserting a
+                        # second row, which would collide on the
+                        # (episode_id, file_path_suffix) primary key. Insert
+                        # only as a fallback, for a file that was never
+                        # tracked by a download (e.g. adopted by hand).
+                        updated = (
+                            await self.tv_repository.set_episode_file_relative_path(
                                 episode_id=episode.id,
-                                quality=quality,
-                                torrent_id=torrent_id,
                                 file_path_suffix=file_path_suffix,
-                                relative_path=str(
-                                    Path(season_dir_name) / target_file.name
-                                ),
+                                relative_path=relative_path,
                             )
                         )
+                        if not updated:
+                            await self.tv_repository.add_episode_file(
+                                EpisodeFile(
+                                    episode_id=episode.id,
+                                    quality=quality,
+                                    torrent_id=torrent_id,
+                                    file_path_suffix=file_path_suffix,
+                                    relative_path=relative_path,
+                                )
+                            )
                     else:
                         msg = (
                             f"S{s_num:02d}E{e_num:02d} of {show.name} has no "
@@ -165,9 +179,15 @@ class TvImportService(BaseMediaService[Show, Show]):
                         )
                         log.warning(msg)
                         failures.append(msg)
-                except Exception as e:
+                except Exception:
                     log.exception(f"Could not update DB for {video_file.name}")
-                    failures.append(f"Could not record {video_file.name}: {e}")
+                    # Exception text can carry SQL/parameter details - keep it
+                    # out of the user-facing message, which notify_import_failure
+                    # stores verbatim on the torrent.
+                    failures.append(
+                        f"Could not record {video_file.name} in the database. "
+                        "Check the server logs for details."
+                    )
                 log.info(
                     f"S{s_num:02d}E{e_num:02d} of {show.name}: DB update took "
                     f"{time.monotonic() - db_start:.3f}s, total file took "

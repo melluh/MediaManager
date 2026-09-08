@@ -529,8 +529,17 @@ class BaseMediaService[T, S]:
                 # for import" with nothing in the UI to show why.
                 try:
                     media_name = getattr(media, "name", None) or t.title
+                    # Exception text can carry SQL/parameter/filesystem
+                    # details - keep it out of the user-facing message,
+                    # which is stored verbatim on the torrent. The type name
+                    # alone is a safe, useful hint; full detail is above in
+                    # the server log.
                     await self.notify_import_failure(
-                        t, media_name, media_type_name, f"{type(e).__name__}: {e}"
+                        t,
+                        media_name,
+                        media_type_name,
+                        f"Unexpected error ({type(e).__name__}). "
+                        "Check the server logs for details.",
                     )
                 except Exception:
                     log.exception(

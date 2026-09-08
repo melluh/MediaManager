@@ -42,11 +42,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
 
     async def get_show_by_id(self, show_id: ShowId) -> ShowSchema:
         try:
-            stmt = (
-                select(Show)
-                .where(Show.id == show_id)
-                .options(_load_show_tree())
-            )
+            stmt = select(Show).where(Show.id == show_id).options(_load_show_tree())
             result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
             if not result:
                 msg = f"Show with id {show_id} not found."
@@ -268,12 +264,14 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
 
     async def set_episode_file_relative_path(
         self, episode_id: EpisodeId, file_path_suffix: str, relative_path: str | None
-    ) -> None:
+    ) -> bool:
         """
         Records where an episode file was actually written, for a record that
         was created before its file existed. None means no file is known for
         the record, which is what the library scan writes when the file it
         pointed at is gone.
+
+        :return: Whether a matching row existed and was updated.
         """
         stmt = (
             update(EpisodeFile)
@@ -283,8 +281,9 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             )
             .values(relative_path=relative_path)
         )
-        await self.db.execute(stmt)
+        result = await self.db.execute(stmt)
         await self.db.commit()
+        return result.rowcount > 0
 
     async def set_episode_file_relative_paths_bulk(
         self,
