@@ -250,7 +250,12 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
     async def get_episode_files_by_season_id(
         self, season_id: SeasonId
     ) -> list[EpisodeFileSchema]:
-        stmt = select(EpisodeFile).join(Episode).where(Episode.season_id == season_id)
+        stmt = (
+            select(EpisodeFile)
+            .join(Episode)
+            .where(Episode.season_id == season_id)
+            .order_by(Episode.number)
+        )
         results = (await self.db.execute(stmt)).scalars().all()
         return [EpisodeFileSchema.model_validate(ef) for ef in results]
 
