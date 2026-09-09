@@ -40,12 +40,13 @@
 		isFirstForEpisode: boolean;
 	};
 
-	// One row per file, with episodes that have no files (or multiple files)
-	// represented by 1 or N rows respectively - the episode's own columns are
-	// only rendered on the first of those rows and span the rest via rowspan.
 	let episodeRows = $derived(
 		season.episodes.flatMap((episode): EpisodeRow[] => {
-			const files = episodeFiles.filter((file) => file.episode_id === episode.id);
+			const files = episodeFiles
+				.filter((file) => file.episode_id === episode.id)
+				.sort((a, b) =>
+					(a.relative_path ?? a.file_path).localeCompare(b.relative_path ?? b.file_path)
+				);
 			if (files.length === 0) {
 				return [{ episode, file: null, fileIndex: 0, rowSpan: 1, isFirstForEpisode: true }];
 			}
