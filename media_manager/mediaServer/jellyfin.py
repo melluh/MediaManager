@@ -61,7 +61,7 @@ class JellyfinProvider(AbstractMediaServerProvider):
     async def __get_items(self, params: dict) -> dict:
         response = await _client.get(
             url=f"{self.url}/Items",
-            headers={"Authorization": f"MediaBrowser Token=${self.api_key}"},
+            headers={"Authorization": f"MediaBrowser Token={self.api_key}"},
             params=params,
         )
         response.raise_for_status()
@@ -112,19 +112,19 @@ class JellyfinProvider(AbstractMediaServerProvider):
             if imdb_id
             else f"{_PROVIDER_ID_KEYS.get(metadata_provider)}.{external_id}"
         )
-        try:
-            data = await self.__get_items(
-                {
-                    "AnyProviderIdEquals": provider_id_query,
-                    "Recursive": "true",
-                    "IncludeItemTypes": "Movie,Series",
-                    "Fields": "ProviderIds",
-                    "Limit": _SEARCH_PAGE_SIZE,
-                }
-            )
-        except httpx.HTTPError:
-            log.warning("Jellyfin API error looking up item", exc_info=True)
-            return None
+        # Deliberately not caught here: a lookup this raises out of is never
+        # written into `_watch_url_cache` (see `find_watch_url`), so a
+        # transient failure (e.g. a bad API key) can't get cached as a false
+        # "not in library" for `_CACHE_TTL_SECONDS`. The caller logs it.
+        data = await self.__get_items(
+            {
+                "AnyProviderIdEquals": provider_id_query,
+                "Recursive": "true",
+                "IncludeItemTypes": "Movie,Series",
+                "Fields": "ProviderIds",
+                "Limit": _SEARCH_PAGE_SIZE,
+            }
+        )
 
         items = data.get("Items", [])
         match = next(
@@ -144,13 +144,9 @@ class JellyfinProvider(AbstractMediaServerProvider):
         # version - if there are more items in the library than we fetched,
         # the page we got can't be trusted to be exhaustive.
         if data.get("TotalRecordCount", 0) > len(items):
-            try:
-                return await self.__scan_full_library(
-                    imdb_id, external_id, metadata_provider
-                )
-            except httpx.HTTPError:
-                log.warning("Jellyfin API error scanning library", exc_info=True)
-                return None
+            return await self.__scan_full_library(
+                imdb_id, external_id, metadata_provider
+            )
         return None
 
     @override
