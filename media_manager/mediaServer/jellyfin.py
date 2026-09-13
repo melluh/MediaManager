@@ -61,7 +61,7 @@ class JellyfinProvider(AbstractMediaServerProvider):
     async def __get_items(self, params: dict) -> dict:
         response = await _client.get(
             url=f"{self.url}/Items",
-            headers={"X-Emby-Token": self.api_key},
+            headers={"Authorization": f"MediaBrowser Token=${self.api_key}"},
             params=params,
         )
         response.raise_for_status()
