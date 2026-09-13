@@ -154,7 +154,7 @@ export function formatTorrentSeasonEpisodeRange(
 
 export async function handleLogout() {
 	await client.POST('/api/v1/auth/cookie/logout');
-	await goto(resolve('/login', {}));
+	await goto(resolve('/login', {}) + '?loggedOut=true');
 }
 
 export async function handleOauth() {

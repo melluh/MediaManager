@@ -4,6 +4,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import * as Alert from '$lib/components/ui/alert';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import LogInIcon from '@lucide/svelte/icons/log-in';
@@ -27,12 +28,21 @@
 	let email = $state('');
 	let password = $state('');
 	let status = $state<'idle' | 'loading' | 'success' | 'error'>('idle');
+	let oauthLoading = $state(false);
 
 	let singleOauthOnly = $derived(!passwordLoginEnabled && oauthProviderNames.length === 1);
 
+	async function onOauthClick() {
+		oauthLoading = true;
+		await handleOauth();
+		oauthLoading = false;
+	}
+
+	let justLoggedOut = page.url.searchParams.get('loggedOut') === 'true';
+
 	$effect(() => {
-		if (singleOauthOnly) {
-			handleOauth();
+		if (singleOauthOnly && !justLoggedOut) {
+			onOauthClick();
 		}
 	});
 
@@ -154,10 +164,15 @@
 			{#each oauthProviderNames as name, i (name)}
 				<Button
 					class={passwordLoginEnabled || i > 0 ? 'mt-2 w-full' : 'w-full'}
-					onclick={() => handleOauth()}
+					disabled={oauthLoading}
+					onclick={onOauthClick}
 					variant={singleOauthOnly ? 'default' : 'outline'}
 				>
-					{#if singleOauthOnly}<LogInIcon class="size-4" />{/if}
+					{#if oauthLoading}
+						<Spinner />
+					{:else if singleOauthOnly}
+						<LogInIcon class="size-4" />
+					{/if}
 					Login with {name}
 				</Button>
 			{/each}
