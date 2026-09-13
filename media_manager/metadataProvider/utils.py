@@ -1,7 +1,12 @@
 import asyncio
 import logging
+import os
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
+from typing import BinaryIO
 from uuid import UUID
 
 import httpx
@@ -40,12 +45,34 @@ def get_genre_names_from_ids(
     return [genre_map[genre_id] for genre_id in genre_ids if genre_id in genre_map]
 
 
+@contextmanager
+def _atomic_write(path: Path) -> Iterator[BinaryIO]:
+    """
+    Write to a temp file in `path`'s directory, then atomically rename it
+    onto `path` once writing succeeds. Without this, writing straight to
+    `path` (as `Path.write_bytes`/`Image.save` do) truncates it first, so a
+    request racing the write can be served a 0-byte or partial file - which
+    then gets cached by the browser as if it were the real thing.
+    """
+    tmp_fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(tmp_fd, "wb") as tmp_file:
+            yield tmp_file
+        tmp_path.replace(path)
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
 def _process_image(image_file_path: Path, content: bytes) -> None:
     image_file_path.parent.mkdir(parents=True, exist_ok=True)
-    image_file_path.write_bytes(content)
+    with _atomic_write(image_file_path) as f:
+        f.write(content)
 
     original_image = Image.open(image_file_path)
-    original_image.save(image_file_path.with_suffix(".webp"), quality=50)
+    with _atomic_write(image_file_path.with_suffix(".webp")) as f:
+        original_image.save(f, format="WEBP", quality=50)
 
 
 def _encode_avif(image_file_path: Path) -> None:
@@ -57,7 +84,9 @@ def _encode_avif(image_file_path: Path) -> None:
     nothing needs avif to be ready immediately - `<picture>` clients that
     don't see it yet fall back to the webp/jpg source that's already there.
     """
-    Image.open(image_file_path).save(image_file_path.with_suffix(".avif"), quality=50)
+    image = Image.open(image_file_path)
+    with _atomic_write(image_file_path.with_suffix(".avif")) as f:
+        image.save(f, format="AVIF", quality=50)
 
 
 def media_image_relative_path(media_id: UUID | str, image_type: MediaImageType) -> str:
