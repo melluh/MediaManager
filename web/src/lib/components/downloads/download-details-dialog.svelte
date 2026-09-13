@@ -20,6 +20,8 @@
 	import Users from '@lucide/svelte/icons/users';
 	import Clock from '@lucide/svelte/icons/clock';
 	import ClockAlert from '@lucide/svelte/icons/clock-alert';
+	import Check from '@lucide/svelte/icons/check';
+	import Copy from '@lucide/svelte/icons/copy';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { resolve } from '$app/paths';
@@ -80,6 +82,26 @@
 			torrent.media != null &&
 			!torrent.media.is_show
 	);
+
+	// The import error is a raw exception message, so it can be arbitrarily long.
+	// It is clamped in the markup and copyable in full.
+	let importErrorCopied = $state(false);
+	let importErrorCopyReset: ReturnType<typeof setTimeout> | undefined;
+
+	async function copyImportError() {
+		if (!torrent.import_error) return;
+		try {
+			// `navigator.clipboard` is undefined when the app is served over plain
+			// http, which is common for self-hosted setups on a LAN.
+			await navigator.clipboard.writeText(torrent.import_error);
+		} catch {
+			toast.error('Could not copy the error to the clipboard.');
+			return;
+		}
+		importErrorCopied = true;
+		clearTimeout(importErrorCopyReset);
+		importErrorCopyReset = setTimeout(() => (importErrorCopied = false), 2000);
+	}
 
 	let candidates = $state<TorrentImportCandidate[] | null>(null);
 	let candidatesLoading = $state(false);
@@ -246,7 +268,24 @@
 			{statusBadge.label}
 		</div>
 		{#if torrent.import_error}
-			<p class="text-xs font-normal">{torrent.import_error}</p>
+			<div class="group/error flex items-start gap-2">
+				<p class="line-clamp-3 min-w-0 flex-1 text-xs font-normal break-words">
+					{torrent.import_error}
+				</p>
+				<button
+					type="button"
+					onclick={copyImportError}
+					class="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-normal opacity-0 transition-opacity group-hover/error:opacity-100 hover:bg-current/10 focus-visible:opacity-100"
+				>
+					{#if importErrorCopied}
+						<Check class="size-3" />
+						Copied
+					{:else}
+						<Copy class="size-3" />
+						Copy
+					{/if}
+				</button>
+			</div>
 		{/if}
 	</div>
 
