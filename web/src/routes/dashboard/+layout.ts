@@ -1,6 +1,18 @@
+import { redirect } from '@sveltejs/kit';
+import { resolve } from '$app/paths';
 import type { LayoutLoad } from './$types';
 import client from '$lib/api';
 import type { UserResult } from '$lib/api/user';
+
+/**
+ * The real session cookie is httponly, so we can't check it directly. The backend
+ * also sets a non-sensitive `mm_authenticated` cookie alongside it (see
+ * media_manager/auth/users.py) purely so we can tell "definitely logged out" apart
+ * from "maybe logged in" without waiting on a network round trip.
+ */
+function hasAuthHintCookie(): boolean {
+	return document.cookie.split('; ').some((c) => c.startsWith('mm_authenticated='));
+}
 
 /**
  * The current user is deliberately *not* awaited here: this app is a client-rendered
@@ -12,6 +24,10 @@ import type { UserResult } from '$lib/api/user';
  * unhandled rejection - it resolves to a discriminated result instead.
  */
 export const load: LayoutLoad = ({ fetch }) => {
+	if (!hasAuthHintCookie()) {
+		redirect(303, resolve('/login', {}));
+	}
+
 	const user: Promise<UserResult> = client
 		.GET('/api/v1/users/me', { fetch: fetch })
 		.then(({ data, error, response }) => {

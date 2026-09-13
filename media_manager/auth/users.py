@@ -275,19 +275,53 @@ def get_jwt_strategy() -> JWTStrategy[models.UP, models.ID]:
     return JWTStrategy(secret=SECRET, lifetime_seconds=LIFETIME)
 
 
+# Non-sensitive, JS-readable cookie mirroring whether a session cookie was just
+# set/cleared. The real auth cookie is httponly, so the frontend has no way to
+# tell "definitely logged out" from "maybe logged in" without a network round
+# trip; this lets it skip that round trip for the definitely-logged-out case.
+AUTH_HINT_COOKIE_NAME = "mm_authenticated"
+
+
+class HintCookieTransport(CookieTransport):
+    async def get_login_response(self, token: str) -> Response:
+        response = await super().get_login_response(token)
+        return self._set_hint_cookie(response)
+
+    async def get_logout_response(self) -> Response:
+        response = await super().get_logout_response()
+        response.delete_cookie(
+            AUTH_HINT_COOKIE_NAME, path=self.cookie_path, domain=self.cookie_domain
+        )
+        return response
+
+    def _set_hint_cookie(self, response: Response) -> Response:
+        response.set_cookie(
+            AUTH_HINT_COOKIE_NAME,
+            "1",
+            max_age=self.cookie_max_age,
+            path=self.cookie_path,
+            domain=self.cookie_domain,
+            secure=self.cookie_secure,
+            httponly=False,
+            samesite=self.cookie_samesite,
+        )
+        return response
+
+
 # needed because the default CookieTransport does not redirect after login,
 # thus the user would be stuck on the OAuth Providers "redirecting" page
-class RedirectingCookieTransport(CookieTransport):
+class RedirectingCookieTransport(HintCookieTransport):
     async def get_login_response(self, token: str) -> Response:
         response = RedirectResponse(
             str(MediaManagerConfig().misc.frontend_url) + "web/dashboard",
             status_code=status.HTTP_302_FOUND,
         )
-        return self._set_login_cookie(response, token)
+        response = self._set_login_cookie(response, token)
+        return self._set_hint_cookie(response)
 
 
 bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
-cookie_transport = CookieTransport(
+cookie_transport = HintCookieTransport(
     cookie_max_age=LIFETIME, cookie_samesite="lax", cookie_secure=False
 )
 openid_cookie_transport = RedirectingCookieTransport(

@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import type { UserRead } from '$lib/api/api';
-	const user: () => UserRead = getContext('user');
+	const user: () => UserRead | undefined = getContext('user');
 </script>
 
-<span class="truncate font-semibold">{user().display_name || user().email}</span>
-{#if user().is_superuser}
-	<span class="truncate text-xs">Administrator</span>
+{#if user()}
+	<span class="truncate font-semibold">{user()!.display_name || user()!.email}</span>
+	{#if user()!.is_superuser}
+		<span class="truncate text-xs">Administrator</span>
+	{:else}
+		<span class="truncate text-xs">User</span>
+	{/if}
 {:else}
-	<span class="truncate text-xs">User</span>
+	<span class="truncate font-semibold text-muted-foreground">Signing in…</span>
 {/if}

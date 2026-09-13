@@ -72,14 +72,16 @@
 		fullPage
 		message="Could not reach the MediaManager backend, so your account could not be loaded. Please try again in a moment."
 	/>
-{:else if status === 'loading' || !user}
-	<PageLoading fullPage message="Signing you in…" />
 {:else}
 	<Sidebar.Provider>
 		<AppSidebar />
 		<Sidebar.Inset>
 			<DashboardHeader {crumbs} {heroHeader} />
-			{@render children()}
+			{#if status === 'ready'}
+				{@render children()}
+			{:else}
+				<PageLoading message="Signing you in…" />
+			{/if}
 		</Sidebar.Inset>
 	</Sidebar.Provider>
 {/if}
