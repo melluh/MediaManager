@@ -154,10 +154,11 @@ export function formatTorrentSeasonEpisodeRange(
 
 export async function handleLogout() {
 	await client.POST('/api/v1/auth/cookie/logout');
+	// eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve() has no query-string support
 	await goto(resolve('/login', {}) + '?loggedOut=true');
 }
 
-export async function handleOauth() {
+export async function handleOauth(): Promise<boolean> {
 	const { error, data } = await client.GET(`/api/v1/auth/oauth/authorize`, {
 		params: {
 			query: {
@@ -167,8 +168,10 @@ export async function handleOauth() {
 	});
 	if (!error && data?.authorization_url) {
 		window.location.href = data.authorization_url;
+		return true;
 	} else {
 		toast.error('Failed to initiate OAuth login.');
+		return false;
 	}
 }
 

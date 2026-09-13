@@ -34,8 +34,9 @@
 
 	async function onOauthClick() {
 		oauthLoading = true;
-		await handleOauth();
-		oauthLoading = false;
+		if (!(await handleOauth())) {
+			oauthLoading = false;
+		}
 	}
 
 	let justLoggedOut = page.url.searchParams.get('loggedOut') === 'true';
