@@ -82,8 +82,10 @@ class IndexerService:
 
     async def search_movie(self, movie: Movie) -> list[IndexerQueryResult]:
         self._require_indexers()
-        query = f"{movie.name} {movie.year}"
-        query = remove_special_chars_and_parentheses(query)
+        if movie.imdb_id:
+            query = movie.imdb_id
+        else:
+            query = remove_special_chars_and_parentheses(f"{movie.name} {movie.year}")
         cache_key = ("movie", query)
 
         async def factory() -> list[IndexerQueryResult]:
@@ -112,9 +114,13 @@ class IndexerService:
         self, show: Show, season_number: int
     ) -> list[IndexerQueryResult]:
         self._require_indexers()
-        query = f"{show.name} {show.year} S{season_number:02d}"
-        query = remove_special_chars_and_parentheses(query)
-        cache_key = ("season", query)
+        if show.imdb_id:
+            query = show.imdb_id
+        else:
+            query = remove_special_chars_and_parentheses(
+                f"{show.name} {show.year} S{season_number:02d}"
+            )
+        cache_key = ("season", query, season_number)
 
         async def factory() -> list[IndexerQueryResult]:
             results = []
