@@ -115,6 +115,7 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
                     season_id=existing_season.id,
                     name=fresh_season_data.name,
                     overview=fresh_season_data.overview,
+                    air_date=fresh_season_data.air_date,
                 )
                 existing_episode_external_ids = {
                     ep.external_id: ep for ep in existing_season.episodes

@@ -1233,6 +1233,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/movies/{movie_id}/watch-url': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Movie Watch Url
+		 * @description Get the deep link to this movie on the configured media server, if any.
+		 *     Fetched separately from the movie's main details so a slow or
+		 *     unconfigured media server never blocks the movie page from loading.
+		 */
+		get: operations['get_movie_watch_url_api_v1_movies__movie_id__watch_url_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/movies/{movie_id}/files': {
 		parameters: {
 			query?: never;
@@ -1268,28 +1290,6 @@ export interface paths {
 		 *     and adopt video files that have no record yet.
 		 */
 		post: operations['rescan_movie_files_api_v1_movies__movie_id__rescan_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/movies/{movie_id}/watch-url': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Movie Watch Url
-		 * @description Get the deep link to this movie on the configured media server, if any.
-		 *     Fetched separately from the movie's main details so a slow or
-		 *     unconfigured media server never blocks the movie page from loading.
-		 */
-		get: operations['get_movie_watch_url_api_v1_movies__movie_id__watch_url_get'];
-		put?: never;
-		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1931,6 +1931,21 @@ export interface components {
 			files_adopted: number;
 		};
 		/**
+		 * MediaAddedByUser
+		 * @description The user a media item is attributed to, as shown alongside `created_at`.
+		 */
+		MediaAddedByUser: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			/** Email */
+			email: string;
+			/** Display Name */
+			display_name?: string | null;
+		};
+		/**
 		 * MediaFileDetails
 		 * @description What the file on disk itself says about the media, as opposed to what the
 		 *     database row claims. Populated by probing the file; every field is
@@ -2055,6 +2070,9 @@ export interface components {
 			 * Format: date-time
 			 */
 			created_at?: string;
+			/** Added By User Id */
+			added_by_user_id?: string | null;
+			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2116,6 +2134,9 @@ export interface components {
 			 * Format: date-time
 			 */
 			created_at?: string;
+			/** Added By User Id */
+			added_by_user_id?: string | null;
+			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2297,6 +2318,9 @@ export interface components {
 			 * Format: date-time
 			 */
 			created_at?: string;
+			/** Added By User Id */
+			added_by_user_id?: string | null;
+			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2363,6 +2387,8 @@ export interface components {
 			name: string;
 			/** Overview */
 			overview: string;
+			/** Air Date */
+			air_date?: string | null;
 			/** External Id */
 			external_id: number;
 			/** Episodes */
@@ -2429,6 +2455,7 @@ export interface components {
 			 * Format: date-time
 			 */
 			created_at?: string;
+			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2558,6 +2585,9 @@ export interface components {
 			 * Format: date-time
 			 */
 			created_at?: string;
+			/** Added By User Id */
+			added_by_user_id?: string | null;
+			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2577,6 +2607,8 @@ export interface components {
 			name: string;
 			/** Overview */
 			overview: string;
+			/** Air Date */
+			air_date?: string | null;
 			/** External Id */
 			external_id: number;
 			/** Episodes */
@@ -2657,6 +2689,9 @@ export interface components {
 			 * Format: date-time
 			 */
 			created_at?: string;
+			/** Added By User Id */
+			added_by_user_id?: string | null;
+			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -2726,6 +2761,9 @@ export interface components {
 			 * Format: date-time
 			 */
 			created_at?: string;
+			/** Added By User Id */
+			added_by_user_id?: string | null;
+			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
 				[key: string]: string;
@@ -3041,13 +3079,6 @@ export interface components {
 			/** Display Name */
 			display_name?: string | null;
 		};
-		/** WatchUrl */
-		WatchUrl: {
-			/** Url */
-			url?: string | null;
-			/** Media Server Name */
-			media_server_name?: string | null;
-		};
 		/** ValidationError */
 		ValidationError: {
 			/** Location */
@@ -3060,6 +3091,18 @@ export interface components {
 			input?: unknown;
 			/** Context */
 			ctx?: Record<string, never>;
+		};
+		/**
+		 * WatchUrl
+		 * @description Response for the movie/show "watch-url" endpoint, fetched separately
+		 *     from the media's main details so a slow or unconfigured media server
+		 *     never blocks the movie/show page from loading.
+		 */
+		WatchUrl: {
+			/** Url */
+			url?: string | null;
+			/** Media Server Name */
+			media_server_name?: string | null;
 		};
 	};
 	responses: never;
@@ -3095,6 +3138,7 @@ export type ImportMatchConfidence = components['schemas']['ImportMatchConfidence
 export type IndexerQueryResult = components['schemas']['IndexerQueryResult'];
 export type LibraryItem = components['schemas']['LibraryItem'];
 export type LibraryScanCounts = components['schemas']['LibraryScanCounts'];
+export type MediaAddedByUser = components['schemas']['MediaAddedByUser'];
 export type MediaFileDetails = components['schemas']['MediaFileDetails'];
 export type MediaImportSuggestion = components['schemas']['MediaImportSuggestion'];
 export type MediaType = components['schemas']['MediaType'];
@@ -3136,6 +3180,7 @@ export type UserRead = components['schemas']['UserRead'];
 export type UserReadWithPermissions = components['schemas']['UserReadWithPermissions'];
 export type UserUpdate = components['schemas']['UserUpdate'];
 export type ValidationError = components['schemas']['ValidationError'];
+export type WatchUrl = components['schemas']['WatchUrl'];
 export type $defs = Record<string, never>;
 export interface operations {
 	liveness_api_v1_health_get: {
@@ -5356,6 +5401,38 @@ export interface operations {
 			};
 		};
 	};
+	get_movie_watch_url_api_v1_movies__movie_id__watch_url_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['WatchUrl'];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
 	get_movie_files_by_movie_id_api_v1_movies__movie_id__files_get: {
 		parameters: {
 			query?: never;
@@ -5407,38 +5484,6 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['PublicMovieFile'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	get_movie_watch_url_api_v1_movies__movie_id__watch_url_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description The ID of the movie */
-				movie_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['WatchUrl'];
 				};
 			};
 			/** @description Validation Error */

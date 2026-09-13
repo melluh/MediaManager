@@ -37,6 +37,7 @@ class Season(Base):
     external_id: Mapped[int]
     name: Mapped[str]
     overview: Mapped[str]
+    air_date: Mapped[str | None] = mapped_column(nullable=True)
 
     show: Mapped["Show"] = relationship(back_populates="seasons")
     episodes: Mapped[list["Episode"]] = relationship(

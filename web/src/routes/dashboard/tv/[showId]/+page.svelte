@@ -88,7 +88,8 @@
 		available: 'bg-green-600/90',
 		downloading: 'bg-blue-600/90',
 		partial: 'bg-amber-600/90',
-		missing: 'bg-gray-600/80'
+		missing: 'bg-gray-600/80',
+		unreleased: 'bg-slate-600/80'
 	} as const;
 
 	function seasonBanner(season: PublicShow['seasons'][number]) {
@@ -114,6 +115,11 @@
 				label: `Partial (${downloadedCount}/${total})`,
 				classes: seasonBannerClasses.partial
 			};
+		}
+		// A future air_date is the clear signal, but a season with no episode
+		// data yet (nothing announced) is just as clearly not downloadable.
+		if (total === 0 || (season.air_date && new Date(season.air_date) > new Date())) {
+			return { label: 'Unreleased', classes: seasonBannerClasses.unreleased };
 		}
 		return { label: 'Missing', classes: seasonBannerClasses.missing };
 	}

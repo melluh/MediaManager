@@ -488,6 +488,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             external_id=season_data.external_id,
             name=season_data.name,
             overview=season_data.overview,
+            air_date=season_data.air_date,
             episodes=[
                 Episode(
                     id=ep_schema.id,
@@ -581,7 +582,11 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         )
 
     async def update_season_attributes(
-        self, season_id: SeasonId, name: str | None = None, overview: str | None = None
+        self,
+        season_id: SeasonId,
+        name: str | None = None,
+        overview: str | None = None,
+        air_date: str | None = None,
     ) -> SeasonSchema:
         # selectinload episodes so SeasonSchema.model_validate doesn't trip
         # an implicit lazy load under AsyncSession.
@@ -597,6 +602,9 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             updated = True
         if overview is not None and db_season.overview != overview:
             db_season.overview = overview
+            updated = True
+        if air_date is not None and db_season.air_date != air_date:
+            db_season.air_date = air_date
             updated = True
         if updated:
             try:

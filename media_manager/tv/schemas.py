@@ -41,6 +41,7 @@ class Season(BaseModel):
 
     name: str
     overview: str
+    air_date: str | None = None
 
     external_id: int
 
@@ -115,6 +116,7 @@ class PublicSeason(BaseModel):
     downloaded: bool = False
     name: str
     overview: str
+    air_date: str | None = None
 
     external_id: int
 

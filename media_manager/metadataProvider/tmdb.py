@@ -455,6 +455,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                 external_id=int(season_metadata["id"]),
                 name=season_metadata["name"],
                 overview=season_metadata["overview"],
+                air_date=season_metadata.get("air_date") or None,
                 number=SeasonNumber(season_metadata["season_number"]),
                 episodes=[
                     Episode(
