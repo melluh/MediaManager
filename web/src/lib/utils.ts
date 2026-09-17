@@ -152,10 +152,10 @@ export function formatTorrentSeasonEpisodeRange(
 	return `${seasonLabel}${formatContiguousRuns(episodes, 'E')}`;
 }
 
-export async function handleLogout() {
+export async function handleLogout(userInitiated: boolean = true) {
 	await client.POST('/api/v1/auth/cookie/logout');
 	// eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve() has no query-string support
-	await goto(resolve('/login', {}) + '?loggedOut=true');
+	await goto(resolve('/login', {}) + (userInitiated ? '?loggedOut=true' : ''));
 }
 
 export async function handleOauth(): Promise<boolean> {
