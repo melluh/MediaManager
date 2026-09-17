@@ -29,15 +29,30 @@
 	// text-shadow doesn't apply to icon SVGs at all.
 	let overlayColorClass = $derived(heroHeader ? 'text-white hover:text-white/80' : '');
 	let overlayTextClass = $derived(heroHeader ? `${overlayColorClass} text-shadow-lg` : '');
-	let overlayIconClass = $derived(heroHeader ? `${overlayColorClass} drop-shadow-md` : '');
+	// The ghost button's default hover:bg-accent resolves to a near-white fill
+	// in light mode, which flashes as a stray bright box over a backdrop image.
+	// A translucent white hover works over the image in either theme.
+	let overlayIconClass = $derived(
+		heroHeader ? `${overlayColorClass} drop-shadow-md hover:bg-white/10` : ''
+	);
+	// Only interactive breadcrumb links get the hover color; the list and the
+	// current (non-link) page keep a static color so hovering one crumb link
+	// doesn't visually affect the separators or the other crumbs.
+	let overlayStaticTextClass = $derived(heroHeader ? 'text-white text-shadow-lg' : '');
 </script>
 
 <header class="relative z-20 flex h-16 shrink-0 items-center gap-2 bg-transparent">
 	<div class={cn('flex items-center gap-2 px-4', showMobileSearchExpanded && 'hidden md:flex')}>
 		<Sidebar.Trigger class={cn('-ml-1', overlayIconClass)} />
-		<Separator class="mr-2 hidden h-4 md:block" orientation="vertical" />
+		<!-- The header background is always transparent, so this separator is
+		     hardcoded to the light-theme border color rather than following
+		     the app's light/dark mode. -->
+		<Separator
+			class="mr-2 hidden h-4 bg-[oklch(0.922_0_0)] md:block"
+			orientation="vertical"
+		/>
 		<Breadcrumb.Root class="hidden md:block">
-			<Breadcrumb.List class={overlayTextClass}>
+			<Breadcrumb.List class={overlayStaticTextClass}>
 				<Breadcrumb.Item>
 					<Breadcrumb.Link class={overlayTextClass} href={resolve('/dashboard', {})}>
 						MediaManager
@@ -51,7 +66,7 @@
 								{crumb.label}
 							</Breadcrumb.Link>
 						{:else}
-							<Breadcrumb.Page class={overlayTextClass}>{crumb.label}</Breadcrumb.Page>
+							<Breadcrumb.Page class={overlayStaticTextClass}>{crumb.label}</Breadcrumb.Page>
 						{/if}
 					</Breadcrumb.Item>
 				{/each}
