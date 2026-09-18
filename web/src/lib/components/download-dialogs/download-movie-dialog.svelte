@@ -94,9 +94,16 @@
 			} else {
 				console.log('Downloading torrent:', data);
 				toast.success('Torrent download started successfully!');
+			}
+			// Refresh before closing: closing the dialog pops a shallow-routed
+			// history entry (see shallowDialog's own warning about racing async
+			// work against that history.back()) - invalidating first ensures the
+			// movie's new "Downloading" state is already loaded by the time the
+			// dialog closes, instead of racing the history navigation and losing.
+			await invalidateAll();
+			if (response.ok) {
 				dialogueState.open = false;
 			}
-			await invalidateAll();
 		} finally {
 			downloadingResultId = null;
 		}

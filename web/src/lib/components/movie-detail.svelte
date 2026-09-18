@@ -4,13 +4,17 @@
 	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import Play from '@lucide/svelte/icons/play';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+	import Users from '@lucide/svelte/icons/users';
+	import Gauge from '@lucide/svelte/icons/gauge';
 	import { getContext, onDestroy } from 'svelte';
 	import type { PublicMovie, PublicMovieFile, TorrentWithProgress, UserRead } from '$lib/api/api';
-	import { getFullyQualifiedMediaName } from '$lib/utils';
+	import { formatDownloadSpeed, getFullyQualifiedMediaName, getTorrentStatusString } from '$lib/utils';
 	import client from '$lib/api';
 	import TorrentTable from '$lib/components/torrents/torrent-table.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
 	import MediaAvailabilityBadge from '$lib/components/media-availability-badge.svelte';
+	import { Progress } from '$lib/components/ui/progress/index.js';
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { movieAvailability } from '$lib/components/movie-availability.js';
 	import { withDownloadProgress } from '$lib/components/media-availability.js';
 	import DownloadMovieDialog from '$lib/components/download-dialogs/download-movie-dialog.svelte';
@@ -46,11 +50,22 @@
 	});
 	onDestroy(() => clearInterval(ownTorrentsPollHandle));
 
-	let movieProgress = $derived(
-		ownTorrents.find((t) => t.media?.id === movie.id)?.download_progress?.progress
+	let ownMovieDownloadProgress = $derived(
+		ownTorrents.find((t) => t.media?.id === movie.id)?.download_progress
 	);
+	let movieProgress = $derived(ownMovieDownloadProgress?.progress);
 	let movieAvailabilityInfo = $derived(
 		withDownloadProgress(movieAvailability(movie, movieFiles), movieProgress)
+	);
+	let movieDownloadSpeedLabel = $derived(
+		formatDownloadSpeed(ownMovieDownloadProgress?.download_speed_bytes_per_second)
+	);
+
+	// While a torrent is already downloading, the primary action shouldn't
+	// invite starting a second one - that's demoted into the overflow menu
+	// (mirroring how "Download additional" works once the movie is watchable).
+	let isDownloading = $derived(
+		(movie.torrents ?? []).some((t) => getTorrentStatusString(t.status) === 'downloading')
 	);
 
 	// Fetched separately from the movie's own details so a slow/unconfigured
@@ -108,6 +123,37 @@
 					Watch on {watchMediaServerName}
 					<Play />
 				</Button>
+			{:else if isDownloading}
+				<Tooltip.Root disableHoverableContent>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}
+							<span {...props} class="inline-block">
+								<Button
+									disabled
+									class="relative overflow-hidden bg-blue-600 text-white hover:bg-blue-600"
+								>
+									Downloading{movieProgress != null ? ` ${Math.round(movieProgress)}%` : ''}
+									<LoaderCircle class="animate-spin" />
+									{#if movieProgress != null}
+										<Progress
+											value={movieProgress}
+											class="absolute inset-x-0 bottom-0 h-1 rounded-none bg-transparent"
+										/>
+									{/if}
+								</Button>
+							</span>
+						{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content>
+						<div class="flex items-center gap-1.5 whitespace-nowrap">
+							<Users class="size-3.5" />
+							{ownMovieDownloadProgress?.seeders ?? '?'}
+							<span>&middot;</span>
+							<Gauge class="size-3.5" />
+							{movieDownloadSpeedLabel ?? 'unknown'}
+						</div>
+					</Tooltip.Content>
+				</Tooltip.Root>
 			{:else}
 				<DownloadMovieDialog {movie} {hasImportedFile} />
 			{/if}
@@ -116,7 +162,7 @@
 					<EllipsisVertical class="size-4" />
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content align="end" class="w-48">
-					{#if watchUrl}
+					{#if watchUrl || isDownloading}
 						<DownloadMovieDialog
 							{movie}
 							{hasImportedFile}

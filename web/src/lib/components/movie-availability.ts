@@ -17,16 +17,23 @@ export function movieAvailability(
 	movieFiles: PublicMovieFile[]
 ): MediaAvailability {
 	const torrents = movie.torrents ?? [];
-	const primary: AvailabilityBadgeInfo = movie.downloaded
-		? { label: availableLabel(movieFiles), tone: 'available' }
-		: notDownloadedLabel(torrents);
-
 	const isDownloading = torrents.some((t) => getTorrentStatusString(t.status) === 'downloading');
-	const secondary: AvailabilityBadgeInfo | undefined = isDownloading
-		? { label: 'Downloading', tone: 'downloading' }
-		: undefined;
 
-	return { primary, secondary };
+	if (movie.downloaded) {
+		const secondary: AvailabilityBadgeInfo | undefined = isDownloading
+			? { label: 'Downloading', tone: 'downloading' }
+			: undefined;
+		return { primary: { label: availableLabel(movieFiles), tone: 'available' }, secondary };
+	}
+
+	// A movie is a single unit, unlike a show's seasons - so if it's actively
+	// downloading, that's the whole story. Showing "Not downloaded yet"
+	// alongside "Downloading" would be redundant (and read as contradictory).
+	if (isDownloading) {
+		return { primary: { label: 'Downloading', tone: 'downloading' } };
+	}
+
+	return { primary: notDownloadedLabel(torrents) };
 }
 
 function availableLabel(movieFiles: PublicMovieFile[]): string {
@@ -40,17 +47,15 @@ function availableLabel(movieFiles: PublicMovieFile[]): string {
 }
 
 /**
- * When nothing is downloaded yet, distinguishes "a download errored out" and
- * "finished downloading but hasn't imported yet" from the plain "not
- * downloaded" case - torrents currently downloading are reported separately
- * as the secondary badge, so they're excluded here.
+ * When nothing is downloaded yet and nothing is actively downloading,
+ * distinguishes "a download errored out" and "finished downloading but
+ * hasn't imported yet" from the plain "not downloaded" case.
  */
 function notDownloadedLabel(torrents: MovieTorrent[]): AvailabilityBadgeInfo {
-	const settled = torrents.filter((t) => getTorrentStatusString(t.status) !== 'downloading');
-	if (settled.some((t) => getTorrentStatusString(t.status) === 'finished' && !t.imported)) {
+	if (torrents.some((t) => getTorrentStatusString(t.status) === 'finished' && !t.imported)) {
 		return { label: 'Waiting for import', tone: 'neutral' };
 	}
-	if (settled.some((t) => getTorrentStatusString(t.status) === 'error')) {
+	if (torrents.some((t) => getTorrentStatusString(t.status) === 'error')) {
 		return { label: 'Download failed', tone: 'error' };
 	}
 	return { label: 'Not downloaded yet', tone: 'neutral' };
