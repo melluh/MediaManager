@@ -42,7 +42,11 @@ async def get_own_torrents(
     return await service.get_own_torrents(user_id=user.id)
 
 
-@router.get("/{torrent_id}", status_code=status.HTTP_200_OK)
+@router.get(
+    "/{torrent_id}",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(current_active_user)],
+)
 async def get_torrent(service: torrent_service_dep, torrent: torrent_dep) -> Torrent:
     return await service.get_torrent_by_id(torrent_id=torrent.id)
 
