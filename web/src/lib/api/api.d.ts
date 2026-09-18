@@ -759,7 +759,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	'/api/v1/tv/torrents': {
+	'/api/v1/tv/shows/{show_id}/season-download-plan': {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -767,11 +767,27 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Get Torrents For A Season
-		 * @description Search for torrents for a specific season of a show.
-		 *     Default season_number is 1 because it often returns multi-season torrents.
+		 * Get Season Download Plan
+		 * @description Search the given seasons and propose a set of torrents that together
+		 *     cover every episode of every one of them.
 		 */
-		get: operations['get_torrents_for_a_season_api_v1_tv_torrents_get'];
+		get: operations['get_season_download_plan_api_v1_tv_shows__show_id__season_download_plan_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/tv/torrents': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
 		put?: never;
 		/**
 		 * Download A Torrent
@@ -1743,6 +1759,18 @@ export interface components {
 			/** Token */
 			token: string;
 		};
+		/**
+		 * CoverageGap
+		 * @description A requested (season, episodes) span that no candidate torrent could cover.
+		 */
+		CoverageGap: {
+			/** Season Number */
+			season_number: number;
+			/** Episode Numbers */
+			episode_numbers: number[];
+			/** Reason */
+			reason: string;
+		};
 		/** DownloadProgress */
 		DownloadProgress: {
 			state: components['schemas']['DownloadState'];
@@ -2618,6 +2646,13 @@ export interface components {
 				[key: string]: string;
 			};
 		};
+		/** SeasonDownloadPlan */
+		SeasonDownloadPlan: {
+			/** Slots */
+			slots: components['schemas']['SlotDownloadPlan'][];
+			/** Search Errors */
+			search_errors?: string[];
+		};
 		/** ServiceHealth */
 		ServiceHealth: {
 			/** Name */
@@ -2779,6 +2814,25 @@ export interface components {
 			 */
 			continuous_download: boolean;
 		};
+		/**
+		 * SlotDownloadPlan
+		 * @description One quality tier's independent coverage plan. `picks`/`gaps` are scoped
+		 *     only to candidates classified into this slot - a torrent from a
+		 *     different slot is never mixed into another slot's plan, since a
+		 *     result's `score` is only ever a meaningful ranking within its own slot.
+		 */
+		SlotDownloadPlan: {
+			/** Slot Name */
+			slot_name: string;
+			/** Slot Label */
+			slot_label: string;
+			/** Slot Index */
+			slot_index: number;
+			/** Picks */
+			picks: components['schemas']['SuggestedTorrentPick'][];
+			/** Gaps */
+			gaps: components['schemas']['CoverageGap'][];
+		};
 		/** SubtitleInfo */
 		SubtitleInfo: {
 			/** Language */
@@ -2793,6 +2847,24 @@ export interface components {
 			 * @default false
 			 */
 			embedded: boolean;
+		};
+		/**
+		 * SuggestedTorrentPick
+		 * @description One torrent proposed as part of a season download plan, and the slice of
+		 *     the user's request it covers. `covers_episodes` is only set for an
+		 *     episode-level release (a gap-filler); a season-level pick is assumed to
+		 *     cover every episode of each season in `covers_seasons`.
+		 */
+		SuggestedTorrentPick: {
+			result: components['schemas']['IndexerQueryResult'];
+			/** Covers Seasons */
+			covers_seasons: number[];
+			/** Covers Episodes */
+			covers_episodes?: {
+				[key: string]: number[];
+			} | null;
+			/** Already Downloaded */
+			already_downloaded: boolean;
 		};
 		/** SystemHealth */
 		SystemHealth: {
@@ -3126,6 +3198,7 @@ export type BodyVerifyRequestTokenApiV1AuthRequestVerifyTokenPost =
 	components['schemas']['Body_verify_request_token_api_v1_auth_request_verify_token_post'];
 export type BodyVerifyVerifyApiV1AuthVerifyPost =
 	components['schemas']['Body_verify_verify_api_v1_auth_verify_post'];
+export type CoverageGap = components['schemas']['CoverageGap'];
 export type DownloadProgress = components['schemas']['DownloadProgress'];
 export type DownloadState = components['schemas']['DownloadState'];
 export type Episode = components['schemas']['Episode'];
@@ -3162,11 +3235,14 @@ export type RichShowTorrent = components['schemas']['RichShowTorrent'];
 export type ScoreBreakdownEntry = components['schemas']['ScoreBreakdownEntry'];
 export type SearchResult = components['schemas']['SearchResult'];
 export type Season = components['schemas']['Season'];
+export type SeasonDownloadPlan = components['schemas']['SeasonDownloadPlan'];
 export type ServiceHealth = components['schemas']['ServiceHealth'];
 export type ServiceStatus = components['schemas']['ServiceStatus'];
 export type Show = components['schemas']['Show'];
 export type ShowSummary = components['schemas']['ShowSummary'];
+export type SlotDownloadPlan = components['schemas']['SlotDownloadPlan'];
 export type SubtitleInfo = components['schemas']['SubtitleInfo'];
+export type SuggestedTorrentPick = components['schemas']['SuggestedTorrentPick'];
 export type SystemHealth = components['schemas']['SystemHealth'];
 export type Torrent = components['schemas']['Torrent'];
 export type TorrentAttributes = components['schemas']['TorrentAttributes'];
@@ -4636,22 +4712,18 @@ export interface operations {
 			};
 		};
 	};
-	get_torrents_for_a_season_api_v1_tv_torrents_get: {
+	get_season_download_plan_api_v1_tv_shows__show_id__season_download_plan_get: {
 		parameters: {
 			query: {
-				show_id: string;
-				season_number?: number;
-				search_query_override?: string | null;
+				season_numbers: number[];
 			};
 			header?: never;
-			path?: never;
+			path: {
+				show_id: string;
+			};
 			cookie?: never;
 		};
-		requestBody?: {
-			content: {
-				'application/json': string[] | null;
-			};
-		};
+		requestBody?: never;
 		responses: {
 			/** @description Successful Response */
 			200: {
@@ -4659,7 +4731,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['IndexerQueryResult'][];
+					'application/json': components['schemas']['SeasonDownloadPlan'];
 				};
 			};
 			/** @description Validation Error */

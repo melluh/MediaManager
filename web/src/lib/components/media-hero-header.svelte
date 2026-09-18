@@ -36,6 +36,7 @@
 		media,
 		isShow,
 		actions,
+		availability,
 		children
 	}: {
 		media: HeroMedia;
@@ -43,6 +44,8 @@
 		isShow: boolean;
 		/** Download/admin controls, rendered next to the title, right-aligned. */
 		actions?: Snippet;
+		/** Availability badge(s), rendered under the title. Visible to every viewer, not just admins. */
+		availability?: Snippet;
 		/** Additional cards, rendered below the Overview card inside the same layout. */
 		children?: Snippet;
 	} = $props();
@@ -114,6 +117,9 @@
 					</div>
 				{/if}
 			</div>
+			{#if availability}
+				{@render availability()}
+			{/if}
 			{#if media.tagline}
 				<p class="text-medium text-lg text-muted-foreground italic">{media.tagline}</p>
 			{/if}

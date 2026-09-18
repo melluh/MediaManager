@@ -4,12 +4,15 @@
 	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import Play from '@lucide/svelte/icons/play';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
-	import { getContext } from 'svelte';
-	import type { PublicMovie, PublicMovieFile, UserRead } from '$lib/api/api';
+	import { getContext, onDestroy } from 'svelte';
+	import type { PublicMovie, PublicMovieFile, TorrentWithProgress, UserRead } from '$lib/api/api';
 	import { getFullyQualifiedMediaName } from '$lib/utils';
 	import client from '$lib/api';
 	import TorrentTable from '$lib/components/torrents/torrent-table.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
+	import MediaAvailabilityBadge from '$lib/components/media-availability-badge.svelte';
+	import { movieAvailability } from '$lib/components/movie-availability.js';
+	import { withDownloadProgress } from '$lib/components/media-availability.js';
 	import DownloadMovieDialog from '$lib/components/download-dialogs/download-movie-dialog.svelte';
 	import LibraryCombobox from '$lib/components/library-combobox.svelte';
 	import { resolve } from '$app/paths';
@@ -22,6 +25,33 @@
 	let { movie, movieFiles }: { movie: PublicMovie; movieFiles: PublicMovieFile[] } = $props();
 	let hasImportedFile = $derived(movieFiles.some((file) => file.imported));
 	let user: () => UserRead = getContext('user');
+
+	// Polled (rather than fetched once) so a "Downloading" badge's progress bar
+	// actually moves while the page is open, matching the dashboard's own
+	// downloads carousel. Only reports progress for torrents *this* user
+	// started - a download started by another admin still shows as
+	// "Downloading" without a percentage.
+	const OWN_TORRENTS_POLL_INTERVAL_MS = 7000;
+	let ownTorrents: TorrentWithProgress[] = $state([]);
+	let ownTorrentsPollHandle: ReturnType<typeof setInterval> | undefined;
+	function refreshOwnTorrents() {
+		if (document.hidden) return;
+		client.GET('/api/v1/torrent/mine').then(({ data }) => {
+			if (data) ownTorrents = data;
+		});
+	}
+	$effect(() => {
+		refreshOwnTorrents();
+		ownTorrentsPollHandle = setInterval(refreshOwnTorrents, OWN_TORRENTS_POLL_INTERVAL_MS);
+	});
+	onDestroy(() => clearInterval(ownTorrentsPollHandle));
+
+	let movieProgress = $derived(
+		ownTorrents.find((t) => t.media?.id === movie.id)?.download_progress?.progress
+	);
+	let movieAvailabilityInfo = $derived(
+		withDownloadProgress(movieAvailability(movie, movieFiles), movieProgress)
+	);
 
 	// Fetched separately from the movie's own details so a slow/unconfigured
 	// media server never blocks the movie page from loading.
@@ -58,6 +88,9 @@
 {/snippet}
 
 <MediaHeroHeader media={movie} isShow={false}>
+	{#snippet availability()}
+		<MediaAvailabilityBadge availability={movieAvailabilityInfo} />
+	{/snippet}
 	{#snippet actions()}
 		{#if user().is_superuser}
 			{#if movie.downloaded && watchUrlLoading}

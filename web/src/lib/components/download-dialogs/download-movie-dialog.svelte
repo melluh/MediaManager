@@ -154,7 +154,7 @@
 
 <DownloadDialogWrapper
 	bind:open={() => dialogueState.open, (v) => (dialogueState.open = v)}
-	triggerText="Download Movie"
+	triggerText="Download"
 	triggerClass={hasImportedFile
 		? buttonVariants({ variant: 'secondary' })
 		: cn(buttonVariants({ variant: 'default' }), 'bg-blue-600 text-white hover:bg-blue-700')}

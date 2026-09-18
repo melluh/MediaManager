@@ -132,6 +132,14 @@ function formatRun(start: number, end: number, prefix: string): string {
 }
 
 /**
+ * Formats season numbers as prefixed runs, e.g. [1,2,3] -> "S01-S03" and
+ * [1,3] -> "S01, S03". Used for the availability badge's season range label.
+ */
+export function formatSeasonRunLabel(seasons: number[]): string {
+	return formatContiguousRuns(seasons, 'S');
+}
+
+/**
  * Formats the seasons/episodes a torrent covers as a compact label, e.g.
  * "S01", "S01-S03" or "S01E01-E10". Returns null for anything without seasons
  * (movie torrents).
