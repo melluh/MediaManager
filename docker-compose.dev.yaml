@@ -60,9 +60,6 @@ services:
       #- ./web/build:/app/web/build # this is only needed to test built frontend when developing frontend
       # - ./res/images/:/data/images/
       - ./res/:/data/
-      - /mnt/wildrust-media/movies:/data/movies
-      - /mnt/wildrust-media/tv:/data/tv
-      - /mnt/wildrust-media/torrents:/data/torrents
       - ./res/config/:/app/config/
       - ./media_manager:/app/media_manager
     depends_on:
