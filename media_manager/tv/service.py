@@ -49,11 +49,28 @@ from media_manager.tv.schemas import (
     RichSeasonTorrent,
     RichShowTorrent,
     Season,
+    SeasonDownloadPlan,
     SeasonId,
+    SeasonNumber,
     Show,
     ShowId,
     ShowSummary,
 )
+from media_manager.tv.season_download_plan import build_season_download_plan
+
+
+def _episode_count_for_torrent(show: Show, result: IndexerQueryResult) -> int | None:
+    # A single-episode release (S01E05) covers one episode, not the whole
+    # season - only fall back to the season's full episode count for season
+    # packs (result.episode empty).
+    if result.episode:
+        return len(result.episode)
+    count = sum(
+        len(season.episodes)
+        for season in show.seasons
+        if season.number in result.season
+    )
+    return count or None
 
 
 class TvService(BaseMediaService[Show, Show]):
@@ -119,10 +136,14 @@ class TvService(BaseMediaService[Show, Show]):
                     log.info(f"Deleted show directory: {show_dir}")
 
             if delete_torrents:
-                torrents = await self.tv_repository.get_torrents_by_show_id(show_id=show.id)
+                torrents = await self.tv_repository.get_torrents_by_show_id(
+                    show_id=show.id
+                )
                 for torrent in torrents:
                     try:
-                        await self.torrent_service.cancel_download(torrent, delete_files=True)
+                        await self.torrent_service.cancel_download(
+                            torrent, delete_files=True
+                        )
                         await self.torrent_service.delete_torrent(torrent_id=torrent.id)
                         log.info(f"Deleted torrent: {torrent.hash}")
                     except Exception:  # noqa: BLE001 # best-effort cleanup, continue on any failure
@@ -244,55 +265,64 @@ class TvService(BaseMediaService[Show, Show]):
         )
         return counts
 
-    async def get_all_available_torrents_for_a_season(
-        self,
-        season_number: int,
-        show_id: ShowId,
-        search_query_override: str | None = None,
-        allow_language_variants: list[str] | None = None,
-    ) -> list[IndexerQueryResult]:
+    async def get_season_download_plan(
+        self, show_id: ShowId, season_numbers: list[int]
+    ) -> SeasonDownloadPlan:
         """
-        Get all available torrents for a given season.
+        Search the show and propose a set of torrents that together cover
+        every episode of every requested season - preferring whole
+        season/series packs over single-episode releases, and a single
+        consistent release group where one alone can cover everything.
 
-        :param season_number: The number of the season.
+        Deliberately runs a single whole-show search rather than one search
+        per requested season: some indexers return zero results when an
+        ID-based search (imdb/tvdb/tmdb) is combined with a season filter, so
+        anchoring to a season is unreliable when several seasons are in play
+        anyway. A result's season/episode coverage is recovered from its
+        title regardless of what was searched for.
+
         :param show_id: The ID of the show.
-        :param search_query_override: Optional override for the search query.
-        :param allow_language_variants: Language variants (e.g. "multi",
-            "dubbed") to allow for this search on top of the configured
-            defaults.
-        :return: A list of indexer query results.
+        :param season_numbers: The season numbers the user wants to download.
+        :return: The proposed plan, plus any part of the request nothing could cover.
         """
-
-        if search_query_override:
-            return await self.indexer_service.search(query=search_query_override, is_tv=True)
-
         show = await self.tv_repository.get_show_by_id(show_id=show_id)
+        requested_numbers = {SeasonNumber(n) for n in season_numbers}
+        seasons = [
+            season for season in show.seasons if season.number in requested_numbers
+        ]
 
-        torrents = await self.indexer_service.search_season(
-            show=show, season_number=season_number
+        downloaded_by_pair: dict[tuple[SeasonNumber, EpisodeNumber], bool] = {}
+        for season in seasons:
+            for episode in season.episodes:
+                downloaded_by_pair[
+                    (season.number, episode.number)
+                ] = await self.is_episode_downloaded(episode_id=episode.id)
+
+        search_errors: list[str] = []
+        try:
+            raw_results = await self.indexer_service.search_season(
+                show=show, season_number=None
+            )
+        except Exception as e:  # a failed search must still produce a (gap-only) plan
+            log.warning(f"Torrent search failed for show {show_id}", exc_info=True)
+            raw_results = []
+            search_errors.append(str(e))
+
+        candidates = slot_and_score_results(
+            is_tv=True,
+            results=raw_results,
+            media=show,
+            episode_count_for_torrent=lambda result: _episode_count_for_torrent(
+                show, result
+            ),
         )
 
-        results = [torrent for torrent in torrents if season_number in torrent.season]
-
-        def episode_count_for_torrent(result: IndexerQueryResult) -> int | None:
-            # A single-episode release (S01E05) covers one episode, not the
-            # whole season - only fall back to the season's full episode
-            # count for season packs (result.episode empty).
-            if result.episode:
-                return len(result.episode)
-            count = sum(
-                len(season.episodes)
-                for season in show.seasons
-                if season.number in result.season
-            )
-            return count or None
-
-        return slot_and_score_results(
-            is_tv=True,
-            results=results,
-            media=show,
-            episode_count_for_torrent=episode_count_for_torrent,
-            allow_language_variants=allow_language_variants,
+        return build_season_download_plan(
+            season_numbers=sorted(requested_numbers),
+            seasons=seasons,
+            candidates=candidates,
+            downloaded_by_pair=downloaded_by_pair,
+            search_errors=search_errors,
         )
 
     async def get_public_show_by_id(self, show: Show) -> PublicShow:
@@ -419,7 +449,9 @@ class TvService(BaseMediaService[Show, Show]):
                         else []
                     )
                 except OSError as e:
-                    log.error(f"Disk check failed for season directory {season_dir}: {e}")
+                    log.error(
+                        f"Disk check failed for season directory {season_dir}: {e}"
+                    )
                     filenames = []
                 season_filenames_by_key[season_key] = filenames
 
@@ -489,7 +521,9 @@ class TvService(BaseMediaService[Show, Show]):
         :param show: The show.
         :return: A rich show torrent.
         """
-        show_torrents = await self.tv_repository.get_torrents_by_show_id(show_id=show.id)
+        show_torrents = await self.tv_repository.get_torrents_by_show_id(
+            show_id=show.id
+        )
         rich_season_torrents = []
         for show_torrent in show_torrents:
             seasons = await self.tv_repository.get_seasons_by_torrent_id(
@@ -547,8 +581,8 @@ class TvService(BaseMediaService[Show, Show]):
         if any of them already has a file for `file_path_suffix` (the pair the DB's
         unique constraint on episode_file is keyed on).
         """
-        existing_files_by_episode = await self.tv_repository.get_episode_files_by_show_id(
-            show_id=show_id
+        existing_files_by_episode = (
+            await self.tv_repository.get_episode_files_by_show_id(show_id=show_id)
         )
         episode_ids_by_season: dict[SeasonId, list[EpisodeId]] = {}
         for season_number in indexer_result.season:
@@ -581,7 +615,9 @@ class TvService(BaseMediaService[Show, Show]):
 
             for episode_id in episode_ids:
                 existing_files = existing_files_by_episode.get(episode_id, [])
-                if any(ef.file_path_suffix == file_path_suffix for ef in existing_files):
+                if any(
+                    ef.file_path_suffix == file_path_suffix for ef in existing_files
+                ):
                     msg = (
                         f"Episode file for episode {episode_id} of season {season.id} "
                         "already exists, refusing to start download."

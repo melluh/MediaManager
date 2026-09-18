@@ -12,6 +12,7 @@ from media_manager.common.schemas import (
     MediaAddedByUser,
     PublicMediaFile,
 )
+from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.torrent.models import Quality
 from media_manager.torrent.schemas import TorrentId, TorrentStatus
 
@@ -163,3 +164,45 @@ class PublicShow(BaseModel):
     @classmethod
     def _default_genres_to_empty_list(cls, v: list[str] | None) -> list[str]:
         return v or []
+
+
+class CoverageGap(BaseModel):
+    """A requested (season, episodes) span that no candidate torrent could cover."""
+
+    season_number: SeasonNumber
+    episode_numbers: list[EpisodeNumber]
+    reason: str
+
+
+class SuggestedTorrentPick(BaseModel):
+    """
+    One torrent proposed as part of a season download plan, and the slice of
+    the user's request it covers. `covers_episodes` is only set for an
+    episode-level release (a gap-filler); a season-level pick is assumed to
+    cover every episode of each season in `covers_seasons`.
+    """
+
+    result: IndexerQueryResult
+    covers_seasons: list[SeasonNumber]
+    covers_episodes: dict[SeasonNumber, list[EpisodeNumber]] | None = None
+    already_downloaded: bool
+
+
+class SlotDownloadPlan(BaseModel):
+    """
+    One quality tier's independent coverage plan. `picks`/`gaps` are scoped
+    only to candidates classified into this slot - a torrent from a
+    different slot is never mixed into another slot's plan, since a
+    result's `score` is only ever a meaningful ranking within its own slot.
+    """
+
+    slot_name: str
+    slot_label: str
+    slot_index: int
+    picks: list[SuggestedTorrentPick]
+    gaps: list[CoverageGap]
+
+
+class SeasonDownloadPlan(BaseModel):
+    slots: list[SlotDownloadPlan]
+    search_errors: list[str] = Field(default_factory=list)

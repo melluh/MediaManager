@@ -24,14 +24,17 @@ class GenericIndexer(ABC):
 
     @abstractmethod
     def search_season(
-        self, query: str, show: Show, season_number: int
+        self, query: str, show: Show, season_number: int | None
     ) -> list[IndexerQueryResult]:
         """
-        Sends a search request to the Indexer for a specific season and returns the results.
+        Sends a search request to the Indexer for a show, optionally narrowed
+        to a specific season.
 
         :param query: A string representing the search query, used as a fallback for indexers that don't support TMDB/IMDB ID-based search.
         :param show: The show to search for.
-        :param season_number: The season number to search for.
+        :param season_number: The season number to search for, or None to search
+            the whole show without a season filter (some indexers return nothing
+            when a season filter is combined with ID-based search).
         :return: A list of IndexerQueryResult objects representing the search results.
         """
         raise NotImplementedError()

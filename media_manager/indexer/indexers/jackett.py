@@ -183,14 +183,15 @@ class Jackett(GenericIndexer, TorznabMixin):
         return results
 
     def search_season(
-        self, query: str, show: Show, season_number: int
+        self, query: str, show: Show, season_number: int | None
     ) -> list[IndexerQueryResult]:
         log.debug(f"Searching for season {season_number} of show {show.name}")
         params = {
             "t": "tvsearch",
-            "season": season_number,
             "q": query,
         }
+        if season_number is not None:
+            params["season"] = season_number
         if show.imdb_id:
             params["imdbid"] = show.imdb_id
         params[show.metadata_provider + "id"] = show.external_id

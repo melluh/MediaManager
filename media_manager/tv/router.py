@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from media_manager.auth.db import User
 from media_manager.auth.users import current_active_user, current_superuser
@@ -14,10 +14,7 @@ from media_manager.common.library_scan import LibraryScanCounts
 from media_manager.common.schemas import WatchUrl
 from media_manager.config import LibraryItem, MediaManagerConfig
 from media_manager.exceptions import MediaAlreadyExistsError, NotFoundError
-from media_manager.indexer.schemas import (
-    IndexerQueryResult,
-    IndexerQueryResultId,
-)
+from media_manager.indexer.schemas import IndexerQueryResultId
 from media_manager.metadataProvider.dependencies import metadata_provider_dep
 from media_manager.metadataProvider.schemas import MetaDataProviderSearchResult
 from media_manager.schemas import MediaImportSuggestion
@@ -36,6 +33,7 @@ from media_manager.tv.schemas import (
     PublicShow,
     RichShowTorrent,
     Season,
+    SeasonDownloadPlan,
     Show,
     ShowId,
     ShowSummary,
@@ -393,9 +391,7 @@ async def set_library(
     "/shows/{show_id}/watch-url",
     dependencies=[Depends(current_active_user)],
 )
-async def get_show_watch_url(
-    tv_service: tv_service_dep, show: show_dep
-) -> WatchUrl:
+async def get_show_watch_url(tv_service: tv_service_dep, show: show_dep) -> WatchUrl:
     """
     Get the deep link to this show on the configured media server, if any.
     Fetched separately from the show's main details so a slow or
@@ -470,37 +466,32 @@ async def get_episode_files(
 
 
 @router.get(
-    "/torrents",
+    "/shows/{show_id}/season-download-plan",
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(current_superuser)],
+    dependencies=[Depends(current_active_user)],
 )
-async def get_torrents_for_a_season(
+async def get_season_download_plan(
     tv_service: tv_service_dep,
     show_id: ShowId,
-    season_number: int = 1,
-    search_query_override: str | None = None,
-    allow_language_variants: list[str] | None = None,
-) -> list[IndexerQueryResult]:
+    season_numbers: Annotated[list[int], Query()],
+) -> SeasonDownloadPlan:
     """
-    Search for torrents for a specific season of a show.
-    Default season_number is 1 because it often returns multi-season torrents.
+    Search the given seasons and propose a set of torrents that together
+    cover every episode of every one of them.
     """
-    return await tv_service.get_all_available_torrents_for_a_season(
-        season_number=season_number,
-        show_id=show_id,
-        search_query_override=search_query_override,
-        allow_language_variants=allow_language_variants,
+    return await tv_service.get_season_download_plan(
+        show_id=show_id, season_numbers=season_numbers
     )
 
 
 @router.post(
     "/torrents",
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(current_superuser)],
+    dependencies=[Depends(current_active_user)],
 )
 async def download_a_torrent(
     tv_service: tv_service_dep,
-    user: Annotated[User, Depends(current_superuser)],
+    user: Annotated[User, Depends(current_active_user)],
     public_indexer_result_id: IndexerQueryResultId,
     show_id: ShowId,
     override_file_path_suffix: str = "",

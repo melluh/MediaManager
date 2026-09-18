@@ -23,6 +23,7 @@ _search_cache: AsyncTTLCache[tuple[object, ...], list[IndexerQueryResult]] = (
     )
 )
 
+
 class IndexerService:
     def __init__(self, indexer_repository: IndexerRepository) -> None:
         config = MediaManagerConfig()
@@ -111,15 +112,28 @@ class IndexerService:
         return [result.model_copy() for result in cached_results]
 
     async def search_season(
-        self, show: Show, season_number: int
+        self, show: Show, season_number: int | None = None
     ) -> list[IndexerQueryResult]:
+        """
+        Search for torrents for a show, optionally narrowed to one season.
+
+        :param show: The show to search for.
+        :param season_number: The season to narrow the search to, or None to
+            search the whole show. Some indexers return zero results when an
+            ID-based search (imdb/tvdb/tmdb) is combined with a season filter,
+            so a whole-show search is the more reliable option when the caller
+            needs to consider multiple seasons at once - individual results'
+            season/episode coverage is still recovered from their titles.
+        """
         self._require_indexers()
         if show.imdb_id:
             query = show.imdb_id
-        else:
+        elif season_number is not None:
             query = remove_special_chars_and_parentheses(
                 f"{show.name} {show.year} S{season_number:02d}"
             )
+        else:
+            query = remove_special_chars_and_parentheses(f"{show.name} {show.year}")
         cache_key = ("season", query, season_number)
 
         async def factory() -> list[IndexerQueryResult]:

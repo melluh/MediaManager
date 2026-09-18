@@ -124,7 +124,7 @@ class Prowlarr(GenericIndexer, TorznabMixin):
         return raw_results
 
     def search_season(
-        self, query: str, show: Show, season_number: int
+        self, query: str, show: Show, season_number: int | None
     ) -> list[IndexerQueryResult]:
         indexers = self._get_tv_indexers()
 
@@ -144,7 +144,7 @@ class Prowlarr(GenericIndexer, TorznabMixin):
                 search_params["tvdbid"] = show.external_id
             if indexer.supports_tv_search_imdb:
                 search_params["imdbid"] = show.imdb_id
-            if indexer.supports_tv_search_season:
+            if indexer.supports_tv_search_season and season_number is not None:
                 search_params["season"] = season_number
 
             raw_results.extend(

@@ -231,7 +231,7 @@ def test_unknown_runtime_never_rejects_on_bitrate(patch_indexer_config):
 
 
 def make_episode_count_callback(show: Show):
-    # Mirrors media_manager.tv.service.get_all_available_torrents_for_a_season's
+    # Mirrors media_manager.tv.service._episode_count_for_torrent's
     # episode_count_for_torrent callback: single-episode releases divide by
     # their own episode count, season packs fall back to the season total.
     def episode_count_for_torrent(result: IndexerQueryResult) -> int | None:
