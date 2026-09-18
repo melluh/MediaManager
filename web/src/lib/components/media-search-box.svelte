@@ -4,13 +4,18 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import Search from '@lucide/svelte/icons/search';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+	import Plus from '@lucide/svelte/icons/plus';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import client from '$lib/api';
-	import type { SearchResult } from '$lib/api/api.d.ts';
+	import type { SearchResult, TitleSuggestion } from '$lib/api/api.d.ts';
 	import { cn, getFullyQualifiedMediaName, isSearchPage } from '$lib/utils.js';
-	import { getMediaTypeHref } from '$lib/media-types.ts';
+	import { getMediaTypeHref, getMediaTypeLabel } from '$lib/media-types.ts';
+
+	type CombinedItem =
+		| { kind: 'library'; item: SearchResult }
+		| { kind: 'suggestion'; item: TitleSuggestion };
 
 	let {
 		class: className = '',
@@ -29,6 +34,7 @@
 	// navigations, including back/forward).
 	let searchTerm = $derived(initialValue);
 	let results: SearchResult[] = $state([]);
+	let suggestions: TitleSuggestion[] = $state([]);
 	let hasSearched = $state(false);
 	let isOpen = $state(false);
 	let isLoading = $state(false);
@@ -39,6 +45,13 @@
 	let inputRef: HTMLInputElement | null = $state(null);
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 	let searchAbortController: AbortController | undefined;
+
+	// Library results and not-yet-in-library suggestions share one flat list
+	// so arrow keys/Enter can move across both sections.
+	let combinedItems: CombinedItem[] = $derived([
+		...results.map((item): CombinedItem => ({ kind: 'library', item })),
+		...suggestions.map((item): CombinedItem => ({ kind: 'suggestion', item }))
+	]);
 
 	function hrefForResult(result: SearchResult): string | undefined {
 		return getMediaTypeHref(result.media_type, result.slug);
@@ -54,6 +67,7 @@
 		cancelPendingSearch();
 		searchTerm = '';
 		results = [];
+		suggestions = [];
 		hasSearched = false;
 		isOpen = false;
 		highlightedIndex = -1;
@@ -79,33 +93,43 @@
 		searchAbortController = controller;
 		isLoading = true;
 		hasError = false;
-		try {
-			const { data, error } = await client.GET('/api/v1/search', {
+
+		// Library and suggestion results are independent: a `/suggest` failure
+		// (e.g. no title index built yet) must not blank library results, and
+		// vice versa. `allSettled` (rather than `all`) keeps one from failing
+		// the other.
+		const [libraryOutcome, suggestOutcome] = await Promise.allSettled([
+			client.GET('/api/v1/search', {
 				params: { query: { q: query } },
 				signal: controller.signal
-			});
-			if (controller.signal.aborted) return;
-			if (error) {
-				hasError = true;
-				results = [];
-			} else {
-				results = data ?? [];
-				for (const result of results) {
-					if (!(result.id in posterLoaded)) posterLoaded[result.id] = false;
-				}
+			}),
+			client.GET('/api/v1/search/suggest', {
+				params: { query: { q: query } },
+				signal: controller.signal
+			})
+		]);
+
+		if (controller.signal.aborted) return;
+
+		if (libraryOutcome.status === 'fulfilled' && !libraryOutcome.value.error) {
+			results = libraryOutcome.value.data ?? [];
+			for (const result of results) {
+				if (!(result.id in posterLoaded)) posterLoaded[result.id] = false;
 			}
-			hasSearched = true;
-			highlightedIndex = -1;
-			isOpen = true;
-		} catch {
-			if (controller.signal.aborted) return;
+		} else {
 			hasError = true;
 			results = [];
-			hasSearched = true;
-			isOpen = true;
-		} finally {
-			if (searchAbortController === controller) isLoading = false;
 		}
+
+		suggestions =
+			suggestOutcome.status === 'fulfilled' && !suggestOutcome.value.error
+				? (suggestOutcome.value.data ?? [])
+				: [];
+
+		hasSearched = true;
+		highlightedIndex = -1;
+		isOpen = true;
+		isLoading = false;
 	}
 
 	function handleInput() {
@@ -114,6 +138,7 @@
 		if (query.length === 0) {
 			searchAbortController?.abort();
 			results = [];
+			suggestions = [];
 			hasSearched = false;
 			isOpen = false;
 			highlightedIndex = -1;
@@ -123,8 +148,7 @@
 		debounceTimer = setTimeout(() => runSearch(query), 300);
 	}
 
-	function goToSearchPage() {
-		const query = searchTerm.trim();
+	function goToSearchPageFor(query: string) {
 		if (query.length === 0) return;
 		cancelPendingSearch();
 		isOpen = false;
@@ -137,26 +161,35 @@
 		});
 	}
 
+	function goToSearchPage() {
+		goToSearchPageFor(searchTerm.trim());
+	}
+
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'ArrowDown') {
-			if (results.length === 0) return;
+			if (combinedItems.length === 0) return;
 			e.preventDefault();
 			isOpen = true;
-			highlightedIndex = (highlightedIndex + 1) % results.length;
+			highlightedIndex = (highlightedIndex + 1) % combinedItems.length;
 		} else if (e.key === 'ArrowUp') {
-			if (results.length === 0) return;
+			if (combinedItems.length === 0) return;
 			e.preventDefault();
 			isOpen = true;
-			highlightedIndex = highlightedIndex <= 0 ? results.length - 1 : highlightedIndex - 1;
+			highlightedIndex = highlightedIndex <= 0 ? combinedItems.length - 1 : highlightedIndex - 1;
 		} else if (e.key === 'Enter') {
 			e.preventDefault();
-			const highlighted = results[highlightedIndex];
-			if (highlighted) {
-				const href = hrefForResult(highlighted);
+			const highlighted = combinedItems[highlightedIndex];
+			if (highlighted?.kind === 'library') {
+				const href = hrefForResult(highlighted.item);
 				clearSearch();
 				onResultSelect?.();
 				// eslint-disable-next-line svelte/no-navigation-without-resolve -- href is built from resolve() in getMediaTypeHref
 				if (href) goto(href);
+			} else if (highlighted?.kind === 'suggestion') {
+				const query = highlighted.item.title;
+				clearSearch();
+				onResultSelect?.();
+				goToSearchPageFor(query);
 			} else {
 				goToSearchPage();
 			}
@@ -192,7 +225,7 @@
 		class="bg-background pl-9"
 		oninput={handleInput}
 		onfocus={() => {
-			if (hasSearched || results.length > 0) isOpen = true;
+			if (hasSearched || combinedItems.length > 0) isOpen = true;
 		}}
 		onkeydown={handleKeydown}
 	/>
@@ -232,13 +265,49 @@
 							<span class="text-xs text-muted-foreground capitalize">{result.media_type}</span>
 						</div>
 					</a>
-				{:else}
-					{#if !isLoading}
-						<p class="px-2 py-1.5 text-sm text-muted-foreground">
-							No matching media in your library.
-						</p>
-					{/if}
 				{/each}
+			{/if}
+
+			<!-- Suggestions are fetched independently of the library search
+				 (see runSearch) and must keep rendering even if that search
+				 failed - so this lives outside the hasError branch above. -->
+			{#if suggestions.length > 0}
+				<p class="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground">
+					Not in your library yet
+				</p>
+				{#each suggestions as suggestion, suggestionIndex (`${suggestion.media_type}-${suggestion.id}`)}
+					{@const index = results.length + suggestionIndex}
+					<button
+						type="button"
+						class={cn(
+							'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
+							index === highlightedIndex
+								? 'bg-accent text-accent-foreground'
+								: 'hover:bg-accent hover:text-accent-foreground'
+						)}
+						onmouseenter={() => (highlightedIndex = index)}
+						onclick={() => {
+							const query = suggestion.title;
+							clearSearch();
+							onResultSelect?.();
+							goToSearchPageFor(query);
+						}}
+					>
+						<div class="flex h-12 w-9 shrink-0 items-center justify-center rounded bg-muted">
+							<Plus class="size-4 text-muted-foreground" />
+						</div>
+						<div class="flex min-w-0 flex-col">
+							<span class="truncate font-medium">{suggestion.title}</span>
+							<span class="text-xs text-muted-foreground">
+								{getMediaTypeLabel(suggestion.media_type)}
+							</span>
+						</div>
+					</button>
+				{/each}
+			{/if}
+
+			{#if combinedItems.length === 0 && !hasError && !isLoading}
+				<p class="px-2 py-1.5 text-sm text-muted-foreground">No matching media found.</p>
 			{/if}
 			<button
 				type="button"

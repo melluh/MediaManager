@@ -5,6 +5,8 @@ from media_manager.metadataProvider.dependencies import metadata_provider_dep
 from media_manager.metadataProvider.schemas import MetaDataProviderSearchResult
 from media_manager.search.dependencies import search_service_dep
 from media_manager.search.schemas import SearchResult
+from media_manager.titleIndex.dependencies import title_suggestion_service_dep
+from media_manager.titleIndex.schemas import TitleSuggestion
 
 router = APIRouter()
 
@@ -49,3 +51,23 @@ async def search_external_media(
     return await search_service.search_external(
         query=query, metadata_provider=metadata_provider
     )
+
+
+@router.get(
+    "/suggest",
+    dependencies=[Depends(current_active_user)],
+)
+async def suggest_titles(
+    q: str,
+    title_suggestion_service: title_suggestion_service_dep,
+) -> list[TitleSuggestion]:
+    """
+    Fast, typo-tolerant title autocomplete for media not yet in the library,
+    sourced from a local index built from TMDB's daily ID export rather than
+    a live provider call. Suggestions carry only a title, media type and
+    popularity - no poster/year, since the export has neither.
+    """
+    query = q.strip()
+    if not query:
+        return []
+    return await title_suggestion_service.suggest(query=query)

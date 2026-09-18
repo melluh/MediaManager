@@ -17,6 +17,7 @@ from media_manager.indexer.config import IndexerConfig
 from media_manager.mediaServer.config import MediaServerConfig
 from media_manager.metadataProvider.config import MetadataProviderConfig
 from media_manager.notification.config import NotificationConfig
+from media_manager.titleIndex.config import TitleIndexConfig
 from media_manager.torrent.config import TorrentConfig
 
 log = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ class BasicConfig(BaseSettings):
     tv_directory: Path = Path(__file__).parent.parent / "data" / "tv"
     movie_directory: Path = Path(__file__).parent.parent / "data" / "movies"
     torrent_directory: Path = Path(__file__).parent.parent / "data" / "torrents"
+    title_index_directory: Path = Path(__file__).parent.parent / "data" / "title_index"
 
     frontend_url: AnyHttpUrl = AnyHttpUrl("http://localhost:8000")
     cors_urls: list[str] = []
@@ -74,6 +76,7 @@ class MediaManagerConfig(BaseSettings):
     indexers: IndexerConfig = IndexerConfig()
     database: DbConfig = DbConfig()
     auth: AuthConfig = AuthConfig()
+    title_index: TitleIndexConfig = TitleIndexConfig()
 
     @classmethod
     def settings_customise_sources(

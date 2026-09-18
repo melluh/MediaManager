@@ -1590,6 +1590,29 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/search/suggest': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Suggest Titles
+		 * @description Fast, typo-tolerant title autocomplete for media not yet in the library,
+		 *     sourced from a local index built from TMDB's daily ID export rather than
+		 *     a live provider call. Suggestions carry only a title, media type and
+		 *     popularity - no poster/year, since the export has neither.
+		 */
+		get: operations['suggest_titles_api_v1_search_suggest_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/': {
 		parameters: {
 			query?: never;
@@ -2872,6 +2895,24 @@ export interface components {
 			services: components['schemas']['ServiceHealth'][];
 			overall: components['schemas']['ServiceStatus'];
 		};
+		/**
+		 * TitleSuggestion
+		 * @description A fast, typo-tolerant autocomplete suggestion sourced from TMDB's daily
+		 *     ID export, for media not yet in the library.
+		 *
+		 *     Deliberately minimal (no poster/year): the daily export only carries id,
+		 *     title and popularity. Selecting a suggestion is expected to trigger a
+		 *     live provider search/detail call for full information.
+		 */
+		TitleSuggestion: {
+			/** Id */
+			id: number;
+			/** Title */
+			title: string;
+			media_type: components['schemas']['MediaType'];
+			/** Popularity */
+			popularity: number;
+		};
 		/** Torrent */
 		Torrent: {
 			/**
@@ -3244,6 +3285,7 @@ export type SlotDownloadPlan = components['schemas']['SlotDownloadPlan'];
 export type SubtitleInfo = components['schemas']['SubtitleInfo'];
 export type SuggestedTorrentPick = components['schemas']['SuggestedTorrentPick'];
 export type SystemHealth = components['schemas']['SystemHealth'];
+export type TitleSuggestion = components['schemas']['TitleSuggestion'];
 export type Torrent = components['schemas']['Torrent'];
 export type TorrentAttributes = components['schemas']['TorrentAttributes'];
 export type TorrentImportCandidate = components['schemas']['TorrentImportCandidate'];
@@ -6004,6 +6046,37 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['MetaDataProviderSearchResult'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	suggest_titles_api_v1_search_suggest_get: {
+		parameters: {
+			query: {
+				q: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['TitleSuggestion'][];
 				};
 			};
 			/** @description Validation Error */

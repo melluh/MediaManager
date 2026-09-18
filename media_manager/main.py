@@ -71,6 +71,7 @@ from media_manager.scheduler import (
     build_scheduler_loop,
     import_all_movie_torrents_task,
     import_all_show_torrents_task,
+    refresh_tmdb_title_index_task,
     rescan_downloaded_episodes_task,
     rescan_downloaded_movies_task,
     scan_importable_movies_task,
@@ -78,6 +79,7 @@ from media_manager.scheduler import (
     update_all_movies_metadata_task,
     update_all_non_ended_shows_metadata_task,
 )
+from media_manager.titleIndex.download import is_stale as title_index_is_stale
 from media_manager.torrent.manager import get_download_manager, init_download_manager
 from media_manager.version import HealthResponse, get_version_checker
 
@@ -195,7 +197,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         receiver_task = asyncio.create_task(receiver.listen(finish_event))
         loop_task = asyncio.create_task(scheduler_loop.run(skip_first_run=True))
         try:
-            await asyncio.gather(
+            startup_tasks = [
                 import_all_movie_torrents_task.kiq(),
                 import_all_show_torrents_task.kiq(),
                 update_all_movies_metadata_task.kiq(),
@@ -204,7 +206,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
                 scan_importable_shows_task.kiq(),
                 rescan_downloaded_movies_task.kiq(),
                 rescan_downloaded_episodes_task.kiq(),
-            )
+            ]
+            # Only kicked when missing/stale, so a normal restart doesn't
+            # redownload TMDB's daily export every time.
+            if title_index_is_stale(
+                config.misc.title_index_directory, config.title_index.stale_after_hours
+            ):
+                startup_tasks.append(refresh_tmdb_title_index_task.kiq())
+            await asyncio.gather(*startup_tasks)
         except Exception:
             log.exception("Failed to submit initial background tasks during startup.")
             raise

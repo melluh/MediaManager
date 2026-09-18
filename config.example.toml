@@ -14,6 +14,7 @@ image_directory = "/data/images"
 tv_directory = "/data/tv"
 movie_directory = "/data/movies"
 torrent_directory = "/data/torrents" # this is where MediaManager will search for the downloaded torrents and usenet files
+title_index_directory = "/data/title_index" # where the TMDB title autocomplete index is downloaded to
 
 # When scanning for importable media, MediaManager caches what it matched each
 # directory to in a ".mediamanager" file inside that directory, so a rescan

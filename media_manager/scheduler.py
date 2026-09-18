@@ -22,6 +22,7 @@ from media_manager.movies.importer import MovieImportService
 from media_manager.movies.service import MovieService
 from media_manager.notification.dependencies import get_notification_service
 from media_manager.notification.service import NotificationService
+from media_manager.titleIndex.download import refresh_title_index
 from media_manager.torrent.dependencies import get_torrent_service
 from media_manager.torrent.service import TorrentService
 from media_manager.tv.dependencies import get_tv_import_service, get_tv_service
@@ -159,6 +160,15 @@ async def encode_avif_image_task(image_file_path: str) -> None:
 
 
 @broker.task
+async def refresh_tmdb_title_index_task() -> None:
+    from media_manager.config import MediaManagerConfig
+
+    config = MediaManagerConfig()
+    log.info("Refreshing TMDB title autocomplete index")
+    await refresh_title_index(config.misc.title_index_directory, config.title_index)
+
+
+@broker.task
 async def delete_expired_indexer_query_results_task(
     db: AsyncSession = TaskiqDepends(get_async_session),
 ) -> None:
@@ -190,6 +200,8 @@ _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
     scan_movie_library_files_task.task_name: [{"cron": "17 * * * *"}],
     scan_show_library_files_task.task_name: [{"cron": "47 * * * *"}],
     delete_expired_indexer_query_results_task.task_name: [{"cron": "*/30 * * * *"}],
+    # After TMDB's ~08:00 UTC publish time, with margin.
+    refresh_tmdb_title_index_task.task_name: [{"cron": "30 9 * * *"}],
 }
 
 
