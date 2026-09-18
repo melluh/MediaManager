@@ -1,5 +1,7 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
+import type { MediaLibraryFilters } from '$lib/utils';
+
 declare global {
 	namespace App {
 		// interface Error {}
@@ -9,6 +11,10 @@ declare global {
 			// Stack of open shallow-routed dialog keys, innermost last. See
 			// $lib/hooks/shallow-dialog.svelte.ts.
 			dialogs?: string[];
+			// Library filters for the current /dashboard/movies or /dashboard/tv
+			// history entry, so they survive a round trip to a detail page and
+			// back. See media-library-page.svelte.
+			libraryFilters?: MediaLibraryFilters;
 		}
 		// interface Platform {}
 	}

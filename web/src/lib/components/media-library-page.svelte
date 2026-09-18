@@ -3,7 +3,7 @@
 	import MediaCardSkeleton from '$lib/components/media-card-skeleton.svelte';
 	import MediaLibraryFilters from '$lib/components/media-library-filters.svelte';
 	import type { MediaImportSuggestion, MovieListItem, ShowSummary, UserRead } from '$lib/api/api';
-	import { getContext } from 'svelte';
+	import { getContext, untrack } from 'svelte';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import { importablePath, rescanImportableMedia } from '$lib/api/importable';
 	import PageLoadError from '$lib/components/page-load-error.svelte';
@@ -15,6 +15,8 @@
 	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import { toast } from 'svelte-sonner';
 	import { defaultMediaLibraryFilters, filterAndSortMedia } from '$lib/utils';
+	import { page } from '$app/state';
+	import { replaceState } from '$app/navigation';
 
 	let {
 		isShow,
@@ -40,7 +42,20 @@
 	let user: () => UserRead = getContext('user');
 	let isRescanning = $state(false);
 
-	let filters = $state(defaultMediaLibraryFilters());
+	// Seeded from the history entry's state so filters survive navigating to
+	// a detail page and back (shallow-routed, not part of the URL: see
+	// libraryFilters in app.d.ts).
+	let filters = $state(page.state.libraryFilters ?? defaultMediaLibraryFilters());
+
+	$effect(() => {
+		const snapshot = $state.snapshot(filters);
+		// Read page.state via untrack: it's rewritten by this same
+		// replaceState call, so tracking it would make the effect re-fire
+		// on its own write.
+		untrack(() => {
+			replaceState('', { ...$state.snapshot(page.state), libraryFilters: snapshot });
+		});
+	});
 
 	let resolvedItems: (ShowSummary | MovieListItem)[] | undefined = $state(undefined);
 	let loadError: string | undefined = $state(undefined);
