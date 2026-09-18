@@ -5,7 +5,7 @@
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import LibraryMediaCard from '$lib/components/library-media-card.svelte';
 	import AddMediaCard from '$lib/components/add-media-card.svelte';
-	import LoadingBar from '$lib/components/loading-bar.svelte';
+	import MediaCardSkeleton from '$lib/components/media-card-skeleton.svelte';
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
 	import { getContext } from 'svelte';
@@ -110,7 +110,7 @@
 	<meta content="Search your MediaManager library and metadata providers" name="description" />
 </svelte:head>
 
-<main class="flex w-full flex-1 flex-col gap-8 p-4 pt-0">
+<main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0">
 	<h1
 		class="hidden scroll-m-20 text-center text-4xl font-extrabold tracking-tight md:block lg:text-5xl"
 	>
@@ -127,7 +127,13 @@
 		<section class="flex flex-col gap-4">
 			<h2 class="text-2xl font-semibold">In Your Library</h2>
 			{#if localLoading}
-				<LoadingBar />
+				<div
+					class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+				>
+					{#each { length: 5 }}
+						<MediaCardSkeleton />
+					{/each}
+				</div>
 			{:else if localError}
 				<Alert.Root variant="destructive">
 					<AlertCircleIcon class="size-4" />
@@ -166,7 +172,13 @@
 				</Select.Root>
 			</div>
 			{#if externalLoading && externalResults.length === 0}
-				<LoadingBar />
+				<div
+					class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+				>
+					{#each { length: 5 }}
+						<MediaCardSkeleton />
+					{/each}
+				</div>
 			{:else if externalError}
 				<Alert.Root variant="destructive">
 					<AlertCircleIcon class="size-4" />
