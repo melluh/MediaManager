@@ -303,7 +303,7 @@ class TvService(BaseMediaService[Show, Show]):
             raw_results = await self.indexer_service.search_season(
                 show=show, season_number=None
             )
-        except Exception as e:  # a failed search must still produce a (gap-only) plan
+        except Exception as e:  # noqa: BLE001 # a failed search must still produce a (gap-only) plan
             log.warning(f"Torrent search failed for show {show_id}", exc_info=True)
             raw_results = []
             search_errors.append(str(e))

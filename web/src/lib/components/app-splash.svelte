@@ -9,9 +9,7 @@
 	booting" to "we're signing you in" reads as one continuous splash screen
 	instead of a second, differently-styled loading screen.
 -->
-<div
-	class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background"
->
+<div class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background">
 	<img alt="" class="app-splash-logo h-[4.5rem] w-[4.5rem]" src={resolve('/logo.svg', {})} />
 	<p class="text-lg font-semibold text-foreground">MediaManager</p>
 	<div class="app-splash-spinner size-5 rounded-full border-2 border-muted-foreground"></div>

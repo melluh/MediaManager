@@ -115,7 +115,9 @@
 			{banner.label}
 		</div>
 	</Dialog.Trigger>
-	<Dialog.Content class="max-h-[90vh] w-fit min-w-[90vw] overflow-y-auto sm:min-w-[600px] lg:min-w-[900px]">
+	<Dialog.Content
+		class="max-h-[90vh] w-fit min-w-[90vw] overflow-y-auto sm:min-w-[600px] lg:min-w-[900px]"
+	>
 		<Dialog.Header>
 			<Dialog.Title>{getFullyQualifiedMediaName(show)} - {season.name}</Dialog.Title>
 		</Dialog.Header>

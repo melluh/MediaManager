@@ -47,10 +47,7 @@
 		<!-- The header background is always transparent, so this separator is
 		     hardcoded to the light-theme border color rather than following
 		     the app's light/dark mode. -->
-		<Separator
-			class="mr-2 hidden h-4 bg-[oklch(0.922_0_0)] md:block"
-			orientation="vertical"
-		/>
+		<Separator class="mr-2 hidden h-4 bg-[oklch(0.922_0_0)] md:block" orientation="vertical" />
 		<Breadcrumb.Root class="hidden md:block">
 			<Breadcrumb.List class={overlayStaticTextClass}>
 				<Breadcrumb.Item>
