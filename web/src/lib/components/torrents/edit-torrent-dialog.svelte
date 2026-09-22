@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import type { MovieTorrent, RichSeasonTorrent } from '$lib/api/api';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Label } from '$lib/components/ui/label';
 	import client from '$lib/api';
@@ -10,12 +9,16 @@
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let {
-		torrent
+		torrentId,
+		torrentTitle,
+		imported
 	}: {
-		torrent: MovieTorrent | RichSeasonTorrent;
+		torrentId: string;
+		torrentTitle: string;
+		imported: boolean;
 	} = $props();
-	const dialogState = $derived(shallowDialog(`editTorrent:${torrent.torrent_id}`));
-	let importedState = $derived(torrent.imported);
+	const dialogState = $derived(shallowDialog(`editTorrent:${torrentId}`));
+	let importedState = $derived(imported);
 
 	async function closeDialog() {
 		dialogState.open = false;
@@ -24,7 +27,7 @@
 		const { error } = await client.PATCH('/api/v1/torrent/{torrent_id}/status', {
 			params: {
 				path: {
-					torrent_id: torrent.torrent_id!
+					torrent_id: torrentId
 				},
 				query: {
 					imported: importedState
@@ -48,7 +51,7 @@
 		<Dialog.Header>
 			<Dialog.Title class="mb-1 text-xl font-semibold">Edit Torrent</Dialog.Title>
 			<Dialog.Description class="mb-4 text-sm">
-				Edit torrent "{torrent.torrent_title}".
+				Edit torrent "{torrentTitle}".
 			</Dialog.Description>
 		</Dialog.Header>
 		<div class="flex gap-2">

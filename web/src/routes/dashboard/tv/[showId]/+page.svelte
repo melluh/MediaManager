@@ -8,7 +8,7 @@
 	import type { PublicShow, RichShowTorrent, TorrentWithProgress, UserRead } from '$lib/api/api';
 	import { getFullyQualifiedMediaName } from '$lib/utils';
 	import DownloadSeasonsDialog from '$lib/components/download-dialogs/download-seasons-dialog.svelte';
-	import TorrentTable from '$lib/components/torrents/torrent-table.svelte';
+	import DownloadTable from '$lib/components/downloads/download-table.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
 	import MediaAvailabilityBadge from '$lib/components/media-availability-badge.svelte';
 	import { seasonBanner, showAvailability } from '$lib/components/show-availability.js';
@@ -78,26 +78,33 @@
 		};
 	}
 
-	// Poll our own active downloads for live progress on whichever season is
-	// currently downloading - same pattern as the movie detail page and the
-	// dashboard's downloads carousel.
-	const OWN_TORRENTS_POLL_INTERVAL_MS = 7000;
-	let ownTorrents: TorrentWithProgress[] = $state([]);
-	let ownTorrentsPollHandle: ReturnType<typeof setInterval> | undefined;
-	function refreshOwnTorrents() {
+	// Polled (rather than fetched once) for live progress on whichever season
+	// is currently downloading, and so the torrent table's status badges stay
+	// live too - same pattern as the movie detail page and the dashboard's
+	// downloads carousel.
+	const TORRENTS_POLL_INTERVAL_MS = 7000;
+	let showTorrentsWithProgress: TorrentWithProgress[] = $state([]);
+	let showTorrentsPollHandle: ReturnType<typeof setInterval> | undefined;
+	function refreshShowTorrentsWithProgress() {
 		if (document.hidden) return;
-		client.GET('/api/v1/torrent/mine').then(({ data }) => {
-			if (data) ownTorrents = data;
-		});
+		client
+			.GET('/api/v1/tv/shows/{show_id}/downloads', { params: { path: { show_id: show.id } } })
+			.then(({ data }) => {
+				if (data) showTorrentsWithProgress = data;
+			});
 	}
 	$effect(() => {
-		refreshOwnTorrents();
-		ownTorrentsPollHandle = setInterval(refreshOwnTorrents, OWN_TORRENTS_POLL_INTERVAL_MS);
+		refreshShowTorrentsWithProgress();
+		showTorrentsPollHandle = setInterval(
+			refreshShowTorrentsWithProgress,
+			TORRENTS_POLL_INTERVAL_MS
+		);
 	});
-	onDestroy(() => clearInterval(ownTorrentsPollHandle));
+	onDestroy(() => clearInterval(showTorrentsPollHandle));
 
 	let showProgress = $derived(
-		ownTorrents.find((t) => t.media?.id === show.id)?.download_progress?.progress
+		showTorrentsWithProgress.find((t) => t.initiated_by_user_id === user().id)?.download_progress
+			?.progress
 	);
 	let showAvailabilityInfo = $derived(
 		withDownloadProgress(showAvailability(show, torrents.torrents), showProgress)
@@ -218,7 +225,7 @@
 			</Card.Header>
 
 			<Card.Content class="w-full overflow-x-auto">
-				<TorrentTable isShow={true} torrents={torrents.torrents} showSlug={show.slug} />
+				<DownloadTable torrents={showTorrentsWithProgress} />
 			</Card.Content>
 		</Card.Root>
 	</div>

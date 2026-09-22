@@ -698,6 +698,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/tv/shows/{show_id}/downloads': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Downloads For Show
+		 * @description Get every torrent associated with this show - any initiating user, any
+		 *     status - with live download status/progress, for the show's torrent
+		 *     table.
+		 */
+		get: operations['get_downloads_for_show_api_v1_tv_shows__show_id__downloads_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/tv/shows/{show_id}/rescan': {
 		parameters: {
 			query?: never;
@@ -1330,6 +1352,28 @@ export interface paths {
 		 * @description Trigger a download for a specific torrent for a movie.
 		 */
 		post: operations['download_torrent_for_movie_api_v1_movies__movie_id__torrents_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/movies/{movie_id}/downloads': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Downloads For Movie
+		 * @description Get every torrent associated with this movie - any initiating user, any
+		 *     status - with live download status/progress, for the movie's torrent
+		 *     table.
+		 */
+		get: operations['get_downloads_for_movie_api_v1_movies__movie_id__downloads_get'];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4748,6 +4792,38 @@ export interface operations {
 			};
 		};
 	};
+	get_downloads_for_show_api_v1_tv_shows__show_id__downloads_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the show */
+				show_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['TorrentWithProgress'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
 	rescan_show_files_api_v1_tv_shows__show_id__rescan_post: {
 		parameters: {
 			query?: never;
@@ -5761,6 +5837,38 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['Torrent'];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	get_downloads_for_movie_api_v1_movies__movie_id__downloads_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['TorrentWithProgress'][];
 				};
 			};
 			/** @description Validation Error */

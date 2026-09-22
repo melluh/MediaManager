@@ -8,9 +8,13 @@
 	import Gauge from '@lucide/svelte/icons/gauge';
 	import { getContext, onDestroy } from 'svelte';
 	import type { PublicMovie, PublicMovieFile, TorrentWithProgress, UserRead } from '$lib/api/api';
-	import { formatDownloadSpeed, getFullyQualifiedMediaName, getTorrentStatusString } from '$lib/utils';
+	import {
+		formatDownloadSpeed,
+		getFullyQualifiedMediaName,
+		getTorrentStatusString
+	} from '$lib/utils';
 	import client from '$lib/api';
-	import TorrentTable from '$lib/components/torrents/torrent-table.svelte';
+	import DownloadTable from '$lib/components/downloads/download-table.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
 	import MediaAvailabilityBadge from '$lib/components/media-availability-badge.svelte';
 	import { Progress } from '$lib/components/ui/progress/index.js';
@@ -32,26 +36,29 @@
 
 	// Polled (rather than fetched once) so a "Downloading" badge's progress bar
 	// actually moves while the page is open, matching the dashboard's own
-	// downloads carousel. Only reports progress for torrents *this* user
-	// started - a download started by another admin still shows as
-	// "Downloading" without a percentage.
-	const OWN_TORRENTS_POLL_INTERVAL_MS = 7000;
-	let ownTorrents: TorrentWithProgress[] = $state([]);
-	let ownTorrentsPollHandle: ReturnType<typeof setInterval> | undefined;
-	function refreshOwnTorrents() {
+	// downloads carousel, and so the torrent table's status badges stay live
+	// too. Progress is only shown for torrents *this* user started - a
+	// download started by another admin still shows as "Downloading" without
+	// a percentage.
+	const TORRENTS_POLL_INTERVAL_MS = 7000;
+	let movieTorrents: TorrentWithProgress[] = $state([]);
+	let movieTorrentsPollHandle: ReturnType<typeof setInterval> | undefined;
+	function refreshMovieTorrents() {
 		if (document.hidden) return;
-		client.GET('/api/v1/torrent/mine').then(({ data }) => {
-			if (data) ownTorrents = data;
-		});
+		client
+			.GET('/api/v1/movies/{movie_id}/downloads', { params: { path: { movie_id: movie.id! } } })
+			.then(({ data }) => {
+				if (data) movieTorrents = data;
+			});
 	}
 	$effect(() => {
-		refreshOwnTorrents();
-		ownTorrentsPollHandle = setInterval(refreshOwnTorrents, OWN_TORRENTS_POLL_INTERVAL_MS);
+		refreshMovieTorrents();
+		movieTorrentsPollHandle = setInterval(refreshMovieTorrents, TORRENTS_POLL_INTERVAL_MS);
 	});
-	onDestroy(() => clearInterval(ownTorrentsPollHandle));
+	onDestroy(() => clearInterval(movieTorrentsPollHandle));
 
 	let ownMovieDownloadProgress = $derived(
-		ownTorrents.find((t) => t.media?.id === movie.id)?.download_progress
+		movieTorrents.find((t) => t.initiated_by_user_id === user().id)?.download_progress
 	);
 	let movieProgress = $derived(ownMovieDownloadProgress?.progress);
 	let movieAvailabilityInfo = $derived(
@@ -208,7 +215,7 @@
 				<Card.Description>A list of all torrents associated with this movie.</Card.Description>
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-4">
-				<TorrentTable isShow={false} torrents={movie.torrents ?? []} movieSlug={movie.slug} />
+				<DownloadTable torrents={movieTorrents} />
 			</Card.Content>
 		</Card.Root>
 	</div>

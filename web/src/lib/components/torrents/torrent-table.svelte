@@ -118,7 +118,11 @@
 						{/if}
 						<DeleteTorrentDialog torrentName={torrent.torrent_title} torrentId={torrent.torrent_id!}
 						></DeleteTorrentDialog>
-						<EditTorrentDialog {torrent} />
+						<EditTorrentDialog
+							torrentId={torrent.torrent_id!}
+							torrentTitle={torrent.torrent_title}
+							imported={torrent.imported}
+						/>
 					</Table.Cell>
 				{/if}
 			</Table.Row>
