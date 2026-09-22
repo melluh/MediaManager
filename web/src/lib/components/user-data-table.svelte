@@ -10,7 +10,7 @@
 	import InlineEditField from '$lib/components/inline-edit-field.svelte';
 	import ToggleField from '$lib/components/toggle-field.svelte';
 	import ChangePasswordDialog from '$lib/components/change-password-dialog.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import client from '$lib/api';
 	import type { UserRead } from '$lib/api/api';
 	import UserPlus from '@lucide/svelte/icons/user-plus';
@@ -69,7 +69,7 @@
 			}
 			toast.success(`User ${createEmail} created successfully.`);
 			createDialog.open = false;
-			await invalidateAll();
+			await refreshAll();
 		} finally {
 			isCreating = false;
 		}
@@ -87,7 +87,7 @@
 		}
 		toast.success('Display name updated successfully.');
 		selectedUser.display_name = newDisplayName;
-		await invalidateAll();
+		await refreshAll();
 		return true;
 	}
 
@@ -103,7 +103,7 @@
 		}
 		toast.success('Email updated successfully.');
 		selectedUser.email = newEmail;
-		await invalidateAll();
+		await refreshAll();
 		return true;
 	}
 
@@ -121,7 +121,7 @@
 			return;
 		}
 		toast.success(`User ${selectedUser.email} updated successfully.`);
-		await invalidateAll();
+		await refreshAll();
 	}
 
 	async function deleteUser() {
@@ -142,7 +142,7 @@
 			deleteDialog.open = false;
 			userToDelete = null;
 		}
-		await invalidateAll();
+		await refreshAll();
 	}
 </script>
 

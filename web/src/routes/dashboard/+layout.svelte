@@ -36,7 +36,12 @@
 	$effect(() => {
 		const pending = data.user;
 		let cancelled = false;
-		status = 'loading';
+		// Only show the full-page "signing you in" loading state before we have a user at
+		// all. A background refresh (e.g. refreshAll()/invalidateAll() from elsewhere in the
+		// app) re-runs this effect with a new `data.user` promise; regressing `status` to
+		// 'loading' here would tear down and remount the whole dashboard on every such
+		// refresh, wiping any page-local state (like an open dialog) beneath it.
+		if (status !== 'ready') status = 'loading';
 
 		pending.then((result) => {
 			if (cancelled) return;

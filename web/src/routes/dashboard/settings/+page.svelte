@@ -3,7 +3,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { getContext } from 'svelte';
 	import UserSettings from '$lib/components/user-settings.svelte';
-	import type { UserReadWithPermissions } from '$lib/api/api';
+	import type { UserRead, UserReadWithPermissions } from '$lib/api/api';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import PageLoading from '$lib/components/page-loading.svelte';
 	import type { PageProps } from './$types';
@@ -14,6 +14,26 @@
 	setCrumbs([{ label: 'Settings' }]);
 
 	let currentUser: () => UserReadWithPermissions = getContext('user');
+
+	// `data.users`/`data.passwordLoginEnabled` are re-created as new promises on every
+	// invalidateAll() (e.g. after editing a user). Awaiting them directly in the markup
+	// would remount UserSettings/UserTable on every save, wiping their local state (like
+	// an open edit dialog). Instead resolve into local state once and update in place.
+	let users: UserRead[] | undefined = $state();
+	let passwordLoginEnabled: boolean | undefined = $state();
+
+	$effect(() => {
+		const promise = data.users;
+		promise.then((u) => {
+			if (promise === data.users) users = u;
+		});
+	});
+	$effect(() => {
+		const promise = data.passwordLoginEnabled;
+		promise.then((p) => {
+			if (promise === data.passwordLoginEnabled) passwordLoginEnabled = p;
+		});
+	});
 </script>
 
 <svelte:head>
@@ -30,11 +50,11 @@
 			<Card.Title>Your account</Card.Title>
 		</Card.Header>
 		<Card.Content>
-			{#await data.passwordLoginEnabled}
+			{#if passwordLoginEnabled === undefined}
 				<PageLoading message="Loading account settings…" />
-			{:then passwordLoginEnabled}
+			{:else}
 				<UserSettings {passwordLoginEnabled} />
-			{/await}
+			{/if}
 		</Card.Content>
 	</Card.Root>
 	{#if currentUser().is_superuser}
@@ -44,11 +64,11 @@
 				<Card.Description>Edit, delete or change the permissions of other users</Card.Description>
 			</Card.Header>
 			<Card.Content>
-				{#await Promise.all([data.users, data.passwordLoginEnabled])}
+				{#if users === undefined || passwordLoginEnabled === undefined}
 					<PageLoading message="Loading users…" />
-				{:then [users, passwordLoginEnabled]}
+				{:else}
 					<UserTable currentUserId={currentUser().id} {passwordLoginEnabled} {users} />
-				{/await}
+				{/if}
 			</Card.Content>
 		</Card.Root>
 	{/if}

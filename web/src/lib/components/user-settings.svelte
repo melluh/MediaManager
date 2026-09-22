@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import client from '$lib/api';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { getContext } from 'svelte';
 	import type { UserReadWithPermissions } from '$lib/api/api';
 	import InlineEditField from '$lib/components/inline-edit-field.svelte';
@@ -28,7 +28,7 @@
 			return false;
 		}
 		toast.success('Display name updated successfully.');
-		await invalidateAll();
+		await refreshAll();
 		return true;
 	}
 
@@ -41,7 +41,7 @@
 			return false;
 		}
 		toast.success('Email updated successfully.');
-		await invalidateAll();
+		await refreshAll();
 		return true;
 	}
 </script>
