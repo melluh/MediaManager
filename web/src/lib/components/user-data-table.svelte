@@ -10,6 +10,7 @@
 	import InlineEditField from '$lib/components/inline-edit-field.svelte';
 	import ToggleField from '$lib/components/toggle-field.svelte';
 	import ChangePasswordDialog from '$lib/components/change-password-dialog.svelte';
+	import UserPill from '$lib/components/user-pill.svelte';
 	import { refreshAll } from '$app/navigation';
 	import client from '$lib/api';
 	import type { UserRead } from '$lib/api/api';
@@ -42,6 +43,7 @@
 	let createPassword: string = $state('');
 	let createIsSuperuser: boolean = $state(false);
 	let isCreating: boolean = $state(false);
+	let isDeleting: boolean = $state(false);
 
 	function resetCreateForm() {
 		createEmail = '';
@@ -50,29 +52,44 @@
 		createIsSuperuser = false;
 	}
 
+	// Closing a shallow-routed dialog goes through an async history.back(), and it can be
+	// closed from several places (Cancel, Escape, an overlay click, or a successful
+	// submit), so cleanup is centralized here rather than duplicated at each call site.
+	// This also keeps loading state (isCreating/isDeleting) visible for the whole time the
+	// dialog is still on screen, instead of flipping back to normal before it closes.
+	$effect(() => {
+		if (!createDialog.open) {
+			resetCreateForm();
+			isCreating = false;
+		}
+	});
+	$effect(() => {
+		if (!deleteDialog.open) {
+			userToDelete = null;
+			isDeleting = false;
+		}
+	});
+
 	async function createUser() {
 		if (isCreating) return;
 		isCreating = true;
-		try {
-			const { error } = await client.POST('/api/v1/users/', {
-				body: {
-					email: createEmail,
-					display_name: createDisplayName || null,
-					password: createPassword || null,
-					is_superuser: createIsSuperuser,
-					is_verified: true
-				}
-			});
-			if (error) {
-				toast.error(`Failed to create user: ${error.detail ?? error}`);
-				return;
+		const { error } = await client.POST('/api/v1/users/', {
+			body: {
+				email: createEmail,
+				display_name: createDisplayName || null,
+				password: createPassword || null,
+				is_superuser: createIsSuperuser,
+				is_verified: true
 			}
-			toast.success(`User ${createEmail} created successfully.`);
-			createDialog.open = false;
-			await refreshAll();
-		} finally {
+		});
+		if (error) {
+			toast.error(`Failed to create user: ${error.detail ?? error}`);
 			isCreating = false;
+			return;
 		}
+		toast.success(`User ${createEmail} created successfully.`);
+		await refreshAll();
+		createDialog.open = false;
 	}
 
 	async function saveDisplayName(newDisplayName: string): Promise<boolean> {
@@ -125,7 +142,8 @@
 	}
 
 	async function deleteUser() {
-		if (!userToDelete) return;
+		if (!userToDelete || isDeleting) return;
+		isDeleting = true;
 
 		const { error } = await client.DELETE('/api/v1/users/{id}', {
 			params: {
@@ -137,12 +155,12 @@
 
 		if (error) {
 			toast.error(`Failed to delete user ${userToDelete.email}: ${error}`);
-		} else {
-			toast.success(`User ${userToDelete.email} deleted successfully.`);
-			deleteDialog.open = false;
-			userToDelete = null;
+			isDeleting = false;
+			return;
 		}
+		toast.success(`User ${userToDelete.email} deleted successfully.`);
 		await refreshAll();
+		deleteDialog.open = false;
 	}
 </script>
 
@@ -155,8 +173,7 @@
 	<Table.Caption>A list of all users.</Table.Caption>
 	<Table.Header>
 		<Table.Row>
-			<Table.Head>Display Name</Table.Head>
-			<Table.Head>Email</Table.Head>
+			<Table.Head>User</Table.Head>
 			<Table.Head>Verified</Table.Head>
 			<Table.Head>Active</Table.Head>
 			<Table.Head>Admin</Table.Head>
@@ -166,10 +183,7 @@
 		{#each sortedUsers as user (user.id)}
 			<Table.Row>
 				<Table.Cell class="font-medium">
-					{user.display_name || '—'}
-				</Table.Cell>
-				<Table.Cell class="font-medium">
-					{user.email}
+					<UserPill userId={user.id} name={user.display_name || user.email} />
 				</Table.Cell>
 				<Table.Cell>
 					<CheckmarkX state={user.is_verified} />
@@ -286,27 +300,19 @@
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
-			<AlertDialog.Cancel
-				onclick={() => {
-					deleteDialog.open = false;
-					userToDelete = null;
-				}}><X class="mr-2 size-4" />Cancel</AlertDialog.Cancel
+			<AlertDialog.Cancel disabled={isDeleting} onclick={() => (deleteDialog.open = false)}>
+				<X class="mr-2 size-4" />Cancel</AlertDialog.Cancel
 			>
 			<AlertDialog.Action
+				disabled={isDeleting}
 				onclick={() => deleteUser()}
 				class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-				><Trash2 class="mr-2 size-4" />Delete</AlertDialog.Action
+				><Trash2 class="mr-2 size-4" />{isDeleting ? 'Deleting…' : 'Delete'}</AlertDialog.Action
 			>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
-<Dialog.Root
-	open={createDialog.open}
-	onOpenChange={(open) => {
-		createDialog.open = open;
-		if (!open) resetCreateForm();
-	}}
->
+<Dialog.Root open={createDialog.open} onOpenChange={(open) => (createDialog.open = open)}>
 	<Dialog.Content class="w-full max-w-[500px] rounded-lg p-6 shadow-lg">
 		<Dialog.Header>
 			<Dialog.Title class="mb-1 text-xl font-semibold">Add user</Dialog.Title>
