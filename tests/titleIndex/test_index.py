@@ -1,7 +1,7 @@
-from media_manager.common.import_match import normalize_title
+from media_manager.common.ranking import derive_title_fields
 from media_manager.metadataProvider.schemas import MediaType
 from media_manager.titleIndex.config import TitleIndexConfig
-from media_manager.titleIndex.index import IndexEntry, _acronym, rank_entries
+from media_manager.titleIndex.index import IndexEntry, rank_entries
 
 TITLES = [
     "The Matrix",
@@ -15,11 +15,7 @@ TITLES = [
 def _build_entries(titles_with_popularity_pct: list[tuple[str, float]]) -> list[IndexEntry]:
     entries = []
     for position, (title, popularity_pct) in enumerate(titles_with_popularity_pct):
-        normalized = normalize_title(title)
-        tokens = normalized.split(" ")
-        acronym_full = _acronym(tokens)
-        no_article_tokens = tokens[1:] if tokens and tokens[0] == "the" else tokens
-        acronym_no_article = _acronym(no_article_tokens)
+        normalized, acronym_full, acronym_no_article = derive_title_fields(title)
         entries.append(
             IndexEntry(
                 id=position,

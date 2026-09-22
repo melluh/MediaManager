@@ -31,8 +31,8 @@ class BaseRepository[T, S]:
         self.db = db
         self.model = model
         self.schema = schema
-        # The schema used to shape `search_by_name` results. Defaults to
-        # `schema`, but repositories whose schema has relationship-backed
+        # The schema used to shape `get_by_ids_for_search` results. Defaults
+        # to `schema`, but repositories whose schema has relationship-backed
         # fields not covered by a plain column select (e.g. Show.seasons)
         # must pass a flatter schema here instead (e.g. ShowSummary).
         self.search_schema = search_schema or schema
@@ -128,9 +128,28 @@ class BaseRepository[T, S]:
         results = (await self.db.execute(stmt)).scalars().unique().all()
         return [self.schema.model_validate(r) for r in results]
 
-    async def search_by_name(self, query: str, limit: int = 10) -> Sequence[Any]:
+    async def get_all_names(self) -> Sequence[Any]:
         """
-        Search for media by (partial, case-insensitive) name match.
+        Every row's `(id, name, slug)`, with no filtering/ordering/limit -
+        the candidate pool for in-Python fuzzy ranking (see
+        `media_manager.search.service.SearchService`). A plain-column
+        select, not full ORM hydration, so it's cheap even for the whole
+        table - mirroring `get_ids_by_external_ids`/`get_all_directory_names`
+        above. There's no pagination/row-limiting precedent anywhere in this
+        codebase; a personal media library is trivial for this compared to
+        the ~150k-row TMDB title index the same ranking logic already
+        handles in ~40ms.
+        """
+        stmt = select(self.model.id, self.model.name, self.model.slug)
+        return (await self.db.execute(stmt)).all()
+
+    async def get_by_ids_for_search(self, ids: Collection[EntityId]) -> Sequence[Any]:
+        """
+        Hydrates `search_schema`'s display fields (name, overview, year,
+        genres, ...) for exactly the given ids - the post-ranking winners
+        from `get_all_names`, not the whole table, since `search_schema` can
+        include long fields (e.g. `overview`) not worth fetching for every
+        row on every debounced keystroke.
 
         Selects only the columns backing `search_schema`'s fields (assumed to
         map 1:1 onto plain columns on `model`, e.g. via `MediaMixin`) rather
@@ -142,18 +161,15 @@ class BaseRepository[T, S]:
         query, or `added_by`, a relationship rather than a plain column) are
         skipped and fall back to their schema default.
         """
+        if not ids:
+            return []
         mapper = inspect(self.model)
         columns = [
             getattr(self.model, field_name)
             for field_name in self.search_schema.model_fields
             if field_name in mapper.columns
         ]
-        stmt = (
-            select(*columns)
-            .where(self.model.name.ilike(f"%{query}%"))
-            .order_by(self.model.name)
-            .limit(limit)
-        )
+        stmt = select(*columns).where(self.model.id.in_(ids))
         rows = (await self.db.execute(stmt)).all()
         return [self.search_schema.model_validate(row) for row in rows]
 

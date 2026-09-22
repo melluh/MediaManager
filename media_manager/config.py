@@ -17,6 +17,7 @@ from media_manager.indexer.config import IndexerConfig
 from media_manager.mediaServer.config import MediaServerConfig
 from media_manager.metadataProvider.config import MetadataProviderConfig
 from media_manager.notification.config import NotificationConfig
+from media_manager.search.config import SearchConfig
 from media_manager.titleIndex.config import TitleIndexConfig
 from media_manager.torrent.config import TorrentConfig
 
@@ -77,6 +78,7 @@ class MediaManagerConfig(BaseSettings):
     database: DbConfig = DbConfig()
     auth: AuthConfig = AuthConfig()
     title_index: TitleIndexConfig = TitleIndexConfig()
+    search: SearchConfig = SearchConfig()
 
     @classmethod
     def settings_customise_sources(

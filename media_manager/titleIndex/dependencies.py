@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from media_manager.config import MediaManagerConfig
+from media_manager.config import get_config
 from media_manager.movies.dependencies import movie_repository_dep
 from media_manager.search.schemas import MediaType
 from media_manager.titleIndex.service import TitleSuggestionService
@@ -13,7 +13,7 @@ def get_title_suggestion_service(
     movie_repository: movie_repository_dep,
     tv_repository: tv_repository_dep,
 ) -> TitleSuggestionService:
-    config = MediaManagerConfig()
+    config = get_config()
     return TitleSuggestionService(
         repositories={
             MediaType.movie: movie_repository,

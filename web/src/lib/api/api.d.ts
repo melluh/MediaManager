@@ -698,6 +698,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/tv/shows/{show_id}/downloads': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Downloads For Show
+		 * @description Get every torrent associated with this show - any initiating user, any
+		 *     status - with live download status/progress, for the show's torrent
+		 *     table.
+		 */
+		get: operations['get_downloads_for_show_api_v1_tv_shows__show_id__downloads_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/tv/shows/{show_id}/rescan': {
 		parameters: {
 			query?: never;
@@ -1336,6 +1358,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/movies/{movie_id}/downloads': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Downloads For Movie
+		 * @description Get every torrent associated with this movie - any initiating user, any
+		 *     status - with live download status/progress, for the movie's torrent
+		 *     table.
+		 */
+		get: operations['get_downloads_for_movie_api_v1_movies__movie_id__downloads_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/movies/{movie_id}/torrents/{torrent_id}/import-candidates': {
 		parameters: {
 			query?: never;
@@ -1557,7 +1601,9 @@ export interface paths {
 		 * @description Search local media (movies, TV shows, ...) by name.
 		 *
 		 *     Only queries the local database; no external metadata providers are
-		 *     contacted.
+		 *     contacted. Typo- and abbreviation-tolerant (e.g. "lotr" finds an added
+		 *     "The Lord of the Rings") via the same fuzzy/acronym ranking the title
+		 *     index uses - see `SearchService`.
 		 */
 		get: operations['search_media_api_v1_search_get'];
 		put?: never;
@@ -1590,7 +1636,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	'/api/v1/search/suggest': {
+	'/api/v1/search/combined': {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1598,13 +1644,14 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Suggest Titles
-		 * @description Fast, typo-tolerant title autocomplete for media not yet in the library,
-		 *     sourced from a local index built from TMDB's daily ID export rather than
-		 *     a live provider call. Suggestions carry only a title, media type and
-		 *     popularity - no poster/year, since the export has neither.
+		 * Combined Search Media
+		 * @description One ranked list mixing already-in-library media with fast, typo- and
+		 *     abbreviation-tolerant suggestions from the local TMDB title index for
+		 *     media not yet in the library. In-library results normally rank first,
+		 *     but an exceptionally strong not-in-library match can surface above a
+		 *     weak in-library one. See `SearchService.combined_search`.
 		 */
-		get: operations['suggest_titles_api_v1_search_suggest_get'];
+		get: operations['combined_search_media_api_v1_search_combined_get'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1781,6 +1828,42 @@ export interface components {
 		Body_verify_verify_api_v1_auth_verify_post: {
 			/** Token */
 			token: string;
+		};
+		/**
+		 * CombinedSearchResult
+		 * @description One pre-merged, pre-ranked search result - either an already-in-library
+		 *     item or a not-yet-added suggestion from the title index, distinguished
+		 *     by `in_library`. Mirrors the existing dual-purpose shape of
+		 *     `MetaDataProviderSearchResult` (`added` + optional `id`/`slug`),
+		 *     inverted around library membership. See
+		 *     `SearchService.combined_search`.
+		 */
+		CombinedSearchResult: {
+			/** In Library */
+			in_library: boolean;
+			media_type: components['schemas']['MediaType'];
+			/** Name */
+			name: string;
+			/** Id */
+			id?: string | null;
+			/** Slug */
+			slug?: string | null;
+			/** Year */
+			year?: number | null;
+			/** Runtime */
+			runtime?: number | null;
+			/** Genres */
+			genres?: string[];
+			/** Images */
+			images?: {
+				[key: string]: string;
+			};
+			/** Metadata Updated At */
+			metadata_updated_at?: string | null;
+			/** External Id */
+			external_id?: number | null;
+			/** Popularity */
+			popularity?: number | null;
 		};
 		/**
 		 * CoverageGap
@@ -2895,24 +2978,6 @@ export interface components {
 			services: components['schemas']['ServiceHealth'][];
 			overall: components['schemas']['ServiceStatus'];
 		};
-		/**
-		 * TitleSuggestion
-		 * @description A fast, typo-tolerant autocomplete suggestion sourced from TMDB's daily
-		 *     ID export, for media not yet in the library.
-		 *
-		 *     Deliberately minimal (no poster/year): the daily export only carries id,
-		 *     title and popularity. Selecting a suggestion is expected to trigger a
-		 *     live provider search/detail call for full information.
-		 */
-		TitleSuggestion: {
-			/** Id */
-			id: number;
-			/** Title */
-			title: string;
-			media_type: components['schemas']['MediaType'];
-			/** Popularity */
-			popularity: number;
-		};
 		/** Torrent */
 		Torrent: {
 			/**
@@ -3239,6 +3304,7 @@ export type BodyVerifyRequestTokenApiV1AuthRequestVerifyTokenPost =
 	components['schemas']['Body_verify_request_token_api_v1_auth_request_verify_token_post'];
 export type BodyVerifyVerifyApiV1AuthVerifyPost =
 	components['schemas']['Body_verify_verify_api_v1_auth_verify_post'];
+export type CombinedSearchResult = components['schemas']['CombinedSearchResult'];
 export type CoverageGap = components['schemas']['CoverageGap'];
 export type DownloadProgress = components['schemas']['DownloadProgress'];
 export type DownloadState = components['schemas']['DownloadState'];
@@ -3285,7 +3351,6 @@ export type SlotDownloadPlan = components['schemas']['SlotDownloadPlan'];
 export type SubtitleInfo = components['schemas']['SubtitleInfo'];
 export type SuggestedTorrentPick = components['schemas']['SuggestedTorrentPick'];
 export type SystemHealth = components['schemas']['SystemHealth'];
-export type TitleSuggestion = components['schemas']['TitleSuggestion'];
 export type Torrent = components['schemas']['Torrent'];
 export type TorrentAttributes = components['schemas']['TorrentAttributes'];
 export type TorrentImportCandidate = components['schemas']['TorrentImportCandidate'];
@@ -4658,6 +4723,38 @@ export interface operations {
 			};
 		};
 	};
+	get_downloads_for_show_api_v1_tv_shows__show_id__downloads_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the show */
+				show_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['TorrentWithProgress'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
 	rescan_show_files_api_v1_tv_shows__show_id__rescan_post: {
 		parameters: {
 			query?: never;
@@ -5684,6 +5781,38 @@ export interface operations {
 			};
 		};
 	};
+	get_downloads_for_movie_api_v1_movies__movie_id__downloads_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['TorrentWithProgress'][];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
 	get_movie_torrent_import_candidates_api_v1_movies__movie_id__torrents__torrent_id__import_candidates_get: {
 		parameters: {
 			query?: never;
@@ -6059,7 +6188,7 @@ export interface operations {
 			};
 		};
 	};
-	suggest_titles_api_v1_search_suggest_get: {
+	combined_search_media_api_v1_search_combined_get: {
 		parameters: {
 			query: {
 				q: string;
@@ -6076,7 +6205,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['TitleSuggestion'][];
+					'application/json': components['schemas']['CombinedSearchResult'][];
 				};
 			};
 			/** @description Validation Error */

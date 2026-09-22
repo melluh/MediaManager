@@ -9,18 +9,26 @@ class TitleIndexConfig(BaseSettings):
     size (~1-1.5M rows, most of them near-zero popularity)."""
 
     score_cutoff: float = 60.0
-    """Minimum rapidfuzz WRatio score for a fuzzy candidate to be considered
-    at all."""
+    """Minimum rapidfuzz `ratio` score for a *non-structural* (fuzzy-only)
+    candidate to be considered at all - structural (title-prefix/acronym)
+    candidates are found exhaustively, independent of this cutoff. Plain
+    `ratio`, not `token_set_ratio` (used only to rank whatever survives this
+    gate) - length-sensitive so a short title can't pass just because it's
+    one word of a much longer, unrelated query. See
+    `media_manager.common.ranking.rank_entries`."""
 
     candidate_limit: int = 300
-    """How many fuzzy candidates rapidfuzz considers per query. Needs to be
-    generous (not just `max_results` + headroom for in-library filtering):
-    for a short, common query (e.g. "star") there can easily be more than a
-    few dozen exact/near-exact prefix matches, and rapidfuzz's `limit` truncates
-    by raw fuzzy score alone, before popularity ever enters the ranking - too
-    low a limit can truncate away the actually-popular match entirely.
-    Verified against a real ~150k-entry index that 300 is comfortably past
-    the point where results stop changing, while staying fast (~40ms)."""
+    """How many fuzzy-only candidates rapidfuzz considers per query, on top
+    of the exhaustively-found structural ones. Needs to be generous: for a
+    short, common query there can easily be more than a few dozen
+    near-matches, and rapidfuzz's `limit` truncates by raw fuzzy score
+    alone - too low a limit can truncate away the actually-best fuzzy match
+    entirely. Verified against a real ~150k-entry index that 300 is
+    comfortably past the point where results stop changing, while staying
+    fast enough for interactive use (~70-105ms: `process.extract` scans
+    with the cheaper plain `ratio` scorer for inclusion, and the pricier
+    `token_set_ratio` only runs on whatever survives that gate - see
+    `media_manager.common.ranking.rank_entries`'s docstring)."""
 
     max_results: int = 8
     """Suggestions returned per query, after in-library filtering."""
