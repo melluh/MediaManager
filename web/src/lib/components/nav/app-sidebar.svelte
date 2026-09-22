@@ -3,7 +3,7 @@
 	import Clapperboard from '@lucide/svelte/icons/clapperboard';
 	import Home from '@lucide/svelte/icons/home';
 	import Info from '@lucide/svelte/icons/info';
-	import Settings from '@lucide/svelte/icons/settings';
+	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import TvIcon from '@lucide/svelte/icons/tv';
 	import { resolve } from '$app/paths';
 
@@ -35,11 +35,6 @@
 				icon: Bell
 			},
 			{
-				title: 'Settings',
-				url: resolve('/dashboard/settings', {}),
-				icon: Settings
-			},
-			{
 				title: 'About',
 				url: resolve('/dashboard/about', {}),
 				icon: Info
@@ -54,15 +49,21 @@
 	import NavServiceAlerts from '$lib/components/nav/nav-service-alerts.svelte';
 	import NavUser from '$lib/components/nav/nav-user.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar';
-	import type { ComponentProps } from 'svelte';
+	import { getContext, type ComponentProps } from 'svelte';
 	import AppBrand from '$lib/components/app-brand.svelte';
 	import { afterNavigate } from '$app/navigation';
 	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
 	import { serviceHealth } from '$lib/hooks/service-health.svelte.js';
+	import type { UserRead } from '$lib/api/api';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
 	const sidebar = Sidebar.useSidebar();
+
+	// Undefined while the user is still being resolved (this component renders
+	// outside the dashboard layout's `status === 'ready'` gate) - the
+	// Administration link stays hidden until we know the user is a superuser.
+	let user: () => UserRead | undefined = getContext('user');
 
 	afterNavigate(() => {
 		if (sidebar.isMobile) {
@@ -71,9 +72,18 @@
 	});
 
 	const navSecondaryItems = $derived(
-		data.navSecondary.map((item) =>
-			item.title === 'Notifications' ? { ...item, badge: notificationCount.unread } : item
-		)
+		data.navSecondary.flatMap((item) => {
+			if (item.title === 'Notifications') return [{ ...item, badge: notificationCount.unread }];
+			if (item.title === 'About') {
+				return user()?.is_superuser
+					? [
+							{ title: 'Administration', url: resolve('/dashboard/admin', {}), icon: ShieldCheck },
+							item
+						]
+					: [item];
+			}
+			return [item];
+		})
 	);
 </script>
 

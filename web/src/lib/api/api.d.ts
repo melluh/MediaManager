@@ -698,28 +698,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	'/api/v1/tv/shows/{show_id}/downloads': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Downloads For Show
-		 * @description Get every torrent associated with this show - any initiating user, any
-		 *     status - with live download status/progress, for the show's torrent
-		 *     table.
-		 */
-		get: operations['get_downloads_for_show_api_v1_tv_shows__show_id__downloads_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	'/api/v1/tv/shows/{show_id}/rescan': {
 		parameters: {
 			query?: never;
@@ -1358,28 +1336,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	'/api/v1/movies/{movie_id}/downloads': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Get Downloads For Movie
-		 * @description Get every torrent associated with this movie - any initiating user, any
-		 *     status - with live download status/progress, for the movie's torrent
-		 *     table.
-		 */
-		get: operations['get_downloads_for_movie_api_v1_movies__movie_id__downloads_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	'/api/v1/movies/{movie_id}/torrents/{torrent_id}/import-candidates': {
 		parameters: {
 			query?: never;
@@ -1660,6 +1616,40 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/admin/stats': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get Admin Stats */
+		get: operations['get_admin_stats_api_v1_admin_stats_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/admin/disk-usage': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get Disk Usage */
+		get: operations['get_disk_usage_api_v1_admin_disk_usage_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/': {
 		parameters: {
 			query?: never;
@@ -1877,6 +1867,29 @@ export interface components {
 			/** Reason */
 			reason: string;
 		};
+		/** DiskUsageEntry */
+		DiskUsageEntry: {
+			/** Names */
+			names: string[];
+			/** Paths */
+			paths: string[];
+			/** Total Bytes */
+			total_bytes: number;
+			/** Used Bytes */
+			used_bytes: number;
+			/** Free Bytes */
+			free_bytes: number;
+			/**
+			 * Available
+			 * @default true
+			 */
+			available: boolean;
+		};
+		/** DiskUsageStats */
+		DiskUsageStats: {
+			/** Entries */
+			entries: components['schemas']['DiskUsageEntry'][];
+		};
 		/** DownloadProgress */
 		DownloadProgress: {
 			state: components['schemas']['DownloadState'];
@@ -2063,6 +2076,15 @@ export interface components {
 			 * @default 0
 			 */
 			files_adopted: number;
+		};
+		/** LibraryStats */
+		LibraryStats: {
+			/** Movie Count */
+			movie_count: number;
+			/** Show Count */
+			show_count: number;
+			/** Episode Count */
+			episode_count: number;
 		};
 		/**
 		 * MediaAddedByUser
@@ -3306,6 +3328,8 @@ export type BodyVerifyVerifyApiV1AuthVerifyPost =
 	components['schemas']['Body_verify_verify_api_v1_auth_verify_post'];
 export type CombinedSearchResult = components['schemas']['CombinedSearchResult'];
 export type CoverageGap = components['schemas']['CoverageGap'];
+export type DiskUsageEntry = components['schemas']['DiskUsageEntry'];
+export type DiskUsageStats = components['schemas']['DiskUsageStats'];
 export type DownloadProgress = components['schemas']['DownloadProgress'];
 export type DownloadState = components['schemas']['DownloadState'];
 export type Episode = components['schemas']['Episode'];
@@ -3318,6 +3342,7 @@ export type ImportMatchConfidence = components['schemas']['ImportMatchConfidence
 export type IndexerQueryResult = components['schemas']['IndexerQueryResult'];
 export type LibraryItem = components['schemas']['LibraryItem'];
 export type LibraryScanCounts = components['schemas']['LibraryScanCounts'];
+export type LibraryStats = components['schemas']['LibraryStats'];
 export type MediaAddedByUser = components['schemas']['MediaAddedByUser'];
 export type MediaFileDetails = components['schemas']['MediaFileDetails'];
 export type MediaImportSuggestion = components['schemas']['MediaImportSuggestion'];
@@ -4723,38 +4748,6 @@ export interface operations {
 			};
 		};
 	};
-	get_downloads_for_show_api_v1_tv_shows__show_id__downloads_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description The ID of the show */
-				show_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['TorrentWithProgress'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
 	rescan_show_files_api_v1_tv_shows__show_id__rescan_post: {
 		parameters: {
 			query?: never;
@@ -5781,38 +5774,6 @@ export interface operations {
 			};
 		};
 	};
-	get_downloads_for_movie_api_v1_movies__movie_id__downloads_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description The ID of the movie */
-				movie_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['TorrentWithProgress'][];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
 	get_movie_torrent_import_candidates_api_v1_movies__movie_id__torrents__torrent_id__import_candidates_get: {
 		parameters: {
 			query?: never;
@@ -6215,6 +6176,46 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	get_admin_stats_api_v1_admin_stats_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['LibraryStats'];
+				};
+			};
+		};
+	};
+	get_disk_usage_api_v1_admin_disk_usage_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['DiskUsageStats'];
 				};
 			};
 		};

@@ -133,6 +133,23 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         else:
             return result or 0
 
+    async def count_shows(self) -> int:
+        stmt = select(func.count(Show.id))
+        result = (await self.db.execute(stmt)).scalar_one_or_none()
+        return result or 0
+
+    async def count_episodes(self) -> int:
+        """
+        Total episodes tracked in the library, regardless of download
+        status - matches the semantics of the movie/show counts (library
+        size, not download progress). Distinct from
+        `get_total_downloaded_episodes_count`, which only counts episodes
+        with a linked EpisodeFile.
+        """
+        stmt = select(func.count(Episode.id))
+        result = (await self.db.execute(stmt)).scalar_one_or_none()
+        return result or 0
+
     async def save_show(self, show: ShowSchema) -> ShowSchema:
         db_show = await self.db.get(Show, show.id) if show.id else None
 

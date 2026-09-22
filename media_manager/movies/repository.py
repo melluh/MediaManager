@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,6 +47,11 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
 
     async def get_movies(self) -> list[MovieSchema]:
         return await self.get_all()
+
+    async def count_movies(self) -> int:
+        stmt = select(func.count(Movie.id))
+        result = (await self.db.execute(stmt)).scalar_one_or_none()
+        return result or 0
 
     async def delete_movie(self, movie_id: MovieId) -> None:
         await self.delete(entity_id=movie_id)
