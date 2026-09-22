@@ -18,7 +18,7 @@ from media_manager.indexer.schemas import IndexerQueryResultId
 from media_manager.metadataProvider.dependencies import metadata_provider_dep
 from media_manager.metadataProvider.schemas import MetaDataProviderSearchResult
 from media_manager.schemas import MediaImportSuggestion
-from media_manager.torrent.schemas import Torrent
+from media_manager.torrent.schemas import Torrent, TorrentWithProgress
 from media_manager.torrent.utils import get_importable_media_directories
 from media_manager.tv.dependencies import (
     season_dep,
@@ -411,6 +411,21 @@ async def get_a_shows_torrents(
     Get torrents associated with a specific show.
     """
     return await tv_service.get_torrents_for_show(show=show)
+
+
+@router.get(
+    "/shows/{show_id}/downloads",
+    dependencies=[Depends(current_active_user)],
+)
+async def get_downloads_for_show(
+    show: show_dep, tv_service: tv_service_dep
+) -> list[TorrentWithProgress]:
+    """
+    Get every torrent associated with this show - any initiating user, any
+    status - with live download status/progress, for the show's torrent
+    table.
+    """
+    return await tv_service.get_torrents_with_progress_for_show(show_id=show.id)
 
 
 @router.post(

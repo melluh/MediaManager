@@ -278,12 +278,22 @@ class TorrentService:
         own = await self.torrent_repository.get_active_torrents_initiated_by_user(
             user_id=user_id
         )
-        torrents, progress_by_hash = await self._resolve_progress_and_status(own)
-        media_by_torrent_id = await self._resolve_media(torrents)
-        numbers_by_torrent_id = await self._resolve_season_and_episode_numbers(torrents)
+        return await self.enrich_torrents(own)
+
+    async def enrich_torrents(self, torrents: list[Torrent]) -> list[TorrentWithProgress]:
+        """
+        Attaches live download status/progress, owning media, and
+        season/episode numbers to the given torrents, regardless of who
+        initiated them or their current status. Shared by `get_own_torrents`
+        and by the media detail pages, which need this for every torrent
+        belonging to a movie/show, not just the current user's active ones.
+        """
+        resolved, progress_by_hash = await self._resolve_progress_and_status(torrents)
+        media_by_torrent_id = await self._resolve_media(resolved)
+        numbers_by_torrent_id = await self._resolve_season_and_episode_numbers(resolved)
 
         result = []
-        for t in torrents:
+        for t in resolved:
             seasons, episodes = numbers_by_torrent_id.get(t.id, ([], []))
             result.append(
                 TorrentWithProgress(

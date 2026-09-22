@@ -22,6 +22,7 @@ from media_manager.movies.schemas import (
 )
 from media_manager.torrent.models import Torrent
 from media_manager.torrent.schemas import Quality, TorrentId
+from media_manager.torrent.schemas import Torrent as TorrentSchema
 
 log = logging.getLogger(__name__)
 
@@ -238,6 +239,21 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             raise
         else:
             return formatted_results
+
+    async def get_full_torrents_by_movie_id(self, movie_id: MovieId) -> list[TorrentSchema]:
+        try:
+            stmt = (
+                select(Torrent)
+                .distinct()
+                .join(MovieFile, MovieFile.torrent_id == Torrent.id)
+                .where(MovieFile.movie_id == movie_id)
+            )
+            results = (await self.db.execute(stmt)).scalars().unique().all()
+        except SQLAlchemyError:
+            log.exception(f"Database error retrieving torrents for movie_id {movie_id}")
+            raise
+        else:
+            return [TorrentSchema.model_validate(t) for t in results]
 
     async def get_all_movies_with_torrents(self) -> list[MovieSchema]:
         try:

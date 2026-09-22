@@ -36,7 +36,11 @@ from media_manager.movies.schemas import (
 )
 from media_manager.schemas import MediaImportSuggestion
 from media_manager.torrent.dependencies import torrent_dep
-from media_manager.torrent.schemas import Torrent, TorrentImportCandidate
+from media_manager.torrent.schemas import (
+    Torrent,
+    TorrentImportCandidate,
+    TorrentWithProgress,
+)
 from media_manager.torrent.utils import get_importable_media_directories
 
 router = APIRouter()
@@ -440,6 +444,23 @@ async def search_for_torrents_for_movie(
         movie=movie,
         search_query_override=search_query_override,
         allow_language_variants=allow_language_variants,
+    )
+
+
+@router.get(
+    "/{movie_id}/downloads",
+    dependencies=[Depends(current_active_user)],
+)
+async def get_downloads_for_movie(
+    movie_service: movie_service_dep, movie: movie_dep
+) -> list[TorrentWithProgress]:
+    """
+    Get every torrent associated with this movie - any initiating user, any
+    status - with live download status/progress, for the movie's torrent
+    table.
+    """
+    return await movie_service.get_torrents_with_progress_for_movie(
+        movie_id=movie.id
     )
 
 

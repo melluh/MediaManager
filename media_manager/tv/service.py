@@ -32,6 +32,7 @@ from media_manager.indexer.service import IndexerService
 from media_manager.notification.service import NotificationService
 from media_manager.torrent.schemas import (
     Torrent,
+    TorrentWithProgress,
 )
 from media_manager.torrent.service import TorrentService
 from media_manager.tv import log
@@ -560,6 +561,17 @@ class TvService(BaseMediaService[Show, Show]):
             metadata_provider=show.metadata_provider,
             torrents=rich_season_torrents,
         )
+
+    async def get_torrents_with_progress_for_show(
+        self, show_id: ShowId
+    ) -> list[TorrentWithProgress]:
+        """
+        Get every torrent belonging to this show - any initiating user, any
+        status - enriched with live download status/progress, for the show
+        detail page's torrent table.
+        """
+        torrents = await self.tv_repository.get_torrents_by_show_id(show_id=show_id)
+        return await self.torrent_service.enrich_torrents(torrents)
 
     async def get_all_shows_with_torrents(self) -> list[RichShowTorrent]:
         """

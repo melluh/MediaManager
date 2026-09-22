@@ -44,6 +44,7 @@ from media_manager.torrent.schemas import (
     Quality,
     QualityStrings,
     Torrent,
+    TorrentWithProgress,
 )
 from media_manager.torrent.service import TorrentService
 from media_manager.torrent.utils import remove_special_characters
@@ -356,6 +357,19 @@ class MovieService(BaseMediaService[Movie, Movie]):
             metadata_provider=movie.metadata_provider,
             torrents=movie_torrents,
         )
+
+    async def get_torrents_with_progress_for_movie(
+        self, movie_id: MovieId
+    ) -> list[TorrentWithProgress]:
+        """
+        Get every torrent belonging to this movie - any initiating user, any
+        status - enriched with live download status/progress, for the movie
+        detail page's torrent table.
+        """
+        torrents = await self.movie_repository.get_full_torrents_by_movie_id(
+            movie_id=movie_id
+        )
+        return await self.torrent_service.enrich_torrents(torrents)
 
     async def get_all_movies_with_torrents(self) -> list[RichMovieTorrent]:
         """
