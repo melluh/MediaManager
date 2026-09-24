@@ -157,9 +157,11 @@
 		const params = new SvelteURLSearchParams({ q: query });
 		// Lets the search page pick this exact item back out of its results
 		// and show it more prominently, since a title match alone could
-		// otherwise land on a same-named but different work.
+		// otherwise land on a same-named but different work. The id is a TMDB
+		// id: not-in-library suggestions come from the TMDB-sourced title
+		// index (see TitleSuggestionService).
 		if (highlight) {
-			params.set('highlight', `${highlight.mediaType}-${highlight.id}`);
+			params.set('highlight', `tmdb-${highlight.mediaType}-${highlight.id}`);
 		}
 		// Refining an already-open search replaces the current history entry
 		// instead of pushing a new one, so the search page never piles up
