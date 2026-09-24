@@ -3,6 +3,7 @@
 	import PageLoadError from '$lib/components/page-load-error.svelte';
 	import SeededMediaDetail from '$lib/components/seeded-media-detail.svelte';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { Resolved } from '$lib/hooks/resolved.svelte';
 	import { setShowContext } from '$lib/context.svelte';
 	import type { LayoutProps } from './$types';
@@ -11,8 +12,9 @@
 
 	// The show is resolved here rather than in `load` so this route paints a loading
 	// indicator instead of a blank page. Children read it back off the context, and
-	// only render once it has loaded.
-	const details = new Resolved(() => data.show, { keepPrevious: false });
+	// only render once it has loaded. A refresh of the same show (e.g. after an
+	// import finishes) updates in place; navigating to another show reloads.
+	const details = new Resolved(() => data.show, { key: () => page.params.showId });
 
 	setShowContext({
 		show: () => details.value!.show,

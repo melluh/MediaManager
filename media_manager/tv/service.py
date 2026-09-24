@@ -474,6 +474,7 @@ class TvService(BaseMediaService[Show, Show]):
                 status=show_torrent.status,
                 quality=show_torrent.quality,
                 imported=show_torrent.imported,
+                cancelled=show_torrent.cancelled,
                 seasons=seasons,
                 episodes=episodes if len(seasons) == 1 else [],
                 file_path_suffix=file_path_suffix,

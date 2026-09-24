@@ -5,17 +5,18 @@
 	import { Progress } from '$lib/components/ui/progress/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import MediaImage from '$lib/components/media-image.svelte';
-	import DownloadDetailsDialog from '$lib/components/downloads/download-details-dialog.svelte';
+	import DownloadDetailsDialog, {
+		downloadDetailsDialog
+	} from '$lib/components/downloads/download-details-dialog.svelte';
 	import { getDownloadStatusBadge } from '$lib/components/downloads/download-status.js';
 	import Film from '@lucide/svelte/icons/film';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 	import type { TorrentWithProgress } from '$lib/api/api';
 	import { cn, formatAddedTime, formatBytes, formatTorrentSeasonEpisodeRange } from '$lib/utils';
-	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
-	let { torrent }: { torrent: TorrentWithProgress } = $props();
+	let { torrent, onChange }: { torrent: TorrentWithProgress; onChange?: () => void } = $props();
 
-	const detailsDialog = $derived(shallowDialog(`downloadDetails:${torrent.id}`));
+	const detailsDialog = $derived(downloadDetailsDialog(torrent.id!));
 	let posterLoaded = $state(false);
 	let backdropLoaded = $state(false);
 
@@ -115,5 +116,5 @@
 			</div>
 		{/snippet}
 	</Dialog.Trigger>
-	<DownloadDetailsDialog {torrent} />
+	<DownloadDetailsDialog {torrent} {onChange} />
 </Dialog.Root>

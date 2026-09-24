@@ -16,6 +16,8 @@
 	import WatchButton from '$lib/components/watch-button.svelte';
 	import SeasonFilesDialog from '$lib/components/season-files-dialog.svelte';
 	import { poll } from '$lib/hooks/poll.svelte';
+	import { downloadsSignature } from '$lib/components/downloads/download-status.js';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import client from '$lib/api';
 
@@ -49,13 +51,28 @@
 	// is currently downloading, and so the torrent table's status badges stay
 	// live too - same pattern as the movie detail page and the dashboard's
 	// downloads carousel.
+	//
+	// When a download's status changes in a way that affects the show itself
+	// (an import finished, a download was cancelled or deleted), the show is
+	// refreshed too, so episode availability stays live.
 	let showTorrentsWithProgress: TorrentWithProgress[] = $state([]);
-	poll(async () => {
+	// The id rather than `show`, so a refreshed copy doesn't restart the poll.
+	let showIdForPoll = $derived(show.id);
+	let lastSignature: { showId: string; signature: string } | undefined;
+	async function refreshShowTorrents() {
+		const showId = showIdForPoll;
 		const { data } = await client.GET('/api/v1/tv/shows/{show_id}/downloads', {
-			params: { path: { show_id: show.id } }
+			params: { path: { show_id: showId } }
 		});
-		if (data) showTorrentsWithProgress = data;
-	}, 7000);
+		if (!data) return;
+		showTorrentsWithProgress = data;
+		const signature = downloadsSignature(data);
+		if (lastSignature?.showId === showId && lastSignature.signature !== signature) {
+			invalidateAll();
+		}
+		lastSignature = { showId, signature };
+	}
+	poll(refreshShowTorrents, 7000);
 
 	let showProgress = $derived(
 		showTorrentsWithProgress.find((t) => t.initiated_by_user_id === user().id)?.download_progress
@@ -151,7 +168,11 @@
 	<section class="mt-4 flex flex-col gap-3">
 		<h2 class="text-lg font-semibold">Torrents</h2>
 		<div class="w-full overflow-x-auto">
-			<DownloadTable torrents={showTorrentsWithProgress} emptyTitle="No torrents for this show" />
+			<DownloadTable
+				torrents={showTorrentsWithProgress}
+				emptyTitle="No torrents for this show"
+				onChange={() => refreshShowTorrents().catch(() => {})}
+			/>
 		</div>
 	</section>
 </MediaHeroHeader>

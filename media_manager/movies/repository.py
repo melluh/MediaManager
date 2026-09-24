@@ -223,6 +223,7 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
                     status=torrent.status,
                     quality=torrent.quality,
                     imported=torrent.imported,
+                    cancelled=torrent.cancelled,
                     file_path_suffix=file_path_suffix,
                     usenet=torrent.usenet,
                 )

@@ -1,6 +1,7 @@
 import Check from '@lucide/svelte/icons/check';
 import CircleAlert from '@lucide/svelte/icons/circle-alert';
 import CircleHelp from '@lucide/svelte/icons/circle-help';
+import CircleX from '@lucide/svelte/icons/circle-x';
 import Clock from '@lucide/svelte/icons/clock';
 import Download from '@lucide/svelte/icons/download';
 import type { TorrentWithProgress } from '$lib/api/api';
@@ -31,6 +32,12 @@ export type DownloadStatusBadge = {
  * succeeds, instead of looking done when it isn't.
  */
 export function getDownloadStatusBadge(torrent: TorrentWithProgress): DownloadStatusBadge {
+	// A download cancelled after it was imported is only hidden from its owner's
+	// homepage; the media is still there, so it keeps reading as "Finished".
+	if (torrent.cancelled && !torrent.imported) {
+		return { variant: 'secondary', icon: CircleX, label: 'Cancelled', isFinished: false };
+	}
+
 	const progress = torrent.download_progress;
 
 	const downloadComplete = progress
@@ -84,4 +91,16 @@ export function getDownloadStatusBadge(torrent: TorrentWithProgress): DownloadSt
 		label: `${getDownloadStateString(progress.state)} ${Math.round(progress.progress)}%`,
 		isFinished: false
 	};
+}
+
+/**
+ * Everything about a set of downloads that affects the media they belong to
+ * (availability, files), but not live progress. Detail pages compare this
+ * between polls and refresh the media only when it changes.
+ */
+export function downloadsSignature(torrents: TorrentWithProgress[]): string {
+	return torrents
+		.map((t) => [t.id, t.status, t.imported, t.import_error ?? '', t.cancelled].join(':'))
+		.sort()
+		.join('|');
 }

@@ -28,6 +28,9 @@
 	let watchUrl: string | null = $state(null);
 	let watchMediaServerName: string | null = $state(null);
 	let watchUrlLoading = $state(false);
+	// Keyed on the id rather than `media` itself, so a refreshed copy of the
+	// same media doesn't refetch (and flash) the watch URL.
+	let mediaId = $derived(media.id!);
 	$effect(() => {
 		watchUrl = null;
 		watchMediaServerName = null;
@@ -36,10 +39,10 @@
 		watchUrlLoading = true;
 		const request = isShow
 			? client.GET('/api/v1/tv/shows/{show_id}/watch-url', {
-					params: { path: { show_id: media.id! } }
+					params: { path: { show_id: mediaId } }
 				})
 			: client.GET('/api/v1/movies/{movie_id}/watch-url', {
-					params: { path: { movie_id: media.id! } }
+					params: { path: { movie_id: mediaId } }
 				});
 		request
 			.then(({ data }) => {

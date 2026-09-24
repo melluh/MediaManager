@@ -3,7 +3,6 @@
 	import { Spinner } from '$lib/components/ui/spinner/index.js';
 	import Circle from '@lucide/svelte/icons/circle';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
-	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import client from '$lib/api';
 	import type { TorrentImportCandidate } from '$lib/api/api';
@@ -11,7 +10,16 @@
 
 	// Resolves a movie download whose import failed because it contained more
 	// than one video file, by letting the user pick the one to import.
-	let { movieId, torrentId }: { movieId: string; torrentId: string } = $props();
+	let {
+		movieId,
+		torrentId,
+		onChange
+	}: {
+		movieId: string;
+		torrentId: string;
+		/** Called after the download changed, so the owner can refresh it. */
+		onChange?: () => void;
+	} = $props();
 
 	let candidates = $state<TorrentImportCandidate[] | null>(null);
 	let loading = $state(false);
@@ -62,12 +70,12 @@
 			} else {
 				toast.error('Failed to import the selected file.');
 			}
-			await invalidateAll();
+			onChange?.();
 			return;
 		}
 
 		toast.success('Import resolved successfully.');
-		await invalidateAll();
+		onChange?.();
 	}
 
 	function formatDuration(seconds: number | null | undefined): string {

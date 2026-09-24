@@ -15,6 +15,8 @@
 	import WatchButton from '$lib/components/watch-button.svelte';
 	import MediaFileTable from '$lib/components/media-file-table.svelte';
 	import { poll } from '$lib/hooks/poll.svelte';
+	import { downloadsSignature } from '$lib/components/downloads/download-status.js';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
 	let { movie, movieFiles }: { movie: PublicMovie; movieFiles: PublicMovieFile[] } = $props();
@@ -27,13 +29,28 @@
 	// too. Progress is only shown for torrents *this* user started - a
 	// download started by another admin still shows as "Downloading" without
 	// a percentage.
+	//
+	// When a download's status changes in a way that affects the movie itself
+	// (an import finished, a download was cancelled or deleted), the movie and
+	// its files are refreshed too, so availability and the file list stay live.
 	let movieTorrents: TorrentWithProgress[] = $state([]);
-	poll(async () => {
+	// The id rather than `movie`, so a refreshed copy doesn't restart the poll.
+	let movieIdForPoll = $derived(movie.id!);
+	let lastSignature: { movieId: string; signature: string } | undefined;
+	async function refreshMovieTorrents() {
+		const movieId = movieIdForPoll;
 		const { data } = await client.GET('/api/v1/movies/{movie_id}/downloads', {
-			params: { path: { movie_id: movie.id! } }
+			params: { path: { movie_id: movieId } }
 		});
-		if (data) movieTorrents = data;
-	}, 7000);
+		if (!data) return;
+		movieTorrents = data;
+		const signature = downloadsSignature(data);
+		if (lastSignature?.movieId === movieId && lastSignature.signature !== signature) {
+			invalidateAll();
+		}
+		lastSignature = { movieId, signature };
+	}
+	poll(refreshMovieTorrents, 7000);
 
 	let ownMovieDownloadProgress = $derived(
 		movieTorrents.find((t) => t.initiated_by_user_id === user().id)?.download_progress
@@ -46,7 +63,9 @@
 	// invite starting a second one - that's demoted into the overflow menu
 	// (mirroring how "Download additional" works once the movie is watchable).
 	let isDownloading = $derived(
-		(movie.torrents ?? []).some((t) => getTorrentStatusString(t.status) === 'downloading')
+		(movie.torrents ?? []).some(
+			(t) => !t.cancelled && getTorrentStatusString(t.status) === 'downloading'
+		)
 	);
 
 	let hasWatchUrl = $state(false);
@@ -107,6 +126,10 @@
 	</section>
 	<section class="mt-4 flex flex-col gap-3">
 		<h2 class="text-lg font-semibold">Torrents</h2>
-		<DownloadTable torrents={movieTorrents} emptyTitle="No torrents for this movie" />
+		<DownloadTable
+			torrents={movieTorrents}
+			emptyTitle="No torrents for this movie"
+			onChange={() => refreshMovieTorrents().catch(() => {})}
+		/>
 	</section>
 </MediaHeroHeader>

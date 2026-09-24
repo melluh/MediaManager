@@ -107,8 +107,8 @@ class TorrentService:
     ) -> Torrent:
         """
         Marks a torrent as cancelled so it stops showing up on the user's
-        homepage, without deleting it (or its associated media files) from
-        the database.
+        homepage and is never imported, without deleting it (or its
+        associated media files) from the database.
 
         :param remove_from_client: Also removes the torrent from the download
             client, without deleting its downloaded data. Best-effort: a
@@ -162,7 +162,9 @@ class TorrentService:
         return [
             t
             for t in await self.get_all_torrents()
-            if t.status == TorrentStatus.finished and not t.imported
+            if t.status == TorrentStatus.finished
+            and not t.imported
+            and not t.cancelled
         ]
 
     async def flag_orphaned_completed_torrents(
@@ -187,6 +189,7 @@ class TorrentService:
             if t.status == TorrentStatus.finished
             and not t.imported
             and not t.import_error
+            and not t.cancelled
         ]
         if not candidates:
             return

@@ -81,7 +81,10 @@
 		{#if ownTorrents.length > 0}
 			<div class="mx-auto my-8">
 				<h3 class="my-4 text-2xl font-semibold md:ml-12">Your Downloads</h3>
-				<DownloadsCarousel torrents={ownTorrents} />
+				<DownloadsCarousel
+					torrents={ownTorrents}
+					onChange={() => refreshOwnTorrents().catch(() => {})}
+				/>
 			</div>
 		{/if}
 

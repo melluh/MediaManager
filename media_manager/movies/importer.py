@@ -178,6 +178,9 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             torrent's download directory, exactly as returned by
             `TorrentService.get_import_candidates`.
         """
+        if torrent.cancelled:
+            msg = "This download was cancelled, so it can't be imported."
+            raise ConflictError(msg)
         if torrent.import_error_kind != ImportErrorKind.multiple_video_files:
             msg = "This torrent has no pending multiple-video-file import to resolve."
             raise ConflictError(msg)

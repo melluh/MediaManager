@@ -1,9 +1,19 @@
+<script lang="ts" module>
+	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
+
+	/** The open state of the details dialog for a download, shared by its triggers. */
+	export function downloadDetailsDialog(torrentId: string) {
+		return shallowDialog(`downloadDetails:${torrentId}`);
+	}
+</script>
+
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge, type BadgeVariant } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import CopyButton from '$lib/components/copy-button.svelte';
 	import CancelDownloadDialog from '$lib/components/downloads/cancel-download-dialog.svelte';
+	import DeleteDownloadDialog from '$lib/components/downloads/delete-download-dialog.svelte';
 	import DownloadProgressPanel from '$lib/components/downloads/download-progress-panel.svelte';
 	import ImportFilePicker from '$lib/components/downloads/import-file-picker.svelte';
 	import { getDownloadStatusBadge } from '$lib/components/downloads/download-status.js';
@@ -13,6 +23,13 @@
 	import HardDrive from '@lucide/svelte/icons/hard-drive';
 	import Film from '@lucide/svelte/icons/film';
 	import CircleX from '@lucide/svelte/icons/circle-x';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import RotateCw from '@lucide/svelte/icons/rotate-cw';
+	import PackageCheck from '@lucide/svelte/icons/package-check';
+	import PackageX from '@lucide/svelte/icons/package-x';
+	import { toast } from 'svelte-sonner';
+	import client from '$lib/api';
+	import { getCurrentUser } from '$lib/context.svelte';
 	import { resolve } from '$app/paths';
 	import type { TorrentWithProgress } from '$lib/api/api';
 	import {
@@ -20,7 +37,8 @@
 		formatBytes,
 		formatLastUpdated,
 		formatTorrentSeasonEpisodeRange,
-		getTorrentQualityString
+		getTorrentQualityString,
+		getTorrentStatusString
 	} from '$lib/utils';
 
 	const statusContainerClasses: Record<NonNullable<BadgeVariant>, string> = {
@@ -30,7 +48,17 @@
 		outline: 'border-border bg-background text-foreground'
 	};
 
-	let { torrent }: { torrent: TorrentWithProgress } = $props();
+	let {
+		torrent,
+		onChange
+	}: {
+		torrent: TorrentWithProgress;
+		/** Called after an action changed the download, so the owner can refresh it. */
+		onChange?: () => void;
+	} = $props();
+
+	let user = getCurrentUser();
+	let isAdmin = $derived(user().is_superuser);
 
 	let statusBadge = $derived(getDownloadStatusBadge(torrent));
 	let waitingForImport = $derived(
@@ -42,7 +70,7 @@
 		formatTorrentSeasonEpisodeRange(torrent.seasons, torrent.episodes)
 	);
 	let showLiveProgress = $derived(
-		statusBadge.variant !== 'destructive' && statusBadge.variant !== 'default'
+		!torrent.cancelled && statusBadge.variant !== 'destructive' && statusBadge.variant !== 'default'
 	);
 	let mediaHref = $derived.by(() => {
 		if (!torrent.media) return undefined;
@@ -54,12 +82,57 @@
 
 	// Movie-only for now: TV torrents don't have this failure mode.
 	let canResolveMultipleVideoFiles = $derived(
-		torrent.import_error_kind === 'multiple_video_files' &&
+		!torrent.cancelled &&
+			torrent.import_error_kind === 'multiple_video_files' &&
 			torrent.media != null &&
 			!torrent.media.is_show
 	);
 
+	let canCancel = $derived(
+		!torrent.cancelled && (isAdmin || torrent.initiated_by_user_id === user().id)
+	);
+	let canRetry = $derived(
+		isAdmin && !torrent.cancelled && getTorrentStatusString(torrent.status) !== 'finished'
+	);
+
 	let cancelConfirmOpen = $state(false);
+	let deleteConfirmOpen = $state(false);
+	let busy = $state(false);
+
+	// Cancelling or deleting can take the download off the list this dialog was
+	// opened from, so close it rather than leave it showing a stale download.
+	function closeAndRefresh() {
+		downloadDetailsDialog(torrent.id!).open = false;
+		onChange?.();
+	}
+
+	async function retryDownload() {
+		busy = true;
+		const { error } = await client.POST('/api/v1/torrent/{torrent_id}/retry', {
+			params: { path: { torrent_id: torrent.id! } }
+		});
+		busy = false;
+		if (error) {
+			toast.error('Failed to retry the download.');
+			return;
+		}
+		toast.success('Retrying the download.');
+		onChange?.();
+	}
+
+	async function setImported(imported: boolean) {
+		busy = true;
+		const { error } = await client.PATCH('/api/v1/torrent/{torrent_id}/status', {
+			params: { path: { torrent_id: torrent.id! }, query: { imported } }
+		});
+		busy = false;
+		if (error) {
+			toast.error('Failed to update the download.');
+			return;
+		}
+		toast.success(imported ? 'Marked as imported.' : 'Marked as not imported.');
+		onChange?.();
+	}
 </script>
 
 <Dialog.Content class="w-full max-w-[500px] rounded-lg p-6 shadow-lg">
@@ -149,19 +222,57 @@
 	{/if}
 
 	{#if canResolveMultipleVideoFiles}
-		<ImportFilePicker movieId={torrent.media!.id} torrentId={torrent.id!} />
+		<ImportFilePicker movieId={torrent.media!.id} torrentId={torrent.id!} {onChange} />
 	{/if}
 
-	<div class="border-t pt-3">
-		<Button
-			variant="outline"
-			class="w-full text-destructive hover:text-destructive"
-			onclick={() => (cancelConfirmOpen = true)}
-		>
-			<CircleX />
-			Cancel Download
-		</Button>
-	</div>
+	{#if isAdmin || canCancel}
+		<div class="flex flex-col gap-2 border-t pt-3">
+			{#if isAdmin}
+				<div class="flex flex-wrap gap-2 *:flex-1">
+					{#if canRetry}
+						<Button variant="outline" disabled={busy} onclick={retryDownload}>
+							<RotateCw />
+							Retry
+						</Button>
+					{/if}
+					<!-- A manual override for when the importer got it wrong, e.g. the
+					     files were moved into place by hand. -->
+					<Button variant="outline" disabled={busy} onclick={() => setImported(!torrent.imported)}>
+						{#if torrent.imported}
+							<PackageX />
+							Mark as not imported
+						{:else}
+							<PackageCheck />
+							Mark as imported
+						{/if}
+					</Button>
+				</div>
+			{/if}
+			<div class="flex flex-wrap gap-2 *:flex-1">
+				{#if canCancel}
+					<Button
+						variant="outline"
+						class="text-destructive hover:text-destructive"
+						onclick={() => (cancelConfirmOpen = true)}
+					>
+						<CircleX />
+						Cancel Download
+					</Button>
+				{/if}
+				{#if isAdmin}
+					<Button
+						variant="outline"
+						class="text-destructive hover:text-destructive"
+						onclick={() => (deleteConfirmOpen = true)}
+					>
+						<Trash2 />
+						Delete
+					</Button>
+				{/if}
+			</div>
+		</div>
+	{/if}
 </Dialog.Content>
 
-<CancelDownloadDialog {torrent} bind:open={cancelConfirmOpen} />
+<CancelDownloadDialog {torrent} bind:open={cancelConfirmOpen} onCancelled={closeAndRefresh} />
+<DeleteDownloadDialog {torrent} bind:open={deleteConfirmOpen} onDeleted={closeAndRefresh} />

@@ -2366,6 +2366,11 @@ export interface components {
 			quality: components['schemas']['Quality'];
 			/** Imported */
 			imported: boolean;
+			/**
+			 * Cancelled
+			 * @default false
+			 */
+			cancelled: boolean;
 			/** File Path Suffix */
 			file_path_suffix: string;
 			/** Usenet */
@@ -2706,6 +2711,11 @@ export interface components {
 			quality: components['schemas']['Quality'];
 			/** Imported */
 			imported: boolean;
+			/**
+			 * Cancelled
+			 * @default false
+			 */
+			cancelled: boolean;
 			/** Usenet */
 			usenet: boolean;
 			/** File Path Suffix */

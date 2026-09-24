@@ -542,7 +542,7 @@ class BaseMediaService[T, S]:
         torrents = await self.torrent_service.get_completed_torrents()
         imported_count = 0
         for t in torrents:
-            if t.imported or t.import_error:
+            if t.imported or t.import_error or t.cancelled:
                 continue
             torrent_start = time.monotonic()
             media: S | None = None

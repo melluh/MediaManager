@@ -61,7 +61,7 @@ class Torrent(BaseModel):
     comments: str | None = None
     """Link to the indexer's detail page for this release, if any."""
     cancelled: bool = False
-    """Set when the user cancelled the download; hides it from their homepage without deleting it."""
+    """Set when the user cancelled the download; hides it from their homepage and stops it from being imported, without deleting it."""
 
 
 class DownloadState(StrEnum):

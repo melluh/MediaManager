@@ -46,9 +46,9 @@
 			<Checkbox bind:checked={deleteFiles} id="delete-files" />
 			<div class="flex flex-col">
 				<Label for="delete-files">
-					Delete associated files as well.
+					Also remove it from the download client.
 					<p class="text-sm font-normal text-muted-foreground">
-						(Only files in the download location will be deleted)
+						The downloaded data is left in place, only the entry in the client is removed.
 					</p>
 				</Label>
 			</div>

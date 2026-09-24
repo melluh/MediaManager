@@ -16,7 +16,9 @@ export function movieAvailability(
 	movie: PublicMovie,
 	movieFiles: PublicMovieFile[]
 ): MediaAvailability {
-	const torrents = movie.torrents ?? [];
+	// A cancelled download is never imported, so it says nothing about
+	// whether the movie is (or will become) available.
+	const torrents = (movie.torrents ?? []).filter((t) => !t.cancelled);
 	const isDownloading = torrents.some((t) => getTorrentStatusString(t.status) === 'downloading');
 
 	if (movie.downloaded) {

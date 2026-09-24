@@ -3,7 +3,7 @@
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import CircleX from '@lucide/svelte/icons/circle-x';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import { toast } from 'svelte-sonner';
@@ -13,50 +13,53 @@
 	let {
 		torrent,
 		open = $bindable(),
-		onCancelled
+		onDeleted
 	}: {
 		torrent: TorrentWithProgress;
 		open: boolean;
-		onCancelled?: () => void;
+		onDeleted?: () => void;
 	} = $props();
 
 	let removeFromClient = $state(false);
-	let cancelling = $state(false);
+	let deleting = $state(false);
 
-	async function cancelDownload() {
-		cancelling = true;
-		const { error } = await client.POST('/api/v1/torrent/{torrent_id}/cancel', {
+	async function deleteDownload() {
+		deleting = true;
+		// `delete_files` only removes the download from the client - the
+		// downloaded data itself is never deleted.
+		const { error } = await client.DELETE('/api/v1/torrent/{torrent_id}', {
 			params: {
 				path: { torrent_id: torrent.id! },
-				query: { remove_from_client: removeFromClient }
+				query: { delete_files: removeFromClient }
 			}
 		});
-		cancelling = false;
+		deleting = false;
 
 		if (error) {
-			toast.error('Failed to cancel the download.');
+			toast.error('Failed to delete the download.');
 			return;
 		}
 
 		open = false;
-		toast.success('Download cancelled.');
-		onCancelled?.();
+		toast.success('Download deleted.');
+		onDeleted?.();
 	}
 </script>
 
 <AlertDialog.Root bind:open>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Cancel this download?</AlertDialog.Title>
+			<AlertDialog.Title>Delete this download?</AlertDialog.Title>
 			<AlertDialog.Description>
-				This removes the download from your homepage, and it won't be imported, even if it finishes
-				downloading. It stays on record as cancelled.
+				This permanently removes the download's record from MediaManager{#if !torrent.imported},
+					along with the file entries it created for its media, since it was never imported{/if}.
+				Files on disk are left in place. This can't be undone.
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<div class="flex items-start space-x-2 py-2">
-			<Checkbox bind:checked={removeFromClient} id="remove-from-client" class="mt-0.5" />
+			<Checkbox bind:checked={removeFromClient} id="delete-remove-from-client" class="mt-0.5" />
 			<Label
-				for="remove-from-client"
+				for="delete-remove-from-client"
 				class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 			>
 				Also remove it from the download client
@@ -78,21 +81,21 @@
 			</div>
 		{/if}
 		<AlertDialog.Footer>
-			<AlertDialog.Cancel disabled={cancelling}>Keep downloading</AlertDialog.Cancel>
+			<AlertDialog.Cancel disabled={deleting}>Keep it</AlertDialog.Cancel>
 			<AlertDialog.Action
 				onclick={(e) => {
 					e.preventDefault();
-					cancelDownload();
+					deleteDownload();
 				}}
-				disabled={cancelling}
+				disabled={deleting}
 				class={buttonVariants({ variant: 'destructive' })}
 			>
-				{#if cancelling}
+				{#if deleting}
 					<LoaderCircle class="animate-spin" />
 				{:else}
-					<CircleX />
+					<Trash2 />
 				{/if}
-				Cancel Download
+				Delete Download
 			</AlertDialog.Action>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>

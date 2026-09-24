@@ -83,3 +83,31 @@ def test_an_unexpected_exception_is_recorded_as_an_import_error():
     assert saved.import_error is not None
     assert "disk unavailable" not in saved.import_error
     assert "RuntimeError" in saved.import_error
+
+
+def test_a_cancelled_torrent_is_never_imported():
+    torrent = _torrent()
+    torrent.cancelled = True
+    torrent_service = FakeTorrentService([torrent])
+    service = MovieImportService(
+        movie_repository=None,
+        torrent_service=torrent_service,
+        notification_service=None,
+        movie_metadata_service=None,
+    )
+
+    async def get_media_func(_torrent: Torrent) -> None:
+        pytest.fail("must not look up media for a cancelled torrent")
+
+    async def import_torrent_func(_torrent: Torrent, _media: None) -> None:
+        pytest.fail("must not import a cancelled torrent")
+
+    asyncio.run(
+        service.import_all_torrents_base(
+            get_media_func=get_media_func,
+            import_torrent_func=import_torrent_func,
+            media_type_name="movie",
+        )
+    )
+
+    assert torrent_service.torrent_repository.saved == []

@@ -49,6 +49,7 @@ class MovieTorrent(BaseModel):
     status: TorrentStatus
     quality: Quality
     imported: bool
+    cancelled: bool = False
     file_path_suffix: str
     usenet: bool
 

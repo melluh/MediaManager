@@ -81,6 +81,7 @@ class RichSeasonTorrent(BaseModel):
     status: TorrentStatus
     quality: Quality
     imported: bool
+    cancelled: bool = False
     usenet: bool
 
     file_path_suffix: str

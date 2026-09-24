@@ -82,8 +82,9 @@ async def cancel_torrent(
 ) -> Torrent:
     """
     Cancels a torrent the current user initiated: hides it from their
-    homepage without deleting it, and optionally removes it from the
-    download client (without deleting its downloaded data).
+    homepage and stops it from being imported, without deleting it, and
+    optionally removes it from the download client (without deleting its
+    downloaded data).
     """
     if torrent.initiated_by_user_id != user.id and not user.is_superuser:
         raise HTTPException(

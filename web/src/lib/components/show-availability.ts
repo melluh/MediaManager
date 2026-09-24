@@ -36,7 +36,10 @@ export function seasonBanner(
 	}
 
 	const isDownloading = showTorrents.some(
-		(t) => t.seasons.includes(season.number) && getTorrentStatusString(t.status) === 'downloading'
+		(t) =>
+			!t.cancelled &&
+			t.seasons.includes(season.number) &&
+			getTorrentStatusString(t.status) === 'downloading'
 	);
 	if (isDownloading) {
 		return {

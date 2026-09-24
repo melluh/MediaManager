@@ -4,7 +4,7 @@
 	import { ResponsiveCarouselOpts } from '$lib/hooks/responsive-carousel-opts.svelte.js';
 	import type { TorrentWithProgress } from '$lib/api/api';
 
-	let { torrents }: { torrents: TorrentWithProgress[] } = $props();
+	let { torrents, onChange }: { torrents: TorrentWithProgress[]; onChange?: () => void } = $props();
 
 	const carouselOpts = new ResponsiveCarouselOpts();
 </script>
@@ -13,7 +13,7 @@
 	<Carousel.Content>
 		{#each torrents as torrent (torrent.id)}
 			<Carousel.Item class="basis-4/5 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-				<DownloadCard {torrent} />
+				<DownloadCard {torrent} {onChange} />
 			</Carousel.Item>
 		{/each}
 	</Carousel.Content>
