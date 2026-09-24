@@ -142,9 +142,11 @@ def _run_ffprobe(path: Path) -> VideoProbe:
                 "-v",
                 "error",
                 "-show_entries",
-                "stream=codec_type,codec_name,width,height,channels:"
-                "stream_tags=language:stream_disposition=forced,hearing_impaired:"
-                "format=duration,format_name",
+                (
+                    "stream=codec_type,codec_name,width,height,channels:"
+                    "stream_tags=language:stream_disposition=forced,hearing_impaired:"
+                    "format=duration,format_name"
+                ),
                 "-of",
                 "json",
                 str(path),
