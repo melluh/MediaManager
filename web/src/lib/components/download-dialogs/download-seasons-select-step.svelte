@@ -4,7 +4,8 @@
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { PublicShow } from '$lib/api/api';
-	import CheckmarkX from '$lib/components/checkmark-x.svelte';
+	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { cn } from '$lib/utils';
 
 	let {
 		show,
@@ -26,11 +27,20 @@
 		}
 		selectedSeasonIds = new SvelteSet(selectedSeasonIds);
 	}
+
+	function episodeProgressClass(downloaded: number, total: number) {
+		if (total > 0 && downloaded >= total)
+			return 'border-transparent bg-green-600 text-white hover:bg-green-600';
+		if (downloaded > 0) return 'border-transparent bg-orange-500 text-white hover:bg-orange-500';
+		return 'border-transparent bg-muted text-muted-foreground';
+	}
 </script>
 
 <div class="flex flex-col gap-3">
 	<div class="max-h-[50vh] overflow-y-auto rounded-md border">
 		{#each show.seasons as season (season.id)}
+			{@const total = season.episodes.length}
+			{@const downloaded = season.episodes.filter((e) => e.downloaded).length}
 			<label
 				class="flex cursor-pointer items-center gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
 			>
@@ -42,7 +52,9 @@
 					S{String(season.number).padStart(2, '0')}
 				</span>
 				<span class="flex-1 truncate">{season.name}</span>
-				<CheckmarkX state={season.downloaded} />
+				<Badge class={cn('shrink-0 tabular-nums', episodeProgressClass(downloaded, total))}>
+					{downloaded}/{total}
+				</Badge>
 			</label>
 		{/each}
 	</div>

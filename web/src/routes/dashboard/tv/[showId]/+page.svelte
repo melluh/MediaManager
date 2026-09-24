@@ -1,12 +1,9 @@
 <script lang="ts">
 	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
-	import Play from '@lucide/svelte/icons/play';
-	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import { getContext, onDestroy } from 'svelte';
 	import type { PublicShow, RichShowTorrent, TorrentWithProgress, UserRead } from '$lib/api/api';
-	import { getFullyQualifiedMediaName } from '$lib/utils';
 	import DownloadSeasonsDialog from '$lib/components/download-dialogs/download-seasons-dialog.svelte';
 	import DownloadTable from '$lib/components/downloads/download-table.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
@@ -18,7 +15,7 @@
 	import { toast } from 'svelte-sonner';
 	import { Label } from '$lib/components/ui/label';
 	import LibraryCombobox from '$lib/components/library-combobox.svelte';
-	import * as Card from '$lib/components/ui/card/index.js';
+	import WatchButton from '$lib/components/watch-button.svelte';
 	import DeleteMediaDialog from '$lib/components/delete-media-dialog.svelte';
 	import MediaDetailsDialog from '$lib/components/media-details-dialog.svelte';
 	import SeasonFilesDialog from '$lib/components/season-files-dialog.svelte';
@@ -33,35 +30,16 @@
 	let torrents: RichShowTorrent = $derived(getTorrents());
 	let user: () => UserRead = getContext('user');
 
-	// Fetched separately from the show's own details so a slow/unconfigured
-	// media server never blocks the show page from loading.
 	let anyEpisodeDownloaded = $derived(
 		show.seasons.some((season) => season.episodes.some((episode) => episode.downloaded))
 	);
-	let watchUrl: string | null = $state(null);
-	let watchMediaServerName: string | null = $state(null);
-	let watchUrlLoading = $state(false);
-	$effect(() => {
-		watchUrl = null;
-		watchMediaServerName = null;
-		if (!anyEpisodeDownloaded) return;
-		watchUrlLoading = true;
-		client
-			.GET('/api/v1/tv/shows/{show_id}/watch-url', { params: { path: { show_id: show.id } } })
-			.then(({ data }) => {
-				watchUrl = data?.url ?? null;
-				watchMediaServerName = data?.media_server_name ?? null;
-			})
-			.finally(() => {
-				watchUrlLoading = false;
-			});
-	});
+	let hasWatchUrl = $state(false);
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	$effect(() => {
 		setCrumbs([
 			{ label: 'Shows', href: resolve('/dashboard/tv', {}) },
-			{ label: getFullyQualifiedMediaName(show) }
+			{ label: show.name }
 		]);
 	});
 
@@ -141,30 +119,22 @@
 	{/snippet}
 	{#snippet actions()}
 		{#if user().is_superuser}
-			{#if anyEpisodeDownloaded && watchUrlLoading}
-				<Button disabled class="bg-green-600 text-white hover:bg-green-700">
-					<LoaderCircle class="animate-spin" />
-					Watch
-				</Button>
-			{:else if watchUrl}
-				<Button
-					href={watchUrl}
-					target="_blank"
-					rel="noopener noreferrer"
-					class="bg-green-600 text-white hover:bg-green-700"
-				>
-					Watch on {watchMediaServerName}
-					<Play />
-				</Button>
-			{:else}
-				<DownloadSeasonsDialog {show} />
-			{/if}
+			<WatchButton
+				media={show}
+				isShow={true}
+				enabled={anyEpisodeDownloaded}
+				bind:available={hasWatchUrl}
+			>
+				{#snippet fallback()}
+					<DownloadSeasonsDialog {show} />
+				{/snippet}
+			</WatchButton>
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'icon' })}>
 					<EllipsisVertical class="size-4" />
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content align="end" class="w-64">
-					{#if watchUrl}
+					{#if hasWatchUrl}
 						<DownloadSeasonsDialog {show} asMenuItem menuLabel="Download additional" />
 						<DropdownMenu.Separator />
 					{/if}
@@ -191,42 +161,30 @@
 	{/snippet}
 
 	{#if show.seasons.length > 0}
-		<div class="flex-1 rounded-xl">
-			<Card.Root class="w-full">
-				<Card.Header>
-					<Card.Title>Seasons</Card.Title>
-				</Card.Header>
-				<Card.Content>
-					<Carousel.Root class="w-full md:px-10" opts={{ align: 'start' }}>
-						<Carousel.Content>
-							{#each show.seasons as season (season.id)}
-								<Carousel.Item class="basis-1/3 sm:basis-1/4 md:basis-1/5 lg:basis-1/6">
-									<SeasonFilesDialog
-										{show}
-										{season}
-										posterMedia={seasonPosterMedia(season)}
-										banner={seasonBanner(season, torrents.torrents)}
-									/>
-								</Carousel.Item>
-							{/each}
-						</Carousel.Content>
-						<Carousel.Previous class="left-0 hidden size-9 md:inline-flex" />
-						<Carousel.Next class="right-0 hidden size-9 md:inline-flex" />
-					</Carousel.Root>
-				</Card.Content>
-			</Card.Root>
-		</div>
+		<section class="mt-4 flex flex-col gap-3">
+			<h2 class="text-lg font-semibold">Seasons</h2>
+			<Carousel.Root class="w-full md:max-[102rem]:px-10" opts={{ align: 'start' }}>
+				<Carousel.Content>
+					{#each show.seasons as season (season.id)}
+						<Carousel.Item class="basis-1/3 sm:basis-1/4 md:basis-1/5 lg:basis-1/7">
+							<SeasonFilesDialog
+								{show}
+								{season}
+								posterMedia={seasonPosterMedia(season)}
+								banner={seasonBanner(season, torrents.torrents)}
+							/>
+						</Carousel.Item>
+					{/each}
+				</Carousel.Content>
+				<Carousel.Previous class="left-0 hidden size-9 md:inline-flex min-[102rem]:-left-12" />
+				<Carousel.Next class="right-0 hidden size-9 md:inline-flex min-[102rem]:-right-12" />
+			</Carousel.Root>
+		</section>
 	{/if}
-	<div class="flex-1 rounded-xl">
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>Torrent Information</Card.Title>
-				<Card.Description>A list of all torrents associated with this show.</Card.Description>
-			</Card.Header>
-
-			<Card.Content class="w-full overflow-x-auto">
-				<DownloadTable torrents={showTorrentsWithProgress} />
-			</Card.Content>
-		</Card.Root>
-	</div>
+	<section class="mt-4 flex flex-col gap-3">
+		<h2 class="text-lg font-semibold">Torrents</h2>
+		<div class="w-full overflow-x-auto">
+			<DownloadTable torrents={showTorrentsWithProgress} />
+		</div>
+	</section>
 </MediaHeroHeader>

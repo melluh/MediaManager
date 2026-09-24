@@ -78,7 +78,6 @@
 	{asMenuItem}
 	{menuLabel}
 	title="Download Seasons"
-	description="Select which seasons to download - we'll find the best torrents for you to review before anything starts."
 >
 	{#snippet triggerIcon()}
 		<Download />

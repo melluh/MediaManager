@@ -2,7 +2,6 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
-	import Play from '@lucide/svelte/icons/play';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import Users from '@lucide/svelte/icons/users';
 	import Gauge from '@lucide/svelte/icons/gauge';
@@ -23,8 +22,8 @@
 	import { withDownloadProgress } from '$lib/components/media-availability.js';
 	import DownloadMovieDialog from '$lib/components/download-dialogs/download-movie-dialog.svelte';
 	import LibraryCombobox from '$lib/components/library-combobox.svelte';
+	import WatchButton from '$lib/components/watch-button.svelte';
 	import { resolve } from '$app/paths';
-	import * as Card from '$lib/components/ui/card/index.js';
 	import DeleteMediaDialog from '$lib/components/delete-media-dialog.svelte';
 	import MediaDetailsDialog from '$lib/components/media-details-dialog.svelte';
 	import MediaFileTable from '$lib/components/media-file-table.svelte';
@@ -75,26 +74,7 @@
 		(movie.torrents ?? []).some((t) => getTorrentStatusString(t.status) === 'downloading')
 	);
 
-	// Fetched separately from the movie's own details so a slow/unconfigured
-	// media server never blocks the movie page from loading.
-	let watchUrl: string | null = $state(null);
-	let watchMediaServerName: string | null = $state(null);
-	let watchUrlLoading = $state(false);
-	$effect(() => {
-		watchUrl = null;
-		watchMediaServerName = null;
-		if (!movie.downloaded) return;
-		watchUrlLoading = true;
-		client
-			.GET('/api/v1/movies/{movie_id}/watch-url', { params: { path: { movie_id: movie.id! } } })
-			.then(({ data }) => {
-				watchUrl = data?.url ?? null;
-				watchMediaServerName = data?.media_server_name ?? null;
-			})
-			.finally(() => {
-				watchUrlLoading = false;
-			});
-	});
+	let hasWatchUrl = $state(false);
 
 	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	$effect(() => {
@@ -115,61 +95,55 @@
 	{/snippet}
 	{#snippet actions()}
 		{#if user().is_superuser}
-			{#if movie.downloaded && watchUrlLoading}
-				<Button disabled class="bg-green-600 text-white hover:bg-green-700">
-					Watch
-					<LoaderCircle class="animate-spin" />
-				</Button>
-			{:else if watchUrl}
-				<Button
-					href={watchUrl}
-					target="_blank"
-					rel="noopener noreferrer"
-					class="bg-green-600 text-white hover:bg-green-700"
-				>
-					Watch on {watchMediaServerName}
-					<Play />
-				</Button>
-			{:else if isDownloading}
-				<Tooltip.Root disableHoverableContent>
-					<Tooltip.Trigger>
-						{#snippet child({ props })}
-							<span {...props} class="inline-block">
-								<Button
-									disabled
-									class="relative overflow-hidden bg-blue-600 text-white hover:bg-blue-600"
-								>
-									Downloading{movieProgress != null ? ` ${Math.round(movieProgress)}%` : ''}
-									<LoaderCircle class="animate-spin" />
-									{#if movieProgress != null}
-										<Progress
-											value={movieProgress}
-											class="absolute inset-x-0 bottom-0 h-1 rounded-none bg-transparent"
-										/>
-									{/if}
-								</Button>
-							</span>
-						{/snippet}
-					</Tooltip.Trigger>
-					<Tooltip.Content>
-						<div class="flex items-center gap-1.5 whitespace-nowrap">
-							<Users class="size-3.5" />
-							{ownMovieDownloadProgress?.seeders ?? '?'}
-							<span>&middot;</span>
-							<Gauge class="size-3.5" />
-							{movieDownloadSpeedLabel ?? 'unknown'}
-						</div>
-					</Tooltip.Content>
-				</Tooltip.Root>
-			{:else}
-				<DownloadMovieDialog {movie} {hasImportedFile} />
-			{/if}
+			<WatchButton
+				media={movie}
+				isShow={false}
+				enabled={movie.downloaded}
+				bind:available={hasWatchUrl}
+			>
+				{#snippet fallback()}
+					{#if isDownloading}
+						<Tooltip.Root disableHoverableContent>
+							<Tooltip.Trigger>
+								{#snippet child({ props })}
+									<span {...props} class="inline-block">
+										<Button
+											disabled
+											class="relative overflow-hidden bg-blue-600 text-white hover:bg-blue-600"
+										>
+											Downloading{movieProgress != null ? ` ${Math.round(movieProgress)}%` : ''}
+											<LoaderCircle class="animate-spin" />
+											{#if movieProgress != null}
+												<Progress
+													value={movieProgress}
+													class="absolute inset-x-0 bottom-0 h-1 rounded-none bg-transparent"
+												/>
+											{/if}
+										</Button>
+									</span>
+								{/snippet}
+							</Tooltip.Trigger>
+							<Tooltip.Content>
+								<div class="flex items-center gap-1.5 whitespace-nowrap">
+									<Users class="size-3.5" />
+									{ownMovieDownloadProgress?.seeders ?? '?'}
+									<span>&middot;</span>
+									<Gauge class="size-3.5" />
+									{movieDownloadSpeedLabel ?? 'unknown'}
+								</div>
+							</Tooltip.Content>
+						</Tooltip.Root>
+					{:else}
+						<DownloadMovieDialog {movie} {hasImportedFile} />
+					{/if}
+				{/snippet}
+			</WatchButton>
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'icon' })}>
 					<EllipsisVertical class="size-4" />
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content align="end" class="w-48">
-					{#if watchUrl || isDownloading}
+					{#if hasWatchUrl || isDownloading}
 						<DownloadMovieDialog
 							{movie}
 							{hasImportedFile}
@@ -188,35 +162,18 @@
 		{/if}
 	{/snippet}
 
-	<div class="flex-1 rounded-xl">
-		<Card.Root class="h-full w-full">
-			<Card.Header>
-				<Card.Title>Movie files</Card.Title>
-				<Card.Description>
-					A list of all downloaded/downloading versions of this movie.
-				</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				<MediaFileTable
-					files={movieFiles}
-					caption="A list of all downloaded/downloading versions of this movie."
-					leadingLabel="File Path"
-					leadingCell={filePathCell}
-					emptyMessage="You haven't downloaded this movie yet."
-					dialogKeyPrefix="movieFileDetails"
-				/>
-			</Card.Content>
-		</Card.Root>
-	</div>
-	<div class="flex-1 rounded-xl">
-		<Card.Root class="h-full w-full">
-			<Card.Header>
-				<Card.Title>Torrent Information</Card.Title>
-				<Card.Description>A list of all torrents associated with this movie.</Card.Description>
-			</Card.Header>
-			<Card.Content class="flex flex-col gap-4">
-				<DownloadTable torrents={movieTorrents} />
-			</Card.Content>
-		</Card.Root>
-	</div>
+	<section class="mt-4 flex flex-col gap-3">
+		<h2 class="text-lg font-semibold">Files</h2>
+		<MediaFileTable
+			files={movieFiles}
+			leadingLabel="File Path"
+			leadingCell={filePathCell}
+			emptyMessage="You haven't downloaded this movie yet."
+			dialogKeyPrefix="movieFileDetails"
+		/>
+	</section>
+	<section class="mt-4 flex flex-col gap-3">
+		<h2 class="text-lg font-semibold">Torrents</h2>
+		<DownloadTable torrents={movieTorrents} />
+	</section>
 </MediaHeroHeader>

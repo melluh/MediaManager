@@ -40,7 +40,6 @@
 </script>
 
 <Table.Root>
-	<Table.Caption>A list of all torrents.</Table.Caption>
 	<Table.Header>
 		<Table.Row>
 			<Table.Head>Name</Table.Head>

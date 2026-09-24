@@ -5,6 +5,7 @@ import { resolve } from '$app/paths';
 import { validate as uuidValidate } from 'uuid';
 import type { PublicShow, RichShowTorrent } from '$lib/api/api';
 import { ShowLoadError } from './show-load-error';
+import { getShowSeed } from '$lib/api/media-seed';
 
 export type ShowDetails = { show: PublicShow; torrents: RichShowTorrent };
 
@@ -39,7 +40,8 @@ async function fetchDetails(showId: string, fetch: typeof globalThis.fetch): Pro
 }
 
 // Deliberately not awaited - the layout renders a loading state instead of blocking
-// first paint. See `routes/dashboard/+layout.ts`.
+// first paint. See `routes/dashboard/+layout.ts`. `seed` is the library list's copy
+// of the show, if we came from there, so the hero can paint in the meantime.
 export const load: LayoutLoad = ({ params, fetch }) => {
-	return { show: fetchDetails(params.showId, fetch) };
+	return { seed: getShowSeed(params.showId), show: fetchDetails(params.showId, fetch) };
 };

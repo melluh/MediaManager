@@ -14,14 +14,12 @@
 
 	let {
 		files,
-		caption,
 		leadingLabel,
 		leadingCell,
 		emptyMessage,
 		dialogKeyPrefix
 	}: {
 		files: TFile[];
-		caption: string;
 		/** Header for the first column, which is the only media-type-specific one. */
 		leadingLabel: string;
 		/** Renders the first column's content for a file (file path / episode number). */
@@ -33,7 +31,6 @@
 </script>
 
 <Table.Root>
-	<Table.Caption>{caption}</Table.Caption>
 	<Table.Header>
 		<Table.Row>
 			<Table.Head>{leadingLabel}</Table.Head>

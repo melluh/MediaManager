@@ -10,7 +10,7 @@
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
-	import { formatLastUpdated } from '$lib/utils';
+	import { formatLastUpdated, getMetadataProviderLabel, getMetadataProviderUrl } from '$lib/utils';
 	import UserPill from '$lib/components/user-pill.svelte';
 
 	let {
@@ -20,6 +20,10 @@
 		media: PublicMovie | PublicShow;
 		isShow: boolean;
 	} = $props();
+
+	let providerUrl = $derived(
+		getMetadataProviderUrl(media.metadata_provider, media.external_id, isShow)
+	);
 
 	const detailsDialog = shallowDialog('mediaDetails');
 	let rescanning = $state(false);
@@ -80,6 +84,25 @@
 						name={media.added_by.display_name || media.added_by.email}
 					/>
 				{/if}
+			</div>
+		</div>
+
+		<div class="flex flex-col gap-1 rounded-lg border bg-muted/40 px-3 py-2">
+			<span class="text-xs text-muted-foreground">Metadata</span>
+			<div class="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+				{#if providerUrl}
+					<a
+						href={providerUrl}
+						target="_blank"
+						rel="noopener noreferrer external"
+						class="underline hover:text-muted-foreground"
+					>
+						{getMetadataProviderLabel(media.metadata_provider)}
+					</a>
+				{:else}
+					<span>{getMetadataProviderLabel(media.metadata_provider)}</span>
+				{/if}
+				<span>· Last updated {formatLastUpdated(media.metadata_updated_at) ?? 'never'}</span>
 			</div>
 		</div>
 

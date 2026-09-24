@@ -10,7 +10,7 @@
 	import { page } from '$app/state';
 	import client from '$lib/api';
 	import type { CombinedSearchResult } from '$lib/api/api.d.ts';
-	import { cn, getFullyQualifiedMediaName, isSearchPage } from '$lib/utils.js';
+	import { cn, isSearchPage } from '$lib/utils.js';
 	import { getMediaTypeHref, getMediaTypeLabel } from '$lib/media-types.ts';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 
@@ -278,8 +278,11 @@
 						</div>
 					{/if}
 					<div class="flex min-w-0 flex-col">
-						<span class="truncate font-medium">
-							{getFullyQualifiedMediaName({ name: item.name, year })}
+						<span class="truncate">
+							<span class="font-medium">{item.name}</span>
+							{#if year != null && item.media_type === 'movie'}
+								<span class="text-muted-foreground">({year})</span>
+							{/if}
 						</span>
 						<span class="flex items-center gap-1 text-xs text-muted-foreground">
 							<span class="capitalize">{getMediaTypeLabel(item.media_type)}</span>

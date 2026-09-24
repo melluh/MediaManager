@@ -1,6 +1,8 @@
 <script lang="ts">
 	import PageLoading from '$lib/components/page-loading.svelte';
 	import PageLoadError from '$lib/components/page-load-error.svelte';
+	import SeededMediaDetail from '$lib/components/seeded-media-detail.svelte';
+	import { resolve } from '$app/paths';
 	import { setContext } from 'svelte';
 	import type { PublicShow, RichShowTorrent } from '$lib/api/api';
 	import type { LayoutProps } from './$types';
@@ -43,6 +45,13 @@
 
 {#if status === 'error'}
 	<PageLoadError title="Show unavailable" message={errorMessage} />
+{:else if (status === 'loading' || !show) && data.seed}
+	<SeededMediaDetail
+		media={data.seed}
+		isShow={true}
+		crumbs={[{ label: 'Shows', href: resolve('/dashboard/tv', {}) }, { label: data.seed.name }]}
+		message="Loading show…"
+	/>
 {:else if status === 'loading' || !show}
 	<PageLoading message="Loading show…" />
 {:else}

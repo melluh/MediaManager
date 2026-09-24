@@ -6,6 +6,7 @@
 	import { getContext, untrack } from 'svelte';
 	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import { importablePath, rescanImportableMedia } from '$lib/api/importable';
+	import { seedMovies, seedShows } from '$lib/api/media-seed';
 	import PageLoadError from '$lib/components/page-load-error.svelte';
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Spinner } from '$lib/components/ui/spinner';
@@ -68,6 +69,9 @@
 		items
 			.then((data) => {
 				resolvedItems = data ?? [];
+				// Lets the detail page paint its hero before its own fetch returns.
+				if (isShow) seedShows(resolvedItems as ShowSummary[]);
+				else seedMovies(resolvedItems as MovieListItem[]);
 			})
 			.catch((error) => {
 				loadError = error instanceof Error ? error.message : String(error);

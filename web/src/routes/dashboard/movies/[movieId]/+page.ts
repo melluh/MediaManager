@@ -5,6 +5,7 @@ import { resolve } from '$app/paths';
 import { validate as uuidValidate } from 'uuid';
 import type { PublicMovie, PublicMovieFile } from '$lib/api/api';
 import { MovieLoadError } from './movie-load-error';
+import { getMovieSeed } from '$lib/api/media-seed';
 
 export type MovieDetails = { movie: PublicMovie; movieFiles: PublicMovieFile[] };
 
@@ -42,7 +43,8 @@ async function fetchDetails(
 }
 
 // Deliberately not awaited - the page renders a loading state instead of blocking
-// first paint. See `routes/dashboard/+layout.ts`.
+// first paint. See `routes/dashboard/+layout.ts`. `seed` is the library list's copy
+// of the movie, if we came from there, so the hero can paint in the meantime.
 export const load: PageLoad = ({ params, fetch }) => {
-	return { details: fetchDetails(params.movieId, fetch) };
+	return { seed: getMovieSeed(params.movieId), details: fetchDetails(params.movieId, fetch) };
 };

@@ -8,6 +8,7 @@
 	import MediaImage from '$lib/components/media-image.svelte';
 	import CheckmarkX from '$lib/components/checkmark-x.svelte';
 	import MediaFileDetailsDialog from '$lib/components/media-file-details-dialog.svelte';
+	import TruncatedText from '$lib/components/truncated-text.svelte';
 	import Info from '@lucide/svelte/icons/info';
 	import FileQuestionMark from '@lucide/svelte/icons/file-question-mark';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
@@ -119,7 +120,7 @@
 		class="max-h-[90vh] w-fit min-w-[90vw] overflow-y-auto sm:min-w-[600px] lg:min-w-[900px]"
 	>
 		<Dialog.Header>
-			<Dialog.Title>{getFullyQualifiedMediaName(show)} - {season.name}</Dialog.Title>
+			<Dialog.Title>{show.name} - {season.name}</Dialog.Title>
 		</Dialog.Header>
 
 		{#if season.overview}
@@ -164,8 +165,11 @@
 										</Table.Cell>
 									{/if}
 									{#if row.file}
-										<Table.Cell class="truncate font-mono text-xs">
-											{row.file.relative_path ?? row.file.file_path}
+										<Table.Cell class="font-mono text-xs">
+											<TruncatedText
+												text={row.file.relative_path ?? row.file.file_path}
+												tooltip={row.file.file_path}
+											/>
 										</Table.Cell>
 										<Table.Cell class="w-[120px]">
 											{getTorrentQualityString(row.file.quality)}
