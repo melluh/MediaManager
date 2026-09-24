@@ -33,7 +33,9 @@ class AdminService:
         return LibraryStats(
             movie_count=await self.movie_repository.count_movies(),
             show_count=await self.tv_repository.count_shows(),
-            episode_count=await self.tv_repository.count_episodes(),
+            episode_count=(
+                await self.tv_repository.get_total_downloaded_episodes_count()
+            ),
         )
 
     @staticmethod
