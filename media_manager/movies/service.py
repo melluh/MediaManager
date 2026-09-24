@@ -403,7 +403,6 @@ class MovieService(BaseMediaService[Movie, Movie]):
         movie_torrent = await self.torrent_service.download(
             indexer_result=indexer_result, user_id=user_id
         )
-        await self.torrent_service.pause_download(torrent=movie_torrent)
         movie_file = MovieFile(
             movie_id=movie.id,
             quality=indexer_result.quality,
@@ -411,10 +410,19 @@ class MovieService(BaseMediaService[Movie, Movie]):
             file_path_suffix=file_path_suffix,
         )
         try:
+            await self.torrent_service.pause_download(torrent=movie_torrent)
             await self.movie_repository.add_movie_file(movie_file=movie_file)
         except IntegrityError:
             log.warning(
                 f"Movie file for movie {movie.name} and torrent {movie_torrent.title} already exists"
+            )
+            await self.torrent_service.cancel_download(
+                torrent=movie_torrent, delete_files=True
+            )
+            raise
+        except Exception:
+            log.exception(
+                f"Failed to link movie file for movie {movie.name} and torrent {movie_torrent.title}, cancelling download"
             )
             await self.torrent_service.cancel_download(
                 torrent=movie_torrent, delete_files=True

@@ -597,9 +597,8 @@ class TvService(BaseMediaService[Show, Show]):
         show_torrent = await self.torrent_service.download(
             indexer_result=indexer_result, user_id=user_id
         )
-        await self.torrent_service.pause_download(torrent=show_torrent)
-
         try:
+            await self.torrent_service.pause_download(torrent=show_torrent)
             for episode_ids in episode_ids_by_season.values():
                 for episode_id in episode_ids:
                     episode_file = EpisodeFile(
@@ -613,6 +612,15 @@ class TvService(BaseMediaService[Show, Show]):
         except IntegrityError:
             log.error(
                 f"Episode file for episode {episode_id} and quality {indexer_result.quality} already exists, skipping."
+            )
+            await self.tv_repository.remove_episode_files_by_torrent_id(show_torrent.id)
+            await self.torrent_service.cancel_download(
+                torrent=show_torrent, delete_files=True
+            )
+            raise
+        except Exception:
+            log.exception(
+                f"Failed to link episode files for torrent {show_torrent.title} and show ID {show_id}, cancelling download"
             )
             await self.tv_repository.remove_episode_files_by_torrent_id(show_torrent.id)
             await self.torrent_service.cancel_download(

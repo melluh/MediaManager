@@ -109,7 +109,6 @@ class TorrentRepository:
             select(Torrent)
             .where(
                 Torrent.initiated_by_user_id == user_id,
-                ~Torrent.imported,
                 ~Torrent.cancelled,
             )
             .order_by(Torrent.initiated_at.desc().nulls_last())

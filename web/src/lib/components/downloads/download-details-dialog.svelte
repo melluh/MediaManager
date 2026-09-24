@@ -23,6 +23,7 @@
 	import Check from '@lucide/svelte/icons/check';
 	import Copy from '@lucide/svelte/icons/copy';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+	import CircleX from '@lucide/svelte/icons/circle-x';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { resolve } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
@@ -386,6 +387,7 @@
 			class="w-full text-destructive hover:text-destructive"
 			onclick={() => (cancelConfirmOpen = true)}
 		>
+			<CircleX />
 			Cancel Download
 		</Button>
 	</div>
@@ -436,6 +438,8 @@
 			>
 				{#if cancelling}
 					<LoaderCircle class="animate-spin" />
+				{:else}
+					<CircleX />
 				{/if}
 				Cancel Download
 			</AlertDialog.Action>
