@@ -101,9 +101,24 @@ class MovieMetadataService(BaseMetadataService[Movie, Movie]):
             metadata_version=CURRENT_METADATA_VERSION,
         )
         updated_movie = await self.movie_repository.get_movie_by_id(db_movie.id)
-        await metadata_provider.download_all_media_images(
+
+        # `get_movie_by_id` doesn't populate `image_source_paths` (that's a
+        # read-API concern handled by `attach_media_images`) - fetch it here
+        # so the provider can diff against it before re-downloading images.
+        updated_movie.image_source_paths = (
+            await self.movie_repository.get_media_image_sources(updated_movie.id)
+        )
+
+        image_sources = await metadata_provider.download_all_media_images(
             updated_movie, MediaType.movie
         )
+        for image_type, source_path in image_sources.items():
+            await self.movie_repository.upsert_media_image_source(
+                media_id=updated_movie.id,
+                image_type=image_type.value,
+                source_path=source_path,
+            )
+
         return updated_movie
 
     async def update_all_metadata(self) -> None:

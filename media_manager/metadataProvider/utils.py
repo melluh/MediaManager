@@ -120,6 +120,26 @@ async def _enqueue_avif_encode(image_file_path: Path) -> None:
     await encode_avif_image_task.kiq(str(image_file_path))
 
 
+def is_image_source_current(
+    media_id: UUID | str,
+    image_type: MediaImageType,
+    source_path: str,
+    stored_source_paths: dict[str, str],
+) -> bool:
+    """
+    Whether the on-disk image for `media_id`/`image_type` was already
+    downloaded from `source_path` - i.e. whether a fresh download of it can
+    be skipped. True only when the provider's freshly-resolved path/URL
+    matches what's recorded for this image (`stored_source_paths`, as
+    attached onto a media/season schema's `image_source_paths`) *and* the
+    file is still on disk (in case it was removed out-of-band).
+    """
+    if stored_source_paths.get(image_type.value) != source_path:
+        return False
+    relative_path = media_image_relative_path(media_id, image_type)
+    return _image_directory.joinpath(relative_path).with_suffix(".jpg").exists()
+
+
 async def download_media_image(
     storage_path: Path,
     image_url: str,

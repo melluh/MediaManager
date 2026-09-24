@@ -4,10 +4,12 @@ from typing import Any, TypeVar
 from uuid import UUID
 
 from sqlalchemy import ColumnElement, delete, inspect, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from media_manager.common.models import MediaImage
 from media_manager.exceptions import ConflictError, NotFoundError
 from media_manager.torrent.models import Torrent
 
@@ -212,9 +214,10 @@ class BaseRepository[T, S]:
         """
         Generic save method for media models.
         """
-        # `images` is determined at runtime from files on disk, not stored to
-        # DB; `added_by` is a read-only joined view of `added_by_user_id`.
-        exclude = (exclude or set()) | {"images", "added_by"}
+        # `images`/`image_source_paths` are determined at runtime (from disk
+        # and the `media_image` table respectively), not stored as columns on
+        # this model; `added_by` is a read-only joined view of `added_by_user_id`.
+        exclude = (exclude or set()) | {"images", "image_source_paths", "added_by"}
 
         db_obj = (
             await self.db.get(model_class, media_schema.id) if media_schema.id else None
@@ -382,3 +385,52 @@ class BaseRepository[T, S]:
             .where(entity_id_column.in_(entity_ids))
         )
         return (await self.db.execute(stmt)).all()
+
+    async def get_media_image_sources(self, media_id: UUID) -> dict[str, str]:
+        """
+        image_type -> source_path for every image currently recorded for
+        `media_id` in the `media_image` table - the provider path/URL last
+        used to download that image, so it can be compared against a
+        freshly-fetched one to skip an unchanged re-download.
+        """
+        stmt = select(MediaImage).where(MediaImage.media_id == media_id)
+        rows = (await self.db.execute(stmt)).scalars().all()
+        return {row.image_type: row.source_path for row in rows}
+
+    async def get_media_image_sources_many(
+        self, media_ids: Collection[UUID]
+    ) -> dict[UUID, dict[str, str]]:
+        """
+        Batched `get_media_image_sources`, keyed by media id - one query for
+        multiple media items rather than one query each.
+        """
+        if not media_ids:
+            return {}
+        stmt = select(MediaImage).where(MediaImage.media_id.in_(media_ids))
+        rows = (await self.db.execute(stmt)).scalars().all()
+        result: dict[UUID, dict[str, str]] = {media_id: {} for media_id in media_ids}
+        for row in rows:
+            result[row.media_id][row.image_type] = row.source_path
+        return result
+
+    async def upsert_media_image_source(
+        self, media_id: UUID, image_type: str, source_path: str
+    ) -> None:
+        """
+        Records `source_path` as the provider path/URL last used to
+        download the `image_type` image for `media_id`, creating or
+        updating the row as needed.
+        """
+        stmt = pg_insert(MediaImage).values(
+            media_id=media_id, image_type=image_type, source_path=source_path
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[MediaImage.media_id, MediaImage.image_type],
+            set_={"source_path": stmt.excluded.source_path},
+        )
+        try:
+            await self.db.execute(stmt)
+            await self.db.commit()
+        except SQLAlchemyError:
+            await self.db.rollback()
+            raise

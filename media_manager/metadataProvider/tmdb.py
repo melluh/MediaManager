@@ -32,6 +32,10 @@ ENDED_STATUS = {"Ended", "Canceled"}
 TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p"
 TMDB_POSTER_WIDTHS = (92, 154, 185, 342, 500, 780)
 TMDB_BACKDROP_WIDTHS = (300, 780, 1280)
+TMDB_BACKDROP_FACES_SIZE = "w1920_and_h800_multi_faces"
+"""Undocumented TMDB backdrop size, cropped towards faces - a better fit for
+the UI's wide hero banners than the uncropped original. Not guaranteed to be
+available, so downloads fall back to the original size."""
 
 # Which metadata JSON key holds each image type's path. Movie and show
 # detail payloads use the same key names.
@@ -332,7 +336,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
     @override
     async def download_media_image(
         self, media: Movie | Show, media_type: MediaType, image_type: MediaImageType
-    ) -> bool:
+    ) -> str | None:
         # Determine which language to use based on the media's original_language
         language = self.__get_language_param(media.original_language)
 
@@ -344,22 +348,45 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             log.warning(
                 f"{image_type} image for {media_type} {media.name} could not be downloaded"
             )
-            return False
+            return None
 
         # all images from TMDB should already be jpeg, so no need to convert
-        image_url = f"{TMDB_POSTER_BASE_URL}/original{image_path}"
-        if await media_manager.metadataProvider.utils.download_media_image(
-            storage_path=self.storage_path,
-            image_url=image_url,
-            media_id=media.id,
-            image_type=image_type,
-        ):
-            log.info(
-                f"Successfully downloaded {image_type} image for {media_type} {media.name}"
+        image_sizes = ["original"]
+        if image_type is MediaImageType.backdrop:
+            image_sizes.insert(0, TMDB_BACKDROP_FACES_SIZE)
+
+        def source_path_for(image_size: str) -> str:
+            # Backdrops record the size they were downloaded at, so backdrops
+            # stored before the faces-cropped size was introduced (recorded as
+            # the bare path) are re-downloaded once.
+            if image_type is MediaImageType.backdrop:
+                return f"/{image_size}{image_path}"
+            return image_path
+
+        for image_size in image_sizes:
+            source_path = source_path_for(image_size)
+            if media_manager.metadataProvider.utils.is_image_source_current(
+                media.id, image_type, source_path, media.image_source_paths
+            ):
+                return source_path
+
+        for image_size in image_sizes:
+            image_url = f"{TMDB_POSTER_BASE_URL}/{image_size}{image_path}"
+            if await media_manager.metadataProvider.utils.download_media_image(
+                storage_path=self.storage_path,
+                image_url=image_url,
+                media_id=media.id,
+                image_type=image_type,
+            ):
+                log.info(
+                    f"Successfully downloaded {image_type} image ({image_size}) for {media_type} {media.name}"
+                )
+                return source_path_for(image_size)
+            log.debug(
+                f"{image_size} {image_type} image for {media_type} {media.name} unavailable"
             )
-            return True
         log.warning(f"download for {image_type} image of {media_type} {media.name} failed")
-        return False
+        return None
 
     @override
     async def get_available_season_image_types(
@@ -374,10 +401,10 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
     @override
     async def download_season_image(
         self, show: Show, season: Season, image_type: MediaImageType
-    ) -> bool:
+    ) -> str | None:
         if image_type is not MediaImageType.poster:
             log.debug(f"{image_type} images are not supported for TMDB seasons")
-            return False
+            return None
 
         language = self.__get_language_param(show.original_language)
         season_metadata = await self.__get_season_metadata(
@@ -389,7 +416,12 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             log.warning(
                 f"poster image for {show.name} season {season.number} could not be downloaded"
             )
-            return False
+            return None
+
+        if media_manager.metadataProvider.utils.is_image_source_current(
+            season.id, MediaImageType.poster, poster_path, season.image_source_paths
+        ):
+            return poster_path
 
         image_url = f"{TMDB_POSTER_BASE_URL}/original{poster_path}"
         if await media_manager.metadataProvider.utils.download_media_image(
@@ -401,11 +433,11 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             log.info(
                 f"Successfully downloaded poster image for {show.name} season {season.number}"
             )
-            return True
+            return poster_path
         log.warning(
             f"download for poster image of {show.name} season {season.number} failed"
         )
-        return False
+        return None
 
     @override
     async def get_show_metadata(

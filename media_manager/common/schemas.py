@@ -9,7 +9,7 @@ from media_manager.torrent.models import Quality
 
 # Increase to force immediate metadata refresh (regardless of configured metadata refresh interval).
 # Useful when metadata fetching logic changes or a new field is stored from metadata.
-CURRENT_METADATA_VERSION = 3
+CURRENT_METADATA_VERSION = 5
 
 
 class MediaAddedByUser(BaseModel):
@@ -50,6 +50,10 @@ class BaseMedia(BaseModel):
     added_by: MediaAddedByUser | None = None
     """The user who added this media item, if known and not since deleted."""
     images: dict[str, str] = Field(default_factory=dict) # Image type (e.g. "poster", "backdrop") -> static file path
+    image_source_paths: dict[str, str] = Field(default_factory=dict)
+    """Image type -> provider path/URL last used to download that image, so a
+    metadata refresh can tell whether it actually changed. Populated at read
+    time from the `media_image` table, same as `images` is from disk."""
 
     @field_validator("genres", mode="before")
     @classmethod

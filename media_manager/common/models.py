@@ -2,10 +2,11 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, PrimaryKeyConstraint, String, func
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
+from media_manager.database import Base
 from media_manager.torrent.models import Quality
 
 if TYPE_CHECKING:
@@ -69,4 +70,27 @@ class MediaFileMixin:
     file is known to have been written yet."""
     torrent_id: Mapped[UUID | None] = mapped_column(
         ForeignKey(column="torrent.id", ondelete="SET NULL"),
+    )
+
+
+class MediaImage(Base):
+    """
+    Tracks the provider path/URL last used to download each on-disk image,
+    so a metadata refresh can tell whether an image actually changed before
+    re-downloading it.
+
+    Not scoped to a single parent table by FK: `media_id` may belong to a
+    Movie, Show, or Season, mirroring the on-disk image layout
+    (`media_image_relative_path` in `metadataProvider/utils.py`), which is
+    also keyed by `media_id` alone regardless of media type.
+    """
+
+    __tablename__ = "media_image"
+    __table_args__ = (PrimaryKeyConstraint("media_id", "image_type"),)
+
+    media_id: Mapped[UUID]
+    image_type: Mapped[str]
+    source_path: Mapped[str]
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

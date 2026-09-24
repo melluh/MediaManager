@@ -49,6 +49,9 @@ class Season(BaseModel):
     episodes: list[Episode]
 
     images: dict[str, str] = Field(default_factory=dict)
+    image_source_paths: dict[str, str] = Field(default_factory=dict)
+    """Image type -> provider path/URL last used to download that image. See
+    `BaseMedia.image_source_paths`."""
 
 
 class ShowSummary(BaseMedia):
@@ -124,6 +127,7 @@ class PublicSeason(BaseModel):
     episodes: list[PublicEpisode]
 
     images: dict[str, str] = Field(default_factory=dict)
+    image_source_paths: dict[str, str] = Field(default_factory=dict)
 
 
 class PublicShow(BaseModel):
@@ -157,6 +161,7 @@ class PublicShow(BaseModel):
     added_by: MediaAddedByUser | None = None
     """The user who added this show, if known and not since deleted."""
     images: dict[str, str] = Field(default_factory=dict)
+    image_source_paths: dict[str, str] = Field(default_factory=dict)
 
     seasons: list[PublicSeason]
 

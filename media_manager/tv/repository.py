@@ -165,12 +165,13 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
 
         # Scalar fields via model_dump() so new schema fields aren't silently
         # dropped on insert (seasons/episodes still need explicit construction).
-        # `images` is determined at runtime from files on disk.
+        # `images`/`image_source_paths` are determined at runtime, not stored
+        # as columns on this model.
         db_show = Show(
-            **show.model_dump(exclude={"seasons", "images"}),
+            **show.model_dump(exclude={"seasons", "images", "image_source_paths"}),
             seasons=[
                 Season(
-                    **season.model_dump(exclude={"episodes", "images"}),
+                    **season.model_dump(exclude={"episodes", "images", "image_source_paths"}),
                     show_id=show.id,
                     episodes=[
                         Episode(**episode.model_dump(), season_id=season.id)

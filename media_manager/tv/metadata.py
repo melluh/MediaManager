@@ -8,6 +8,7 @@ from media_manager.metadataProvider.abstract_metadata_provider import (
     AbstractMetadataProvider,
 )
 from media_manager.metadataProvider.schemas import (
+    MediaImageType,
     MediaType,
     MetaDataProviderSearchResult,
 )
@@ -164,7 +165,39 @@ class TvMetadataService(BaseMetadataService[Show, Show]):
                 )
 
         updated_show = await self.tv_repository.get_show_by_id(show_id=db_show.id)
-        await metadata_provider.download_all_media_images(updated_show, MediaType.tv)
+
+        # `get_show_by_id` doesn't populate `image_source_paths` (that's a
+        # read-API concern handled by `attach_media_images`) - fetch it here
+        # so the provider can diff against it before re-downloading images.
+        updated_show.image_source_paths = await self.tv_repository.get_media_image_sources(
+            updated_show.id
+        )
+        season_source_paths = await self.tv_repository.get_media_image_sources_many(
+            [season.id for season in updated_show.seasons]
+        )
+        for season in updated_show.seasons:
+            season.image_source_paths = season_source_paths[season.id]
+
+        image_sources = await metadata_provider.download_all_media_images(
+            updated_show, MediaType.tv
+        )
+        for image_type, source_path in image_sources.items():
+            await self.tv_repository.upsert_media_image_source(
+                media_id=updated_show.id,
+                image_type=image_type.value,
+                source_path=source_path,
+            )
+
+        season_image_sources = await metadata_provider.download_all_season_images(
+            updated_show
+        )
+        for season_id, source_path in season_image_sources.items():
+            await self.tv_repository.upsert_media_image_source(
+                media_id=season_id,
+                image_type=MediaImageType.poster.value,
+                source_path=source_path,
+            )
+
         return updated_show
 
     async def update_all_non_ended_shows_metadata(self) -> None:

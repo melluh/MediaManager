@@ -1,8 +1,6 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Coroutine
-from typing import Any
 
 from media_manager.config import MediaManagerConfig
 from media_manager.metadataProvider.schemas import (
@@ -12,7 +10,7 @@ from media_manager.metadataProvider.schemas import (
     MetaDataProviderSearchResult,
 )
 from media_manager.movies.schemas import Movie
-from media_manager.tv.schemas import Season, Show
+from media_manager.tv.schemas import Season, SeasonId, Show
 
 log = logging.getLogger(__name__)
 
@@ -113,36 +111,50 @@ class AbstractMetadataProvider(ABC):
     @abstractmethod
     async def download_media_image(
         self, media: Movie | Show, media_type: MediaType, image_type: MediaImageType
-    ) -> bool:
+    ) -> str | None:
         """
-        Downloads a single image for a movie or show.
+        Downloads a single image for a movie or show, skipping the fetch if
+        the provider's resolved path/URL for it already matches
+        `media.image_source_paths[image_type]` and the file is still on
+        disk.
+
         :param media: The movie or show to download the image for.
         :param media_type: Whether `media` is a movie or a show.
         :param image_type: Which image (poster, backdrop, ...) to download.
-        :return: True if the image was downloaded successfully, False otherwise.
+        :return: The provider path/URL the image is now current with (freshly
+            downloaded or already up to date), or None if unavailable/failed.
         """
         raise NotImplementedError()
 
     async def download_all_media_images(
         self, media: Movie | Show, media_type: MediaType
-    ) -> None:
+    ) -> dict[MediaImageType, str]:
         """
         Downloads every image type this provider has available for the
-        given media item (and, for shows, every season's poster too).
+        given media item. Does not touch season images - callers with a
+        `Show` should also call `download_all_season_images` for those.
+
+        :return: image_type -> resolved provider path/URL, for every image
+            type that's now current (freshly downloaded or already up to
+            date) - for callers to persist via `upsert_media_image_source`.
         """
         semaphore = asyncio.Semaphore(_MAX_CONCURRENT_IMAGE_DOWNLOADS)
 
-        async def _download(image_type: MediaImageType) -> bool:
+        async def _download(
+            image_type: MediaImageType,
+        ) -> tuple[MediaImageType, str | None]:
             async with semaphore:
-                return await self.download_media_image(media, media_type, image_type)
+                return image_type, await self.download_media_image(
+                    media, media_type, image_type
+                )
 
         image_types = await self.get_available_image_types(media, media_type)
-        tasks: list[Coroutine[Any, Any, Any]] = [
-            _download(image_type) for image_type in image_types
-        ]
-        if isinstance(media, Show):
-            tasks.append(self.download_all_season_images(media))
-        await asyncio.gather(*tasks)
+        results = await asyncio.gather(*(_download(t) for t in image_types))
+        return {
+            image_type: source_path
+            for image_type, source_path in results
+            if source_path is not None
+        }
 
     @abstractmethod
     async def get_available_season_image_types(
@@ -158,23 +170,40 @@ class AbstractMetadataProvider(ABC):
     @abstractmethod
     async def download_season_image(
         self, show: Show, season: Season, image_type: MediaImageType
-    ) -> bool:
+    ) -> str | None:
         """
         Downloads a single image for a season, keyed on disk by the
         season's own id (same layout `download_media_image` uses for a
-        movie/show, keyed by `media.id`).
+        movie/show, keyed by `media.id`), skipping the fetch under the same
+        conditions `download_media_image` does.
+
+        :return: The provider path/URL the image is now current with, or
+            None if unavailable/failed.
         """
         raise NotImplementedError()
 
-    async def download_all_season_images(self, show: Show) -> None:
+    async def download_all_season_images(self, show: Show) -> dict[SeasonId, str]:
         """
         Downloads every image type available for every season of the show.
+
+        :return: season id -> resolved poster path/URL, for every season
+            whose poster is now current - for callers to persist via
+            `upsert_media_image_source`.
         """
         semaphore = asyncio.Semaphore(_MAX_CONCURRENT_IMAGE_DOWNLOADS)
 
-        async def _download_season(season: Season) -> None:
+        async def _download_season(season: Season) -> tuple[SeasonId, str | None]:
+            resolved: str | None = None
             for image_type in await self.get_available_season_image_types(show, season):
                 async with semaphore:
-                    await self.download_season_image(show, season, image_type)
+                    resolved = await self.download_season_image(show, season, image_type)
+            return season.id, resolved
 
-        await asyncio.gather(*(_download_season(season) for season in show.seasons))
+        results = await asyncio.gather(
+            *(_download_season(season) for season in show.seasons)
+        )
+        return {
+            season_id: source_path
+            for season_id, source_path in results
+            if source_path is not None
+        }

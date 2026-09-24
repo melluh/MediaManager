@@ -37,6 +37,7 @@ from media_manager.metadataProvider.abstract_metadata_provider import (
 )
 from media_manager.metadataProvider.schemas import (
     ExternalPosterImage,
+    MediaImageType,
     MediaType,
     MetaDataProviderSearchResult,
 )
@@ -48,6 +49,7 @@ from media_manager.torrent.utils import (
     extract_external_id_from_string,
     get_importable_media_directories,
 )
+from media_manager.tv.schemas import Show
 
 log = logging.getLogger(__name__)
 
@@ -94,17 +96,23 @@ class BaseMediaService[T, S]:
 
     async def attach_media_images(self, media: S) -> S:
         """
-        Populates `media.images` based on the image types on disk.
+        Populates `media.images` based on the image types on disk, and
+        `media.image_source_paths` based on what's recorded in the
+        `media_image` table.
         """
         media.images = await asyncio.to_thread(
             media_manager.metadataProvider.utils.get_available_media_images, media.id
+        )
+        media.image_source_paths = await self.repository.get_media_image_sources(
+            media.id
         )
         return media
 
     async def attach_media_images_many(self, media_list: list[S]) -> list[S]:
         """
-        Populates `media.images` based on the image types on disk.
-        Batched for multiple media items (more efficient than calling attach_media_images individually).
+        Populates `media.images`/`media.image_source_paths`. Batched for
+        multiple media items (more efficient than calling
+        attach_media_images individually).
         """
         if not media_list:
             return media_list
@@ -112,8 +120,12 @@ class BaseMediaService[T, S]:
             media_manager.metadataProvider.utils.get_available_media_images_many,
             [media.id for media in media_list],
         )
+        source_paths_by_id = await self.repository.get_media_image_sources_many(
+            [media.id for media in media_list]
+        )
         for media in media_list:
             media.images = images_by_id[str(media.id)]
+            media.image_source_paths = source_paths_by_id[media.id]
         return media_list
 
     async def get_watch_url(self, media: S) -> WatchUrl:
@@ -618,7 +630,28 @@ class BaseMetadataService[T, S]:
         media_with_metadata.added_by_user_id = added_by_user_id
 
         saved_media = await save_func(media_with_metadata)
-        await metadata_provider.download_all_media_images(saved_media, media_type)
+
+        image_sources = await metadata_provider.download_all_media_images(
+            saved_media, media_type
+        )
+        for image_type, source_path in image_sources.items():
+            await self.repository.upsert_media_image_source(
+                media_id=saved_media.id,
+                image_type=image_type.value,
+                source_path=source_path,
+            )
+
+        if isinstance(saved_media, Show):
+            season_image_sources = await metadata_provider.download_all_season_images(
+                saved_media
+            )
+            for season_id, source_path in season_image_sources.items():
+                await self.repository.upsert_media_image_source(
+                    media_id=season_id,
+                    image_type=MediaImageType.poster.value,
+                    source_path=source_path,
+                )
+
         return saved_media
 
     async def search_for_media_base(
