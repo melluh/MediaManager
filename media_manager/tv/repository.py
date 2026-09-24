@@ -366,28 +366,16 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
     ) -> Sequence[tuple[EpisodeId, str, bool]]:
         """
         (episode_id, file_path_suffix, imported) for every EpisodeFile
-        belonging to the given episodes - the one query every "is this
-        file/episode downloaded" computation is built from, so the per-file
-        view and the season/show aggregate can never disagree.
-
-        A file counts as imported if it has no torrent (manually imported or
-        adopted by a library scan) or its torrent's `imported` flag is set -
-        the same rule as `BaseMediaService.media_file_is_imported`, applied
-        in bulk instead of one file at a time.
+        belonging to the given episodes - see
+        `BaseRepository.get_file_import_status_base`, shared with the
+        equivalent movie query so both media types compute "downloaded" the
+        same way.
         """
-        if not episode_ids:
-            return []
-        stmt = (
-            select(
-                EpisodeFile.episode_id,
-                EpisodeFile.file_path_suffix,
-                EpisodeFile.torrent_id.is_(None) | TorrentModel.imported.is_(True),
-            )
-            .select_from(EpisodeFile)
-            .outerjoin(TorrentModel, EpisodeFile.torrent_id == TorrentModel.id)
-            .where(EpisodeFile.episode_id.in_(episode_ids))
+        return await self.get_file_import_status_base(
+            entity_ids=episode_ids,
+            model_class=EpisodeFile,
+            entity_id_column=EpisodeFile.episode_id,
         )
-        return (await self.db.execute(stmt)).all()
 
     async def get_torrents_by_show_id(self, show_id: ShowId) -> list[TorrentSchema]:
         stmt = (

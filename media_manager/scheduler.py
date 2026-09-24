@@ -115,14 +115,6 @@ async def scan_importable_shows_task(
 
 
 @broker.task
-async def rescan_downloaded_movies_task(
-    movie_service: MovieService = TaskiqDepends(get_movie_service),
-) -> None:
-    log.info("Scanning for downloaded movies")
-    await movie_service.rescan_downloaded_movies()
-
-
-@broker.task
 async def scan_movie_library_files_task(
     movie_service: MovieService = TaskiqDepends(get_movie_service),
 ) -> None:
@@ -184,7 +176,6 @@ _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
     update_all_non_ended_shows_metadata_task.task_name: [{"cron": "0 * * * *"}],
     scan_importable_movies_task.task_name: [{"cron": "*/5 * * * *"}],
     scan_importable_shows_task.task_name: [{"cron": "*/5 * * * *"}],
-    rescan_downloaded_movies_task.task_name: [{"cron": "*/5 * * * *"}],
     # Hourly rather than every few minutes: this walks every media directory
     # on disk, and nothing depends on it being immediate - imports record
     # their own paths, and an admin can trigger a scan on demand.

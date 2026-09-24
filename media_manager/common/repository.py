@@ -3,17 +3,31 @@ from collections.abc import Collection, Sequence
 from typing import Any, TypeVar
 from uuid import UUID
 
-from sqlalchemy import delete, inspect, select
+from sqlalchemy import ColumnElement, delete, inspect, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import InstrumentedAttribute
 
 from media_manager.exceptions import ConflictError, NotFoundError
+from media_manager.torrent.models import Torrent
 
 log = logging.getLogger(__name__)
 
 T = TypeVar("T")
 S = TypeVar("S")
 EntityId = UUID | int | str
+
+
+def file_imported_expr[FileModel](model_class: type[FileModel]) -> ColumnElement[bool]:
+    """
+    Whether a media file model's row counts as imported: no torrent at all
+    (manually imported, or adopted by a library scan) or its torrent's
+    `imported` flag is set. The one expression every "is this file/episode/
+    movie downloaded" query should be built from - shared as a SQL
+    expression, not just a rule restated in each caller, so a bulk query and
+    a quality-aware query can both use it verbatim instead of redefining it.
+    """
+    return model_class.torrent_id.is_(None) | Torrent.imported.is_(True)
 
 
 class BaseRepository[T, S]:
@@ -336,3 +350,35 @@ class BaseRepository[T, S]:
             raise
         else:
             return result.rowcount
+
+    async def get_file_import_status_base(
+        self,
+        entity_ids: Sequence[EntityId],
+        model_class: type[T],
+        entity_id_column: InstrumentedAttribute[EntityId],
+    ) -> Sequence[tuple[EntityId, str, bool]]:
+        """
+        Generic bulk (entity_id, file_path_suffix, imported) query for a
+        media file model, keyed by whatever column owns the file (an
+        episode or a movie) - the single query every "is this file/episode/
+        movie downloaded" computation is built from, so a per-file view and
+        an aggregate status can never disagree.
+
+        :param entity_ids: The owning entities (episodes or movies) to check.
+        :param model_class: The file model (e.g. EpisodeFile, MovieFile).
+        :param entity_id_column: That model's FK column to the owning entity
+            (e.g. EpisodeFile.episode_id, MovieFile.movie_id).
+        """
+        if not entity_ids:
+            return []
+        stmt = (
+            select(
+                entity_id_column,
+                model_class.file_path_suffix,
+                file_imported_expr(model_class),
+            )
+            .select_from(model_class)
+            .outerjoin(Torrent, model_class.torrent_id == Torrent.id)
+            .where(entity_id_column.in_(entity_ids))
+        )
+        return (await self.db.execute(stmt)).all()

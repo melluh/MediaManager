@@ -1,16 +1,12 @@
 import asyncio
 import logging
 import shutil
+from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
-from media_manager.common.downloaded_status_cache import (
-    DownloadedMediaType,
-    get_cached_downloaded,
-    set_cached_downloaded_statuses,
-)
 from media_manager.common.library_scan import (
     LibraryScanCounts,
     count_plans,
@@ -130,8 +126,16 @@ class MovieService(BaseMediaService[Movie, Movie]):
             movie_id=movie.id
         )
         public_movie_files = [PublicMovieFile.model_validate(x) for x in movie_files]
+        imported_by_key = {
+            (movie_id, file_path_suffix): imported
+            for movie_id, file_path_suffix, imported in (
+                await self.movie_repository.get_movie_file_import_status(
+                    movie_ids=[movie.id]
+                )
+            )
+        }
         for movie_file in public_movie_files:
-            imported = await self.movie_file_exists_on_file(movie_file=movie_file)
+            imported = imported_by_key.get((movie.id, movie_file.file_path_suffix), False)
             movie_file.imported = imported
             movie_file.downloaded = imported
 
@@ -240,7 +244,8 @@ class MovieService(BaseMediaService[Movie, Movie]):
         """
         torrents = (await self.get_torrents_for_movie(movie=movie)).torrents
         public_movie = PublicMovie.model_validate(movie)
-        public_movie.downloaded = await self.is_movie_downloaded(movie_id=movie.id)
+        statuses = await self.get_movie_downloaded_statuses(movie_ids=[movie.id])
+        public_movie.downloaded = statuses[movie.id]
         public_movie.torrents = torrents
         return await self.attach_media_images(public_movie)
 
@@ -262,48 +267,24 @@ class MovieService(BaseMediaService[Movie, Movie]):
         """
         return await self.movie_repository.get_movie_by_slug(slug)
 
-    async def is_movie_downloaded(self, movie_id: MovieId) -> bool:
+    async def get_movie_downloaded_statuses(
+        self, movie_ids: Sequence[MovieId]
+    ) -> dict[MovieId, bool]:
         """
-        Check if a movie is downloaded.
+        Whether each movie has at least one imported file, computed from the
+        same query `get_public_movie_files` reads to build a movie's file
+        list - so a movie's aggregate status can never disagree with what
+        that list shows. See `BaseMediaService.fold_file_import_status`.
 
-        Reads the shared cache populated by the periodic
-        `rescan_downloaded_movies` scan, so this never queries the torrent
-        for every movie file on the request path. If the scan hasn't run
-        yet (e.g. briefly after startup), falls back to querying directly.
-
-        :param movie_id: The ID of the movie.
-        :return: True if the movie is downloaded, False otherwise.
+        :param movie_ids: The movies to check.
+        :return: A status for every given movie id, defaulting to False for
+            one with no file records at all.
         """
-        cached = get_cached_downloaded(DownloadedMediaType.movie, movie_id)
-        if cached is not None:
-            return cached
-
-        movie_files = await self.movie_repository.get_movie_files_by_movie_id(
-            movie_id=movie_id
+        movie_ids = list(movie_ids)
+        rows = await self.movie_repository.get_movie_file_import_status(
+            movie_ids=movie_ids
         )
-        for movie_file in movie_files:
-            if await self.movie_file_exists_on_file(movie_file=movie_file):
-                return True
-        return False
-
-    async def rescan_downloaded_movies(self) -> None:
-        """
-        Recompute which movies are downloaded and refresh the shared cache
-        read by `is_movie_downloaded`. Runs on a schedule so movie-lookup
-        endpoints never recheck every movie file's torrent status
-        themselves.
-        """
-        statuses = await self.movie_repository.get_movie_downloaded_statuses()
-        set_cached_downloaded_statuses(DownloadedMediaType.movie, statuses)
-
-    async def movie_file_exists_on_file(self, movie_file: MovieFile) -> bool:
-        """
-        Check if a movie file exists on the filesystem.
-
-        :param movie_file: The movie file to check.
-        :return: True if the file exists, False otherwise.
-        """
-        return await self.media_file_is_imported(media_file=movie_file)
+        return self.fold_file_import_status(movie_ids, rows)
 
     async def get_movie_by_external_id(
         self, external_id: int, metadata_provider: str

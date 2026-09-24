@@ -1,11 +1,12 @@
 import logging
+from collections.abc import Sequence
 from datetime import datetime
 
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from media_manager.common.repository import BaseRepository
+from media_manager.common.repository import BaseRepository, file_imported_expr
 from media_manager.exceptions import NotFoundError
 from media_manager.movies.models import Movie, MovieFile
 from media_manager.movies.schemas import (
@@ -156,54 +157,46 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             )
         return grouped
 
-    async def get_movie_downloaded_statuses(self) -> dict[MovieId, bool]:
+    async def get_movie_file_import_status(
+        self, movie_ids: Sequence[MovieId]
+    ) -> Sequence[tuple[MovieId, str, bool]]:
         """
-        A movie is downloaded if any of its MovieFiles is either not tied
-        to a torrent (manually imported) or tied to a torrent that has
-        finished importing - the same semantics as
-        `MovieService.movie_file_exists_on_file`, computed in bulk for the
-        downloaded-status scan instead of per movie/file at request time.
-
-        Seeds every movie (including ones with no files at all) to False
-        first, so the scan always produces a cache entry - otherwise movies
-        with zero files would never get one and would keep hitting the
-        request-path fallback query forever.
+        (movie_id, file_path_suffix, imported) for every MovieFile belonging
+        to the given movies - see `BaseRepository.get_file_import_status_base`,
+        shared with the equivalent TV query so both media types compute
+        "downloaded" the same way.
         """
-        all_movie_ids = (await self.db.execute(select(Movie.id))).scalars().all()
-        statuses: dict[MovieId, bool] = dict.fromkeys(all_movie_ids, False)
-
-        stmt = select(
-            MovieFile.movie_id, MovieFile.torrent_id, Torrent.imported
-        ).select_from(MovieFile).outerjoin(Torrent, MovieFile.torrent_id == Torrent.id)
-        rows = (await self.db.execute(stmt)).all()
-
-        for movie_id, torrent_id, imported in rows:
-            downloaded = torrent_id is None or bool(imported)
-            statuses[movie_id] = statuses.get(movie_id, False) or downloaded
-        return statuses
+        return await self.get_file_import_status_base(
+            entity_ids=movie_ids,
+            model_class=MovieFile,
+            entity_id_column=MovieFile.movie_id,
+        )
 
     async def get_movie_download_info(
         self,
     ) -> dict[MovieId, tuple[bool, Quality | None]]:
         """
         For every movie, whether it's downloaded and (if so) the best quality
-        among its downloaded files - the same downloaded semantics as
-        `get_movie_downloaded_statuses`, computed in bulk for the movie list
-        endpoint's filters instead of per movie at request time.
+        among its downloaded files - computed in bulk for the movie list
+        endpoint's filters instead of per movie at request time. Uses the
+        same `file_imported_expr` predicate as
+        `BaseRepository.get_file_import_status_base`, projected here
+        alongside quality since this query needs both in one pass.
         """
         all_movie_ids = (await self.db.execute(select(Movie.id))).scalars().all()
         info: dict[MovieId, tuple[bool, Quality | None]] = dict.fromkeys(
             all_movie_ids, (False, None)
         )
 
-        stmt = select(
-            MovieFile.movie_id, MovieFile.torrent_id, MovieFile.quality, Torrent.imported
-        ).select_from(MovieFile).outerjoin(Torrent, MovieFile.torrent_id == Torrent.id)
+        stmt = (
+            select(MovieFile.movie_id, MovieFile.quality, file_imported_expr(MovieFile))
+            .select_from(MovieFile)
+            .outerjoin(Torrent, MovieFile.torrent_id == Torrent.id)
+        )
         rows = (await self.db.execute(stmt)).all()
 
-        for movie_id, torrent_id, quality, imported in rows:
-            downloaded = torrent_id is None or bool(imported)
-            if not downloaded:
+        for movie_id, quality, imported in rows:
+            if not imported:
                 continue
             _, best_quality = info.get(movie_id, (False, None))
             if best_quality is None or quality.value < best_quality.value:

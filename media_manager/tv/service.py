@@ -395,13 +395,11 @@ class TvService(BaseMediaService[Show, Show]):
         :return: A status for every given episode id, defaulting to False
             for one with no file records at all.
         """
-        statuses: dict[EpisodeId, bool] = dict.fromkeys(episode_ids, False)
+        episode_ids = list(episode_ids)
         rows = await self.tv_repository.get_episode_file_import_status(
-            episode_ids=list(episode_ids)
+            episode_ids=episode_ids
         )
-        for episode_id, _file_path_suffix, imported in rows:
-            statuses[episode_id] = statuses[episode_id] or imported
-        return statuses
+        return self.fold_file_import_status(episode_ids, rows)
 
     async def get_show_by_external_id(
         self, external_id: int, metadata_provider: str
