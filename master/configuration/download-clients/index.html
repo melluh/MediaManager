@@ -1549,10 +1549,12 @@
   Hostname or IP of the qBittorrent server. Include the protocol (http/https).</li>
 <li><code>port</code>\
   Port of the qBittorrent Web UI/API. Default is <code>8080</code>.</li>
+<li><code>api_key</code>\
+  API key for qBittorrent Web UI authentication, generated in qBittorrent under <em>Options → WebUI</em>. Requires qBittorrent v5.2.0 or newer. When set, <code>username</code> and <code>password</code> are ignored. Recommended over username/password.</li>
 <li><code>username</code>\
-  Username for qBittorrent Web UI authentication. Default is <code>admin</code>.</li>
+  Username for qBittorrent Web UI authentication, used when no <code>api_key</code> is set. Default is <code>admin</code>.</li>
 <li><code>password</code>\
-  Password for qBittorrent Web UI authentication. Default is <code>admin</code>.</li>
+  Password for qBittorrent Web UI authentication, used when no <code>api_key</code> is set. Default is <code>admin</code>.</li>
 </ul>
 <h2 id="transmission-settings-torrentstransmission">Transmission Settings (<code>[torrents.transmission]</code>)</h2>
 <div class="admonition info">
@@ -1598,8 +1600,7 @@
 <span class="w">    </span><span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">    </span><span class="n">host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"http://qbittorrent"</span>
 <span class="w">    </span><span class="n">port</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8080</span>
-<span class="w">    </span><span class="n">username</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"admin"</span>
-<span class="w">    </span><span class="n">password</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"your_secure_password"</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"your_qbittorrent_api_key"</span>
 
 <span class="w">    </span><span class="c1"># Transmission configuration</span>
 <span class="w">    </span><span class="k">[torrents.transmission]</span>
