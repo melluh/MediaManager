@@ -135,6 +135,26 @@ class SearchService:
         scored = await self._scored_library_candidates(query)
         return await self._hydrate_library_results(scored[: self.config.max_results])
 
+    @staticmethod
+    def _dedupe_suggestions_by_title(
+        merged: list[tuple[ScoredEntry[Any], bool]],
+    ) -> list[tuple[ScoredEntry[Any], bool]]:
+        """
+        Keeps only the best-ranked not-in-library suggestion per (media_type, normalized title).
+        The title index doesn't show release year, so two titles from different years look identical.
+        Library items aren't collapsed as they're always distinct (and easily distinguishable) items.
+        """
+        seen: set[tuple[MediaType, str]] = set()
+        deduped: list[tuple[ScoredEntry[Any], bool]] = []
+        for item, in_library in merged:
+            if not in_library:
+                key = (item.entry.media_type, item.entry.normalized)
+                if key in seen:
+                    continue
+                seen.add(key)
+            deduped.append((item, in_library))
+        return deduped
+
     async def combined_search(self, query: str) -> list[CombinedSearchResult]:
         """
         Merges the library pool and the not-in-library title-index pool
@@ -172,7 +192,7 @@ class SearchService:
             key=lambda pair: (pair[0].is_structural, pair[1], pair[0].tier_score),
             reverse=True,
         )
-        merged = merged[: self.config.max_results]
+        merged = self._dedupe_suggestions_by_title(merged)[: self.config.max_results]
 
         library_winners = [item for item, in_library in merged if in_library]
         hydrated_by_id = {

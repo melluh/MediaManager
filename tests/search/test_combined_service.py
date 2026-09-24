@@ -121,3 +121,23 @@ def test_not_in_library_structural_match_beats_library_fuzzy_only_match(
 
     assert results[0].in_library is False
     assert results[0].name == "Jurasic Park Begins"
+
+
+def test_same_named_not_in_library_suggestions_are_collapsed(tmp_path: Path) -> None:
+    # Regression: two different works sharing a title (e.g. two "Ice Cream
+    # Man" movies from different years) showed up as identical rows, since
+    # the title index carries no year to tell them apart. Only the
+    # best-ranked one should remain; a same-named title of another media
+    # type is still distinct.
+    title_index_rows = [
+        {"id": 2, "t": "Ice Cream Man", "p": 50.0, "m": "movie"},
+        {"id": 3, "t": "Ice Cream Man", "p": 10.0, "m": "movie"},
+        {"id": 4, "t": "Ice Cream Man", "p": 5.0, "m": "tv"},
+        *_filler_rows(50),
+    ]
+
+    service = _build_service(tmp_path, library_rows=[], title_index_rows=title_index_rows)
+    results = asyncio.run(service.combined_search("ice cream man"))
+
+    ice_cream = [(r.media_type, r.external_id) for r in results if r.name == "Ice Cream Man"]
+    assert ice_cream == [(MediaType.movie, 2), (MediaType.tv, 4)]
