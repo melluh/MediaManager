@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
-	import type { UserRead } from '$lib/api/api';
-	const user: () => UserRead | undefined = getContext('user');
+	import { getMaybeCurrentUser } from '$lib/context.svelte';
+	const user = getMaybeCurrentUser();
 </script>
 
 {#if user()}

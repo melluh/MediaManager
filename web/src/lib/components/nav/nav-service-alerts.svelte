@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getMaybeCurrentUser } from '$lib/context.svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import HelpCircle from '@lucide/svelte/icons/help-circle';
 	import ServiceHealthDialog from '$lib/components/nav/service-health-dialog.svelte';
-	import type { ServiceHealth, UserRead } from '$lib/api/api';
+	import type { ServiceHealth } from '$lib/api/api';
 	import { cn } from '$lib/utils';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let { services }: { services: ServiceHealth[] } = $props();
 
-	const user: () => UserRead = getContext('user');
+	const user = getMaybeCurrentUser();
 
 	const alertServices = $derived(services.filter((service) => service.status !== 'healthy'));
 
@@ -42,9 +42,9 @@
 					is
 					{service.status}
 				{/snippet}
-				{#if user().is_superuser}
+				{#if user()?.is_superuser}
 					{@const dialog = shallowDialog(`serviceHealth:${service.name}`)}
-					<Dialog.Root bind:open={() => dialog.open, (v) => (dialog.open = v)}>
+					<Dialog.Root bind:open={dialog.open}>
 						<Dialog.Trigger>
 							{#snippet child({ props })}
 								<button

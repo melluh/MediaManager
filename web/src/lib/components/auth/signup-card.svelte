@@ -10,6 +10,7 @@
 	import CheckCircle2Icon from '@lucide/svelte/icons/check-circle-2';
 	import { handleOauth } from '$lib/utils.ts';
 	import client from '$lib/api';
+	import OAuthButtons from '$lib/components/auth/oauth-buttons.svelte';
 	import { resolve } from '$app/paths';
 
 	let email = $state('');
@@ -23,6 +24,14 @@
 	}: {
 		oauthProviderNames: string[];
 	} = $props();
+
+	let oauthLoading = $state(false);
+	async function onOauthClick() {
+		oauthLoading = true;
+		if (!(await handleOauth())) {
+			oauthLoading = false;
+		}
+	}
 
 	async function handleSignup(event: Event) {
 		event.preventDefault();
@@ -79,7 +88,7 @@
 				/>
 			</div>
 			<div class="grid gap-2">
-				<Label for="password">Confirm Password</Label>
+				<Label for="confirm-password">Confirm Password</Label>
 				<Input
 					autocomplete="new-password"
 					bind:value={confirmPassword}
@@ -112,18 +121,11 @@
 				>Create an account
 			</Button>
 		</form>
-		{#each oauthProviderNames as name (name)}
-			<div
-				class="relative mt-2 text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border"
-			>
-				<span class="relative z-10 bg-background px-2 text-muted-foreground">
-					Or continue with
-				</span>
-			</div>
-			<Button class="mt-2 w-full" onclick={() => handleOauth()} variant="outline"
-				>Login with {name}</Button
-			>
-		{/each}
+		<OAuthButtons
+			providerNames={oauthProviderNames}
+			loading={oauthLoading}
+			onclick={onOauthClick}
+		/>
 		<div class="mt-4 text-center text-sm">
 			<Button href={resolve('/login/', {})} variant="link">Already have an account? Login</Button>
 		</div>

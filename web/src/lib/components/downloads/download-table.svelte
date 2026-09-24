@@ -7,8 +7,8 @@
 	import { getDownloadStatusBadge } from '$lib/components/downloads/download-status.js';
 	import DeleteTorrentDialog from '$lib/components/torrents/delete-torrent-dialog.svelte';
 	import EditTorrentDialog from '$lib/components/torrents/edit-torrent-dialog.svelte';
-	import type { TorrentWithProgress, UserRead } from '$lib/api/api';
-	import { getContext } from 'svelte';
+	import type { TorrentWithProgress } from '$lib/api/api';
+	import { getCurrentUser } from '$lib/context.svelte';
 	import client from '$lib/api';
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll } from '$app/navigation';
@@ -23,7 +23,7 @@
 
 	let { torrents }: { torrents: TorrentWithProgress[] } = $props();
 
-	let user: () => UserRead = getContext('user');
+	let user = getCurrentUser();
 	let columnCount = $derived(user().is_superuser ? 6 : 5);
 
 	async function retryTorrentDownload(torrent: TorrentWithProgress) {
@@ -60,7 +60,7 @@
 				torrent.seasons,
 				torrent.episodes
 			)}
-			<Dialog.Root bind:open={() => detailsDialog.open, (v) => (detailsDialog.open = v)}>
+			<Dialog.Root bind:open={detailsDialog.open}>
 				<Dialog.Trigger>
 					{#snippet child({ props })}
 						<Table.Row {...props} class="cursor-pointer">

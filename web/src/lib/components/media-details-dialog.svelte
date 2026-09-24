@@ -51,7 +51,7 @@
 	}
 </script>
 
-<Dialog.Root bind:open={() => detailsDialog.open, (v) => (detailsDialog.open = v)}>
+<Dialog.Root bind:open={detailsDialog.open}>
 	<Dialog.Trigger>
 		{#snippet child({ props })}
 			<DropdownMenu.Item {...props} closeOnSelect={false}>

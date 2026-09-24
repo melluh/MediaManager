@@ -1,9 +1,7 @@
 <script lang="ts">
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
-	import { getContext } from 'svelte';
+	import { setCrumbs } from '$lib/context.svelte';
 	import { page } from '$app/state';
 
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'User' }]);
 </script>
 

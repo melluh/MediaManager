@@ -43,7 +43,7 @@
 	}
 </script>
 
-<Dialog.Root bind:open={() => dialogState.open, (v) => (dialogState.open = v)}>
+<Dialog.Root bind:open={dialogState.open}>
 	<Dialog.Trigger>
 		<Button class="w-full" onclick={() => (dialogState.open = true)}>Edit Torrent</Button>
 	</Dialog.Trigger>

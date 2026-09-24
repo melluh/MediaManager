@@ -49,12 +49,12 @@
 	import NavServiceAlerts from '$lib/components/nav/nav-service-alerts.svelte';
 	import NavUser from '$lib/components/nav/nav-user.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar';
-	import { getContext, type ComponentProps } from 'svelte';
+	import { type ComponentProps } from 'svelte';
+	import { getMaybeCurrentUser } from '$lib/context.svelte';
 	import AppBrand from '$lib/components/app-brand.svelte';
 	import { afterNavigate } from '$app/navigation';
 	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
 	import { serviceHealth } from '$lib/hooks/service-health.svelte.js';
-	import type { UserRead } from '$lib/api/api';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
@@ -63,7 +63,7 @@
 	// Undefined while the user is still being resolved (this component renders
 	// outside the dashboard layout's `status === 'ready'` gate) - the
 	// Administration link stays hidden until we know the user is a superuser.
-	let user: () => UserRead | undefined = getContext('user');
+	let user = getMaybeCurrentUser();
 
 	afterNavigate(() => {
 		if (sidebar.isMobile) {

@@ -99,16 +99,18 @@
 								{@render rowSnippet(torrent)}
 							</Table.Row>
 						{:else}
-							<Table.Cell colspan={columns.length + 2}>
-								<div class="font-light text-center w-full">No torrents found.</div>
-							</Table.Cell>
+							<Table.Row>
+								<Table.Cell colspan={columns.length + 2} class="w-full text-center font-light">
+									No torrents found.
+								</Table.Cell>
+							</Table.Row>
 						{/each}
 					{:else}
-						<Table.Cell colspan={columns.length + 2}>
-							<div class="w-full text-center font-light">
+						<Table.Row>
+							<Table.Cell colspan={columns.length + 2} class="w-full text-center font-light">
 								Start searching by clicking the search button!
-							</div>
-						</Table.Cell>
+							</Table.Cell>
+						</Table.Row>
 					{/if}
 				</Table.Body>
 			</Table.Root>

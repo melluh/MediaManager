@@ -28,7 +28,7 @@
 	let statusBadge = $derived(getDownloadStatusBadge(torrent));
 </script>
 
-<Dialog.Root bind:open={() => detailsDialog.open, (v) => (detailsDialog.open = v)}>
+<Dialog.Root bind:open={detailsDialog.open}>
 	<Dialog.Trigger>
 		{#snippet child({ props })}
 			<div

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import LibraryMediaCard from '$lib/components/library-media-card.svelte';
-	import MediaCardSkeleton from '$lib/components/media-card-skeleton.svelte';
+	import MediaGrid from '$lib/components/media-grid.svelte';
+	import PageHeading from '$lib/components/page-heading.svelte';
 	import MediaLibraryFilters from '$lib/components/media-library-filters.svelte';
-	import type { MediaImportSuggestion, MovieListItem, ShowSummary, UserRead } from '$lib/api/api';
-	import { getContext, untrack } from 'svelte';
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
+	import type { MediaImportSuggestion, MovieListItem, ShowSummary } from '$lib/api/api';
+	import { untrack } from 'svelte';
+	import { getCurrentUser, setCrumbs } from '$lib/context.svelte';
 	import { importablePath, rescanImportableMedia } from '$lib/api/importable';
 	import { seedMovies, seedShows } from '$lib/api/media-seed';
 	import PageLoadError from '$lib/components/page-load-error.svelte';
@@ -37,10 +38,9 @@
 		emptyMessage: string;
 	} = $props();
 
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
-	setCrumbs([{ label: crumb }]);
+	setCrumbs(() => [{ label: crumb }]);
 
-	let user: () => UserRead = getContext('user');
+	let user = getCurrentUser();
 	let isRescanning = $state(false);
 
 	// Seeded from the history entry's state so filters survive navigating to
@@ -103,9 +103,7 @@
 </svelte:head>
 
 <main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0">
-	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
-		{title}
-	</h1>
+	<PageHeading>{title}</PageHeading>
 	{#if (resolvedItems && resolvedItems.length > 0) || user()?.is_superuser}
 		{#snippet noImportableDropdown()}
 			<DropdownMenu.Root>
@@ -173,17 +171,9 @@
 	{#if loadError}
 		<PageLoadError title={`${isShow ? 'TV shows' : 'Movies'} unavailable`} message={loadError} />
 	{:else if resolvedItems === undefined}
-		<div
-			class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-		>
-			{#each { length: 10 }}
-				<MediaCardSkeleton />
-			{/each}
-		</div>
+		<MediaGrid skeletons={10} />
 	{:else}
-		<div
-			class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-		>
+		<MediaGrid>
 			{#each filteredItems ?? [] as item (item.id)}
 				<LibraryMediaCard media={item} {isShow} />
 			{:else}
@@ -191,6 +181,6 @@
 					{resolvedItems.length === 0 ? emptyMessage : 'No media matches the selected filters.'}
 				</div>
 			{/each}
-		</div>
+		</MediaGrid>
 	{/if}
 </main>

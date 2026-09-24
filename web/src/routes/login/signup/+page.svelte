@@ -2,13 +2,11 @@
 	import SignupCard from '$lib/components/auth/signup-card.svelte';
 	import PageLoading from '$lib/components/page-loading.svelte';
 	import PageLoadError from '$lib/components/page-load-error.svelte';
-	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import type { AuthMetadata } from '$lib/api/api';
+	import { getAuthMetadataContext } from '$lib/context.svelte';
 
-	const authMetadata: () => AuthMetadata | undefined = getContext('authMetadata');
-	const authStatus: () => 'loading' | 'ready' | 'error' = getContext('authMetadataStatus');
+	const { metadata: authMetadata, status: authStatus } = getAuthMetadataContext();
 
 	// The metadata arrives after this page has already painted, so the
 	// "registration is disabled" bounce happens here rather than in a `load`.

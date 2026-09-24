@@ -5,7 +5,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { PublicShow } from '$lib/api/api';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { cn } from '$lib/utils';
+	import { cn, padSeasonOrEpisodeNumber } from '$lib/utils';
 
 	let {
 		show,
@@ -49,7 +49,7 @@
 					onCheckedChange={() => toggleSeason(season.id)}
 				/>
 				<span class="w-14 shrink-0 font-medium">
-					S{String(season.number).padStart(2, '0')}
+					S{padSeasonOrEpisodeNumber(season.number)}
 				</span>
 				<span class="flex-1 truncate">{season.name}</span>
 				<Badge class={cn('shrink-0 tabular-nums', episodeProgressClass(downloaded, total))}>

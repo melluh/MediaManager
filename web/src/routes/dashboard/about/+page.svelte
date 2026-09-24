@@ -1,10 +1,8 @@
 <script lang="ts">
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import logo from '$lib/images/logo.svg';
 	import { PUBLIC_VERSION } from '$env/static/public';
-	import { getContext } from 'svelte';
+	import { setCrumbs } from '$lib/context.svelte';
 
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'About' }]);
 </script>
 

@@ -5,15 +5,14 @@
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import LibraryMediaCard from '$lib/components/library-media-card.svelte';
 	import AddMediaCard from '$lib/components/add-media-card.svelte';
-	import MediaCardSkeleton from '$lib/components/media-card-skeleton.svelte';
+	import MediaGrid from '$lib/components/media-grid.svelte';
+	import PageHeading from '$lib/components/page-heading.svelte';
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
-	import { getContext } from 'svelte';
+	import { setCrumbs } from '$lib/context.svelte';
 	import client from '$lib/api';
 	import type { SearchResult, MetaDataProviderSearchResult } from '$lib/api/api.d.ts';
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Search' }]);
 
 	let query = $derived(page.url.searchParams.get('q')?.trim() ?? '');
@@ -111,15 +110,13 @@
 </svelte:head>
 
 <main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0">
-	<h1
-		class="hidden scroll-m-20 text-center text-4xl font-extrabold tracking-tight md:block lg:text-5xl"
-	>
+	<PageHeading class="hidden md:block">
 		{#if query}
 			Search results for &quot;{query}&quot;
 		{:else}
 			Search
 		{/if}
-	</h1>
+	</PageHeading>
 
 	{#if query.length === 0}
 		<p class="text-center text-muted-foreground">Enter a search term to get started.</p>
@@ -127,13 +124,7 @@
 		<section class="flex flex-col gap-4">
 			<h2 class="text-2xl font-semibold">In Your Library</h2>
 			{#if localLoading}
-				<div
-					class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-				>
-					{#each { length: 5 }}
-						<MediaCardSkeleton />
-					{/each}
-				</div>
+				<MediaGrid skeletons={5} />
 			{:else if localError}
 				<Alert.Root variant="destructive">
 					<AlertCircleIcon class="size-4" />
@@ -143,13 +134,11 @@
 			{:else if localResults.length === 0}
 				<p class="text-muted-foreground">No matching media in your library.</p>
 			{:else}
-				<div
-					class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-				>
+				<MediaGrid>
 					{#each localResults as result (result.id)}
 						<LibraryMediaCard media={result} isShow={result.media_type === 'tv'} />
 					{/each}
-				</div>
+				</MediaGrid>
 			{/if}
 		</section>
 
@@ -172,13 +161,7 @@
 				</Select.Root>
 			</div>
 			{#if externalLoading && externalResults.length === 0}
-				<div
-					class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-				>
-					{#each { length: 5 }}
-						<MediaCardSkeleton />
-					{/each}
-				</div>
+				<MediaGrid skeletons={5} />
 			{:else if externalError}
 				<Alert.Root variant="destructive">
 					<AlertCircleIcon class="size-4" />
@@ -190,13 +173,11 @@
 			{:else if externalResults.length === 0}
 				<p class="text-muted-foreground">No movies or TV shows found.</p>
 			{:else}
-				<div
-					class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-				>
+				<MediaGrid>
 					{#each externalResults as result (`${result.media_type}-${result.external_id}`)}
 						<AddMediaCard {result} isShow={result.media_type === 'tv'} />
 					{/each}
-				</div>
+				</MediaGrid>
 			{/if}
 		</section>
 	{/if}

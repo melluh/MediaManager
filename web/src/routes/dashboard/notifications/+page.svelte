@@ -1,36 +1,37 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { onMount } from 'svelte';
+	import { setCrumbs } from '$lib/context.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Spinner } from '$lib/components/ui/spinner';
-
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import NotificationItem from '$lib/components/notification-item.svelte';
 	import client from '$lib/api';
 	import type { Notification } from '$lib/api/api';
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
+	import { poll } from '$lib/hooks/poll.svelte';
 
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Notifications' }]);
 
-	let unreadNotifications: Notification[] = [];
-	let readNotifications: Notification[] = [];
-	let loading = true;
-	let loadingRead = false;
-	let readLoaded = false;
-	let showRead = false;
-	let markingAllAsRead = false;
+	let unreadNotifications: Notification[] = $state([]);
+	let readNotifications: Notification[] = $state([]);
+	let loading = $state(true);
+	let loadingRead = $state(false);
+	let readLoaded = $state(false);
+	let showRead = $state(false);
+	let markingAllAsRead = $state(false);
 
 	async function fetchUnreadNotifications() {
-		loading = true;
-		const unread = await client.GET('/api/v1/notification/unread');
-		unreadNotifications = unread.data!;
-		notificationCount.unread = unreadNotifications.length;
+		const { data } = await client.GET('/api/v1/notification/unread');
+		if (data) {
+			unreadNotifications = data;
+			notificationCount.unread = data.length;
+		}
 		loading = false;
 	}
 
 	async function fetchReadNotifications() {
-		loadingRead = true;
-		const all = await client.GET('/api/v1/notification');
-		readNotifications = all.data!.filter((n) => n.read);
+		const { data } = await client.GET('/api/v1/notification');
+		if (data) readNotifications = data.filter((n) => n.read);
 		loadingRead = false;
 		readLoaded = true;
 	}
@@ -38,40 +39,31 @@
 	async function toggleShowRead() {
 		showRead = !showRead;
 		if (showRead && !readLoaded) {
+			loadingRead = true;
 			await fetchReadNotifications();
 		}
 	}
 
-	async function markAsRead(notificationId: string) {
+	async function markAsRead(notification: Notification) {
 		const { response } = await client.PATCH('/api/v1/notification/{notification_id}/read', {
-			params: { path: { notification_id: notificationId } }
+			params: { path: { notification_id: notification.id! } }
 		});
+		if (!response.ok) return;
 
-		if (response.ok) {
-			const notification = unreadNotifications.find((n) => n.id === notificationId);
-			if (notification) {
-				notification.read = true;
-				readNotifications = [notification, ...readNotifications];
-				unreadNotifications = unreadNotifications.filter((n) => n.id !== notificationId);
-				notificationCount.unread = unreadNotifications.length;
-			}
-		}
+		unreadNotifications = unreadNotifications.filter((n) => n.id !== notification.id);
+		readNotifications = [{ ...notification, read: true }, ...readNotifications];
+		notificationCount.unread = unreadNotifications.length;
 	}
 
-	async function markAsUnread(notificationId: string) {
+	async function markAsUnread(notification: Notification) {
 		const { response } = await client.PATCH('/api/v1/notification/{notification_id}/unread', {
-			params: { path: { notification_id: notificationId } }
+			params: { path: { notification_id: notification.id! } }
 		});
+		if (!response.ok) return;
 
-		if (response.ok) {
-			const notification = readNotifications.find((n) => n.id === notificationId);
-			if (notification) {
-				notification.read = false;
-				unreadNotifications = [notification, ...unreadNotifications];
-				readNotifications = readNotifications.filter((n) => n.id !== notificationId);
-				notificationCount.unread = unreadNotifications.length;
-			}
-		}
+		readNotifications = readNotifications.filter((n) => n.id !== notification.id);
+		unreadNotifications = [{ ...notification, read: false }, ...unreadNotifications];
+		notificationCount.unread = unreadNotifications.length;
 	}
 
 	async function markAllAsRead() {
@@ -96,21 +88,16 @@
 		}
 	}
 
+	// This page keeps the unread count up to date itself while it's open.
 	onMount(() => {
 		notificationCount.pausePolling();
-		fetchUnreadNotifications();
-
-		const interval = setInterval(() => {
-			fetchUnreadNotifications();
-			if (showRead) {
-				fetchReadNotifications();
-			}
-		}, 30000);
-		return () => {
-			clearInterval(interval);
-			notificationCount.resumePolling();
-		};
+		return () => notificationCount.resumePolling();
 	});
+
+	poll(async () => {
+		await fetchUnreadNotifications();
+		if (showRead) await fetchReadNotifications();
+	}, 30000);
 </script>
 
 <svelte:head>
@@ -119,9 +106,9 @@
 
 <main class="container mx-auto px-4 py-8">
 	<div class="mb-6 flex items-center justify-between">
-		<h1 class="text-3xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+		<h1 class="text-3xl font-bold">Notifications</h1>
 		{#if unreadNotifications.length > 0}
-			<Button onclick={() => markAllAsRead()} disabled={markingAllAsRead} class="flex items-center">
+			<Button onclick={markAllAsRead} disabled={markingAllAsRead}>
 				{#if markingAllAsRead}
 					<Spinner class="size-4" />
 				{/if}
@@ -135,16 +122,13 @@
 			<Spinner class="size-8" />
 		</div>
 	{:else}
-		<!-- Unread Notifications -->
-		<div class="mb-8">
-			<div class="mb-4 flex items-center gap-2">
-				<h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-					Unread Notifications
-					{#if unreadNotifications.length > 0}
-						({unreadNotifications.length})
-					{/if}
-				</h2>
-			</div>
+		<section class="mb-8">
+			<h2 class="mb-4 text-xl font-semibold">
+				Unread Notifications
+				{#if unreadNotifications.length > 0}
+					({unreadNotifications.length})
+				{/if}
+			</h2>
 
 			{#if unreadNotifications.length === 0}
 				<div
@@ -156,116 +140,36 @@
 			{:else}
 				<div class="space-y-3">
 					{#each unreadNotifications as notification (notification.id)}
-						<div
-							class="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm dark:border-blue-800 dark:bg-blue-900/20"
-						>
-							<div class="flex items-start justify-between gap-4">
-								<div class="flex flex-1 items-start gap-3">
-									<div class="flex-1">
-										<p class="font-medium text-gray-900 dark:text-white">
-											{notification.message}
-										</p>
-										<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-											{new Date(notification.timestamp ?? 0).toLocaleDateString()}
-										</p>
-									</div>
-								</div>
-								<div class="flex items-center gap-2">
-									<Button
-										onclick={() => markAsRead(notification.id ?? '')}
-										class="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-100 dark:hover:bg-blue-800"
-										title="Mark as read"
-										variant="outline"
-									>
-										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M5 13l4 4L19 7"
-											></path>
-										</svg>
-									</Button>
-								</div>
-							</div>
-						</div>
+						<NotificationItem {notification} onToggleRead={() => markAsRead(notification)} />
 					{/each}
 				</div>
 			{/if}
-		</div>
+		</section>
 
-		<!-- Read Notifications Toggle -->
-		<div class="mb-4">
-			<button
-				on:click={toggleShowRead}
-				class="flex items-center gap-2 text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-			>
-				<svg
-					class="h-4 w-4 transition-transform {showRead ? 'rotate-90' : ''}"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
-					></path>
-				</svg>
-				<span>Read Notifications{readLoaded ? ` (${readNotifications.length})` : ''}</span>
-			</button>
-		</div>
+		<button
+			onclick={toggleShowRead}
+			class="mb-4 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+		>
+			<ChevronRight class="size-4 transition-transform {showRead ? 'rotate-90' : ''}" />
+			<span>Read Notifications{readLoaded ? ` (${readNotifications.length})` : ''}</span>
+		</button>
 
-		<!-- Read Notifications -->
 		{#if showRead}
-			<div>
-				{#if loadingRead}
-					<div class="flex items-center justify-center py-12">
-						<Spinner class="size-8" />
-					</div>
-				{:else if readNotifications.length === 0}
-					<div
-						class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center dark:border-gray-700 dark:bg-gray-800"
-					>
-						<p class="text-gray-500 dark:text-gray-400">No read notifications</p>
-					</div>
-				{:else}
-					<div class="space-y-3">
-						{#each readNotifications as notification (notification.id)}
-							<div
-								class="rounded-lg border border-gray-200 bg-white p-4 opacity-75 shadow-sm dark:border-gray-700 dark:bg-gray-800"
-							>
-								<div class="flex items-start justify-between gap-4">
-									<div class="flex flex-1 items-start gap-3">
-										<div class="flex-1">
-											<p class="text-gray-700 dark:text-gray-300">
-												{notification.message}
-											</p>
-											<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-												{new Date(notification.timestamp ?? 0).toLocaleDateString()}
-											</p>
-										</div>
-									</div>
-									<div class="flex items-center gap-2">
-										<Button
-											onclick={() => markAsUnread(notification.id ?? '')}
-											class="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-100 dark:hover:bg-blue-800"
-											title="Mark as unread"
-											variant="outline"
-										>
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M3 8l7.89 7.89a2 2 0 002.83 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-												></path>
-											</svg>
-										</Button>
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
+			{#if loadingRead}
+				<div class="flex items-center justify-center py-12">
+					<Spinner class="size-8" />
+				</div>
+			{:else if readNotifications.length === 0}
+				<div class="rounded-lg border bg-muted p-6 text-center">
+					<p class="text-muted-foreground">No read notifications</p>
+				</div>
+			{:else}
+				<div class="space-y-3">
+					{#each readNotifications as notification (notification.id)}
+						<NotificationItem {notification} onToggleRead={() => markAsUnread(notification)} />
+					{/each}
+				</div>
+			{/if}
 		{/if}
 	{/if}
 </main>

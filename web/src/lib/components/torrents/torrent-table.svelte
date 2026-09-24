@@ -7,8 +7,8 @@
 	} from '$lib/utils.js';
 	import CheckmarkX from '$lib/components/checkmark-x.svelte';
 	import * as Table from '$lib/components/ui/table';
-	import type { MovieTorrent, RichSeasonTorrent, UserRead } from '$lib/api/api';
-	import { getContext } from 'svelte';
+	import type { MovieTorrent, RichSeasonTorrent } from '$lib/api/api';
+	import { getCurrentUser } from '$lib/context.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import client from '$lib/api';
 	import { toast } from 'svelte-sonner';
@@ -28,7 +28,7 @@
 		movieSlug?: string;
 	} = $props();
 
-	let user: () => UserRead = getContext('user');
+	let user = getCurrentUser();
 
 	async function retryTorrentDownload(torrent: MovieTorrent | RichSeasonTorrent) {
 		console.log(`Retrying download for torrent ${torrent.torrent_title}`);

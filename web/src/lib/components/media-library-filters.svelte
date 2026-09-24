@@ -3,13 +3,14 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import MultiSelectFilter from '$lib/components/multi-select-filter.svelte';
 	import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
 	import ListFilter from '@lucide/svelte/icons/list-filter';
 	import HardDrive from '@lucide/svelte/icons/hard-drive';
 	import Gauge from '@lucide/svelte/icons/gauge';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import Captions from '@lucide/svelte/icons/captions';
-	import { NO_SUBTITLES_KEY, qualityMap, subtitleLanguageKey } from '$lib/utils';
+	import { NO_SUBTITLES_KEY, getTorrentQualityString, subtitleLanguageKey } from '$lib/utils';
 	import type { MovieListItem, Quality, ShowSummary, SubtitleLanguage } from '$lib/api/api';
 	import type { DownloadedFilter, MediaSortOption } from '$lib/utils';
 
@@ -81,24 +82,6 @@
 		items.some((item) => 'subtitle_languages' in item && item.subtitle_languages != null)
 	);
 
-	function toggleSubtitle(key: string) {
-		selectedSubtitles = selectedSubtitles.includes(key)
-			? selectedSubtitles.filter((k) => k !== key)
-			: [...selectedSubtitles, key];
-	}
-
-	function toggleGenre(genre: string) {
-		selectedGenres = selectedGenres.includes(genre)
-			? selectedGenres.filter((g) => g !== genre)
-			: [...selectedGenres, genre];
-	}
-
-	function toggleQuality(quality: Quality) {
-		selectedQualities = selectedQualities.includes(quality)
-			? selectedQualities.filter((q) => q !== quality)
-			: [...selectedQualities, quality];
-	}
-
 	let hasActiveFilters = $derived(
 		selectedGenres.length > 0 ||
 			downloadedFilter !== 'all' ||
@@ -130,26 +113,12 @@
 	</Select.Root>
 
 	{#if availableGenres.length > 0}
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline' })}>
-				<ListFilter class="size-4 text-muted-foreground" />
-				Genre
-				{#if selectedGenres.length > 0}
-					<Badge variant="secondary" class="ml-1">{selectedGenres.length}</Badge>
-				{/if}
-			</DropdownMenu.Trigger>
-			<DropdownMenu.Content align="start" class="max-h-80 overflow-y-auto">
-				{#each availableGenres as genre (genre)}
-					<DropdownMenu.CheckboxItem
-						checked={selectedGenres.includes(genre)}
-						closeOnSelect={false}
-						onCheckedChange={() => toggleGenre(genre)}
-					>
-						{genre}
-					</DropdownMenu.CheckboxItem>
-				{/each}
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
+		<MultiSelectFilter
+			icon={ListFilter}
+			label="Genre"
+			options={availableGenres.map((genre) => ({ value: genre, label: genre }))}
+			bind:selected={selectedGenres}
+		/>
 	{/if}
 
 	{#if !isShow}
@@ -171,59 +140,28 @@
 		</DropdownMenu.Root>
 
 		{#if availableQualities.length > 0}
-			<DropdownMenu.Root>
-				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline' })}>
-					<Gauge class="size-4 text-muted-foreground" />
-					Quality
-					{#if selectedQualities.length > 0}
-						<Badge variant="secondary" class="ml-1">{selectedQualities.length}</Badge>
-					{/if}
-				</DropdownMenu.Trigger>
-				<DropdownMenu.Content align="start">
-					{#each availableQualities as quality (quality)}
-						<DropdownMenu.CheckboxItem
-							checked={selectedQualities.includes(quality)}
-							closeOnSelect={false}
-							onCheckedChange={() => toggleQuality(quality)}
-						>
-							{qualityMap[quality]}
-						</DropdownMenu.CheckboxItem>
-					{/each}
-				</DropdownMenu.Content>
-			</DropdownMenu.Root>
+			<MultiSelectFilter
+				icon={Gauge}
+				label="Quality"
+				options={availableQualities.map((quality) => ({
+					value: quality,
+					label: getTorrentQualityString(quality)
+				}))}
+				bind:selected={selectedQualities}
+			/>
 		{/if}
 
 		{#if hasSubtitleData}
-			<DropdownMenu.Root>
-				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline' })}>
-					<Captions class="size-4 text-muted-foreground" />
-					Subtitles
-					{#if selectedSubtitles.length > 0}
-						<Badge variant="secondary" class="ml-1">{selectedSubtitles.length}</Badge>
-					{/if}
-				</DropdownMenu.Trigger>
-				<DropdownMenu.Content align="start" class="max-h-80 overflow-y-auto">
-					<DropdownMenu.CheckboxItem
-						checked={selectedSubtitles.includes(NO_SUBTITLES_KEY)}
-						closeOnSelect={false}
-						onCheckedChange={() => toggleSubtitle(NO_SUBTITLES_KEY)}
-					>
-						None
-					</DropdownMenu.CheckboxItem>
-					{#if availableSubtitleLanguages.length > 0}
-						<DropdownMenu.Separator />
-					{/if}
-					{#each availableSubtitleLanguages as [key, language] (key)}
-						<DropdownMenu.CheckboxItem
-							checked={selectedSubtitles.includes(key)}
-							closeOnSelect={false}
-							onCheckedChange={() => toggleSubtitle(key)}
-						>
-							{language.name}
-						</DropdownMenu.CheckboxItem>
-					{/each}
-				</DropdownMenu.Content>
-			</DropdownMenu.Root>
+			<MultiSelectFilter
+				icon={Captions}
+				label="Subtitles"
+				pinnedOptions={[{ value: NO_SUBTITLES_KEY, label: 'None' }]}
+				options={availableSubtitleLanguages.map(([key, language]) => ({
+					value: key,
+					label: language.name
+				}))}
+				bind:selected={selectedSubtitles}
+			/>
 		{/if}
 	{/if}
 

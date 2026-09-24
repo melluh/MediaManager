@@ -1,10 +1,3 @@
-<script module lang="ts">
-	export interface Crumb {
-		label: string;
-		href?: string;
-	}
-</script>
-
 <script lang="ts">
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
@@ -14,6 +7,7 @@
 	import { resolve } from '$app/paths';
 	import { cn, isSearchPage } from '$lib/utils.js';
 	import { page } from '$app/state';
+	import type { Crumb } from '$lib/context.svelte';
 
 	let { crumbs = [], heroHeader = false }: { crumbs?: Crumb[]; heroHeader?: boolean } = $props();
 

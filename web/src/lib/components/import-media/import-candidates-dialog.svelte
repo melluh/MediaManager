@@ -4,6 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import MediaGrid from '$lib/components/media-grid.svelte';
 	import SuggestedMediaCard from '$lib/components/import-media/suggested-media-card.svelte';
 	import type { Snippet } from 'svelte';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
@@ -69,7 +70,7 @@
 	}
 </script>
 
-<Dialog.Root bind:open={() => dialogState.open, (v) => (dialogState.open = v)}>
+<Dialog.Root bind:open={dialogState.open}>
 	<Dialog.Trigger
 		class={buttonVariants({ variant: triggerVariant, size: 'sm' })}
 		onclick={() => {
@@ -98,9 +99,7 @@
 				<Button variant="outline" size="sm" onclick={retry}>Try again</Button>
 			</div>
 		{:else}
-			<div
-				class="grid w-full auto-rows-min gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4"
-			>
+			<MediaGrid class="md:grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4">
 				{#each candidates ?? [] as candidate (candidate.external_id)}
 					<SuggestedMediaCard result={candidate} action={() => handleImportMedia(candidate)} />
 				{:else}
@@ -109,7 +108,7 @@
 						results!
 					</p>
 				{/each}
-			</div>
+			</MediaGrid>
 		{/if}
 	</Dialog.Content>
 </Dialog.Root>

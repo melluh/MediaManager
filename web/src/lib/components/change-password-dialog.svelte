@@ -38,7 +38,7 @@
 	}
 </script>
 
-<Dialog.Root bind:open={() => dialogState.open, (v) => (dialogState.open = v)}>
+<Dialog.Root bind:open={dialogState.open}>
 	<Dialog.Trigger>
 		<Button onclick={() => (dialogState.open = true)} variant="outline">
 			<KeyRound class="mr-2 size-4" />Change Password

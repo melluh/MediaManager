@@ -2,7 +2,6 @@
 	import { resolve } from '$app/paths';
 	import MediaCard from '$lib/components/media-card.svelte';
 	import MediaImage from '$lib/components/media-image.svelte';
-	import ImageOff from '@lucide/svelte/icons/image-off';
 	import type { MovieListItem, SearchResult, ShowSummary } from '$lib/api/api';
 	import type { Snippet } from 'svelte';
 
@@ -38,12 +37,6 @@
 	{indicators}
 >
 	{#snippet poster()}
-		{#if hasPoster}
-			<MediaImage {media} className="h-full w-full object-cover" bind:loaded={posterLoaded} />
-		{:else}
-			<div class="flex h-full w-full items-center justify-center bg-muted">
-				<ImageOff class="h-12 w-12 text-gray-400" />
-			</div>
-		{/if}
+		<MediaImage {media} className="h-full w-full object-cover" bind:loaded={posterLoaded} />
 	{/snippet}
 </MediaCard>

@@ -1,14 +1,12 @@
 <script lang="ts">
 	import DownloadsCarousel from '$lib/components/downloads/downloads-carousel.svelte';
 	import RecommendedMediaCarousel from '$lib/components/recommended-media-carousel.svelte';
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
-	import { getContext, onDestroy, onMount } from 'svelte';
+	import { onMount } from 'svelte';
+	import { setCrumbs } from '$lib/context.svelte';
+	import { poll } from '$lib/hooks/poll.svelte';
 	import client from '$lib/api';
 	import type { MetaDataProviderSearchResult, TorrentWithProgress } from '$lib/api/api.d.ts';
 
-	const OWN_TORRENTS_POLL_INTERVAL_MS = 7000;
-
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([{ label: 'Dashboard' }]);
 
 	let recommendedShows: MetaDataProviderSearchResult[] = $state([]);
@@ -21,38 +19,20 @@
 
 	// Fetched here rather than in a `load` so the dashboard paints its layout right
 	// away instead of waiting on the backend - see `routes/dashboard/+layout.ts`.
+	// Only polled while there's something to show, so a user without downloads
+	// doesn't keep hitting the backend.
 	let ownTorrents: TorrentWithProgress[] = $state([]);
-	let ownTorrentsPollHandle: ReturnType<typeof setInterval> | undefined;
-	let ownTorrentsRefreshing = false;
-
-	function refreshOwnTorrents() {
-		if (document.hidden || ownTorrentsRefreshing) return;
-		ownTorrentsRefreshing = true;
-		client
-			.GET('/api/v1/torrent/mine')
-			.then((res) => {
-				if (res.data) ownTorrents = res.data;
-			})
-			.catch(() => {
-				// keep showing the last known state; the next tick will retry
-			})
-			.finally(() => {
-				ownTorrentsRefreshing = false;
-			});
+	async function refreshOwnTorrents() {
+		const { data } = await client.GET('/api/v1/torrent/mine');
+		if (data) ownTorrents = data;
 	}
+	let hasOwnTorrents = $derived(ownTorrents.length > 0);
+	poll(refreshOwnTorrents, 7000, { enabled: () => hasOwnTorrents, immediate: false });
 
 	onMount(() => {
-		client
-			.GET('/api/v1/torrent/mine')
-			.then((res) => {
-				if (res.data) ownTorrents = res.data;
-				if (ownTorrents.length > 0) {
-					ownTorrentsPollHandle = setInterval(refreshOwnTorrents, OWN_TORRENTS_POLL_INTERVAL_MS);
-				}
-			})
-			.catch(() => {
-				// nothing to show; the user simply sees no downloads section
-			});
+		refreshOwnTorrents().catch(() => {
+			// nothing to show; the user simply sees no downloads section
+		});
 
 		client
 			.GET('/api/v1/tv/recommended')
@@ -85,10 +65,6 @@
 			.finally(() => {
 				moviesLoading = false;
 			});
-	});
-
-	onDestroy(() => {
-		clearInterval(ownTorrentsPollHandle);
 	});
 </script>
 

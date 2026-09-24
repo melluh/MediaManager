@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ImageOff from '@lucide/svelte/icons/image-off';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { cn, formatRuntime } from '$lib/utils';
 	import type { Snippet } from 'svelte';
@@ -28,6 +29,7 @@
 		// Without a poster there's nothing to identify the card by, so the
 		// title overlay stays visible instead of only appearing on hover.
 		hasPoster?: boolean;
+		/** Only rendered when `hasPoster`; otherwise a placeholder is shown. */
 		poster: Snippet;
 		indicators?: Snippet;
 		href?: string;
@@ -47,8 +49,14 @@
 		{onfocus}
 		{...triggerProps}
 	>
-		{@render poster()}
-		{#if !posterLoaded}
+		{#if hasPoster}
+			{@render poster()}
+		{:else}
+			<div class="flex h-full w-full items-center justify-center bg-muted">
+				<ImageOff class="h-12 w-12 text-gray-400" />
+			</div>
+		{/if}
+		{#if hasPoster && !posterLoaded}
 			<Skeleton class="absolute inset-0 h-full w-full" />
 		{/if}
 		{#if indicators}

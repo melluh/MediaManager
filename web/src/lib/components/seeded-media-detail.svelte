@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { setCrumbs, type Crumb } from '$lib/context.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
 	import PageLoading from '$lib/components/page-loading.svelte';
 	import type { MovieListItem, ShowSummary } from '$lib/api/api';
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 
 	// Stand-in for a detail page while its full object loads: the hero is
 	// painted from the library list item, the rest waits on the real fetch.
@@ -19,10 +18,7 @@
 		message: string;
 	} = $props();
 
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
-	$effect(() => {
-		setCrumbs(crumbs);
-	});
+	setCrumbs(() => crumbs);
 </script>
 
 <MediaHeroHeader {media} {isShow}>

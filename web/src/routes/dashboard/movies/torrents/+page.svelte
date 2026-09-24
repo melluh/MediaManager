@@ -4,14 +4,12 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import TorrentTable from '$lib/components/torrents/torrent-table.svelte';
 	import { resolve } from '$app/paths';
-	import { getContext } from 'svelte';
+	import { setCrumbs } from '$lib/context.svelte';
 	import PageLoading from '$lib/components/page-loading.svelte';
 	import type { PageProps } from './$types';
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 
 	let { data }: PageProps = $props();
 
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
 	setCrumbs([
 		{ label: 'Movies', href: resolve('/dashboard/movies', {}) },
 		{ label: 'Movie Torrents' }

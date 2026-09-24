@@ -33,7 +33,7 @@
 	}
 </script>
 
-<Dialog.Root bind:open={() => dialogState.open, (v) => (dialogState.open = v)}>
+<Dialog.Root bind:open={dialogState.open}>
 	<Dialog.Trigger class={buttonVariants({ variant: 'destructive' })}>Delete Torrent</Dialog.Trigger>
 	<Dialog.Content>
 		<Dialog.Header>

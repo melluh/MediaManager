@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { toast } from 'svelte-sonner';
-	import { Badge } from '$lib/components/ui/badge';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Download from '@lucide/svelte/icons/download';
@@ -11,21 +10,18 @@
 	import { cn } from '$lib/utils';
 	import { untrack } from 'svelte';
 
-	import * as Table from '$lib/components/ui/table';
-	import * as Carousel from '$lib/components/ui/carousel';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Skeleton } from '$lib/components/ui/skeleton';
 	import client from '$lib/api';
 	import type { IndexerQueryResult, Movie } from '$lib/api/api';
 	import { invalidateAll } from '$app/navigation';
+	import EmptyState from '$lib/components/empty-state.svelte';
 	import TorrentTable from '$lib/components/download-dialogs/torrent-table.svelte';
+	import TorrentResultRow from '$lib/components/download-dialogs/torrent-result-row.svelte';
+	import TorrentPickCarousel from '$lib/components/download-dialogs/torrent-pick-carousel.svelte';
 	import DownloadDialogWrapper from '$lib/components/download-dialogs/download-dialog-wrapper.svelte';
-	import TorrentScoreCell from '$lib/components/download-dialogs/torrent-score-cell.svelte';
-	import TorrentPickCard from '$lib/components/download-dialogs/torrent-pick-card.svelte';
 	import { groupIntoSlots } from '$lib/components/download-dialogs/torrent-grouping';
 	import { formatSize } from '$lib/components/download-dialogs/torrent-format';
-	import { getTorrentQualityString } from '$lib/utils';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
 	let {
@@ -160,7 +156,7 @@
 </script>
 
 <DownloadDialogWrapper
-	bind:open={() => dialogueState.open, (v) => (dialogueState.open = v)}
+	bind:open={dialogueState.open}
 	triggerText="Download"
 	triggerClass={hasImportedFile
 		? buttonVariants({ variant: 'secondary' })
@@ -179,42 +175,12 @@
 		</Button>
 		<TorrentTable {torrentsPromise} columns={tableColumnHeadings}>
 			{#snippet rowSnippet(torrent)}
-				<Table.Cell class="font-medium">
-					{#if torrent.comments}
-						<a
-							href={torrent.comments}
-							target="_blank"
-							rel="noopener noreferrer external"
-							class="hover:underline">{torrent.title}</a
-						>
-					{:else}
-						{torrent.title}
-					{/if}
-				</Table.Cell>
-				<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
-				<Table.Cell>{(torrent.size / 1024 / 1024 / 1024).toFixed(2)}GB</Table.Cell>
-				<Table.Cell>{torrent.seeders}</Table.Cell>
-				<TorrentScoreCell score={torrent.score} breakdown={torrent.score_breakdown} />
-				<Table.Cell>{torrent.indexer ?? 'Unknown'}</Table.Cell>
-				<Table.Cell>
-					{#each torrent.flags as flag (flag)}
-						<Badge variant="outline">{flag}</Badge>
-					{/each}
-				</Table.Cell>
-				<Table.Cell class="text-right">
-					<Button
-						class="w-full"
-						disabled={downloadingResultId !== null}
-						onclick={() => downloadTorrent(torrent.id as string)}
-					>
-						{#if downloadingResultId === torrent.id}
-							<LoaderCircle class="animate-spin" />
-						{:else}
-							<Download />
-						{/if}
-						Download
-					</Button>
-				</Table.Cell>
+				<TorrentResultRow
+					{torrent}
+					downloading={downloadingResultId === torrent.id}
+					disabled={downloadingResultId !== null}
+					onDownload={() => downloadTorrent(torrent.id as string)}
+				/>
 			{/snippet}
 		</TorrentTable>
 	{:else}
@@ -231,57 +197,21 @@
 			</div>
 		{/if}
 		{#if torrentsError}
-			<div
-				class="my-2 flex flex-col items-center gap-1 rounded-lg border border-dashed border-destructive/50 bg-destructive/10 px-3 py-6 text-center"
-			>
-				<CircleAlert class="size-8 text-destructive" />
-				<p class="text-sm font-medium text-destructive">An error occurred</p>
-				<p class="text-xs text-muted-foreground">{torrentsError}</p>
-			</div>
+			<EmptyState icon={CircleAlert} title="An error occurred" destructive class="my-2">
+				{torrentsError}
+			</EmptyState>
 		{:else if !isLoading && torrentsData && grouped.allPicks.length === 0}
-			<div
-				class="my-2 flex flex-col items-center gap-1 rounded-lg border border-dashed px-3 py-6 text-center"
-			>
-				<SearchX class="size-8 text-muted-foreground" />
-				<p class="text-sm font-medium">No torrents found</p>
-				<p class="text-xs text-muted-foreground">Try a different search query.</p>
-			</div>
+			<EmptyState icon={SearchX} title="No torrents found" class="my-2">
+				Try a different search query.
+			</EmptyState>
 		{/if}
 		{#if isLoading || (torrentsData && grouped.allPicks.length > 0)}
-			<Carousel.Root class="mx-8 my-4 min-w-0">
-				<Carousel.Content>
-					{#if isLoading}
-						{#each { length: 3 }}
-							<Carousel.Item class="basis-full sm:basis-1/2 lg:basis-1/3">
-								<Skeleton class="h-95 w-full rounded-lg" />
-							</Carousel.Item>
-						{/each}
-					{:else}
-						{#each grouped.allPicks as pick (pick.slotName)}
-							<Carousel.Item class="basis-full sm:basis-1/2 lg:basis-1/3">
-								<TorrentPickCard
-									result={pick.result}
-									slotLabel={pick.slotLabel}
-									selected={selectedResultId === pick.result.id}
-									onSelect={() => (selectedResultId = pick.result.id ?? null)}
-								/>
-							</Carousel.Item>
-						{/each}
-					{/if}
-				</Carousel.Content>
-				<Carousel.Previous />
-				<Carousel.Next />
-				{#if isLoading}
-					<div
-						class="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg bg-background/70 backdrop-blur-sm"
-					>
-						<LoaderCircle class="size-6 animate-spin text-muted-foreground" />
-						<span class="text-sm text-muted-foreground">Searching for torrents...</span>
-					</div>
-				{/if}
-			</Carousel.Root>
-		{/if}
-		{#if isLoading || (torrentsData && grouped.allPicks.length > 0)}
+			<TorrentPickCarousel
+				picks={grouped.allPicks}
+				loading={isLoading}
+				{selectedResultId}
+				onSelect={(id) => (selectedResultId = id)}
+			/>
 			<div class="flex items-center justify-between gap-2 pt-2">
 				<Button
 					variant="secondary"

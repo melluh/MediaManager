@@ -3,56 +3,36 @@
 	import PageLoadError from '$lib/components/page-load-error.svelte';
 	import SeededMediaDetail from '$lib/components/seeded-media-detail.svelte';
 	import { resolve } from '$app/paths';
-	import { setContext } from 'svelte';
-	import type { PublicShow, RichShowTorrent } from '$lib/api/api';
+	import { Resolved } from '$lib/hooks/resolved.svelte';
+	import { setShowContext } from '$lib/context.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
 
 	// The show is resolved here rather than in `load` so this route paints a loading
-	// indicator instead of a blank page. Children read it back off the context.
-	let show = $state<PublicShow | undefined>(undefined);
-	let torrents = $state<RichShowTorrent | undefined>(undefined);
-	let status = $state<'loading' | 'ready' | 'error'>('loading');
-	let errorMessage = $state('');
+	// indicator instead of a blank page. Children read it back off the context, and
+	// only render once it has loaded.
+	const details = new Resolved(() => data.show, { keepPrevious: false });
 
-	setContext('show', () => show);
-	setContext('showTorrents', () => torrents);
-
-	$effect(() => {
-		const pending = data.show;
-		let cancelled = false;
-		status = 'loading';
-
-		pending
-			.then((details) => {
-				if (cancelled) return;
-				show = details.show;
-				torrents = details.torrents;
-				status = 'ready';
-			})
-			.catch((e: Error) => {
-				if (cancelled) return;
-				errorMessage = e.message;
-				status = 'error';
-			});
-
-		return () => {
-			cancelled = true;
-		};
+	setShowContext({
+		show: () => details.value!.show,
+		torrents: () => details.value!.torrents
 	});
 </script>
 
-{#if status === 'error'}
-	<PageLoadError title="Show unavailable" message={errorMessage} />
-{:else if (status === 'loading' || !show) && data.seed}
+{#if details.status === 'error'}
+	<PageLoadError
+		title="Show unavailable"
+		message={details.error instanceof Error ? details.error.message : String(details.error)}
+	/>
+{:else if details.status === 'loading' && data.seed}
 	<SeededMediaDetail
 		media={data.seed}
 		isShow={true}
 		crumbs={[{ label: 'Shows', href: resolve('/dashboard/tv', {}) }, { label: data.seed.name }]}
 		message="Loading show…"
 	/>
-{:else if status === 'loading' || !show}
+{:else if details.status === 'loading'}
 	<PageLoading message="Loading show…" />
 {:else}
 	{@render children()}

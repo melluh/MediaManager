@@ -2,11 +2,9 @@
 	import LoginCard from '$lib/components/auth/login-card.svelte';
 	import PageLoading from '$lib/components/page-loading.svelte';
 	import PageLoadError from '$lib/components/page-load-error.svelte';
-	import { getContext } from 'svelte';
-	import type { AuthMetadata } from '$lib/api/api';
+	import { getAuthMetadataContext } from '$lib/context.svelte';
 
-	const authMetadata: () => AuthMetadata | undefined = getContext('authMetadata');
-	const authStatus: () => 'loading' | 'ready' | 'error' = getContext('authMetadataStatus');
+	const { metadata: authMetadata, status: authStatus } = getAuthMetadataContext();
 </script>
 
 <svelte:head>

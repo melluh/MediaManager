@@ -1,47 +1,36 @@
 <script lang="ts">
-	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import { buttonVariants } from '$lib/components/ui/button/index.js';
-	import { getContext, onDestroy } from 'svelte';
-	import type { PublicShow, RichShowTorrent, TorrentWithProgress, UserRead } from '$lib/api/api';
+	import { getCurrentUser, getShowContext, setCrumbs } from '$lib/context.svelte';
+	import type { PublicShow, TorrentWithProgress } from '$lib/api/api';
 	import DownloadSeasonsDialog from '$lib/components/download-dialogs/download-seasons-dialog.svelte';
 	import DownloadTable from '$lib/components/downloads/download-table.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
 	import MediaAvailabilityBadge from '$lib/components/media-availability-badge.svelte';
+	import MediaActionsMenu from '$lib/components/media-actions-menu.svelte';
 	import { seasonBanner, showAvailability } from '$lib/components/show-availability.js';
 	import { withDownloadProgress } from '$lib/components/media-availability.js';
 	import * as Carousel from '$lib/components/ui/carousel/index.js';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { toast } from 'svelte-sonner';
 	import { Label } from '$lib/components/ui/label';
-	import LibraryCombobox from '$lib/components/library-combobox.svelte';
 	import WatchButton from '$lib/components/watch-button.svelte';
-	import DeleteMediaDialog from '$lib/components/delete-media-dialog.svelte';
-	import MediaDetailsDialog from '$lib/components/media-details-dialog.svelte';
 	import SeasonFilesDialog from '$lib/components/season-files-dialog.svelte';
+	import { poll } from '$lib/hooks/poll.svelte';
 	import { resolve } from '$app/paths';
 	import client from '$lib/api';
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
 
 	// Provided by +layout.svelte, which resolves them without blocking first paint.
-	const getShow: () => PublicShow = getContext('show');
-	const getTorrents: () => RichShowTorrent = getContext('showTorrents');
-	let show: PublicShow = $derived(getShow());
-	let torrents: RichShowTorrent = $derived(getTorrents());
-	let user: () => UserRead = getContext('user');
+	const showContext = getShowContext();
+	let show = $derived(showContext.show());
+	let torrents = $derived(showContext.torrents());
+	let user = getCurrentUser();
 
 	let anyEpisodeDownloaded = $derived(
 		show.seasons.some((season) => season.episodes.some((episode) => episode.downloaded))
 	);
 	let hasWatchUrl = $state(false);
 
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
-	$effect(() => {
-		setCrumbs([
-			{ label: 'Shows', href: resolve('/dashboard/tv', {}) },
-			{ label: show.name }
-		]);
-	});
+	setCrumbs(() => [{ label: 'Shows', href: resolve('/dashboard/tv', {}) }, { label: show.name }]);
 
 	// Seasons don't always have their own poster - fall back to the show's,
 	// reusing its cache-bust timestamp since season posters are downloaded in
@@ -60,25 +49,13 @@
 	// is currently downloading, and so the torrent table's status badges stay
 	// live too - same pattern as the movie detail page and the dashboard's
 	// downloads carousel.
-	const TORRENTS_POLL_INTERVAL_MS = 7000;
 	let showTorrentsWithProgress: TorrentWithProgress[] = $state([]);
-	let showTorrentsPollHandle: ReturnType<typeof setInterval> | undefined;
-	function refreshShowTorrentsWithProgress() {
-		if (document.hidden) return;
-		client
-			.GET('/api/v1/tv/shows/{show_id}/downloads', { params: { path: { show_id: show.id } } })
-			.then(({ data }) => {
-				if (data) showTorrentsWithProgress = data;
-			});
-	}
-	$effect(() => {
-		refreshShowTorrentsWithProgress();
-		showTorrentsPollHandle = setInterval(
-			refreshShowTorrentsWithProgress,
-			TORRENTS_POLL_INTERVAL_MS
-		);
-	});
-	onDestroy(() => clearInterval(showTorrentsPollHandle));
+	poll(async () => {
+		const { data } = await client.GET('/api/v1/tv/shows/{show_id}/downloads', {
+			params: { path: { show_id: show.id } }
+		});
+		if (data) showTorrentsWithProgress = data;
+	}, 7000);
 
 	let showProgress = $derived(
 		showTorrentsWithProgress.find((t) => t.initiated_by_user_id === user().id)?.download_progress
@@ -129,34 +106,24 @@
 					<DownloadSeasonsDialog {show} />
 				{/snippet}
 			</WatchButton>
-			<DropdownMenu.Root>
-				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'icon' })}>
-					<EllipsisVertical class="size-4" />
-				</DropdownMenu.Trigger>
-				<DropdownMenu.Content align="end" class="w-64">
-					{#if hasWatchUrl}
-						<DownloadSeasonsDialog {show} asMenuItem menuLabel="Download additional" />
-						<DropdownMenu.Separator />
-					{/if}
-					{#if !show.ended}
-						<div class="flex items-center gap-3 px-2 py-1.5">
-							<Switch
-								bind:checked={() => continuousDownloadEnabled, toggle_continuous_download}
-								id="continuous-download-checkbox"
-							/>
-							<Label for="continuous-download-checkbox" class="text-xs">
-								Enable automatic download of future seasons
-							</Label>
-						</div>
-						<DropdownMenu.Separator />
-					{/if}
-					<MediaDetailsDialog media={show} isShow={true} />
+			<MediaActionsMenu media={show} isShow={true} class="w-64">
+				{#if hasWatchUrl}
+					<DownloadSeasonsDialog {show} asMenuItem menuLabel="Download additional" />
 					<DropdownMenu.Separator />
-					<LibraryCombobox media={show} mediaType="tv" />
+				{/if}
+				{#if !show.ended}
+					<div class="flex items-center gap-3 px-2 py-1.5">
+						<Switch
+							bind:checked={() => continuousDownloadEnabled, toggle_continuous_download}
+							id="continuous-download-checkbox"
+						/>
+						<Label for="continuous-download-checkbox" class="text-xs">
+							Enable automatic download of future seasons
+						</Label>
+					</div>
 					<DropdownMenu.Separator />
-					<DeleteMediaDialog isShow={true} media={show} />
-				</DropdownMenu.Content>
-			</DropdownMenu.Root>
+				{/if}
+			</MediaActionsMenu>
 		{/if}
 	{/snippet}
 

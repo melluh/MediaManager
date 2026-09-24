@@ -1,41 +1,24 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { Badge, type BadgeVariant } from '$lib/components/ui/badge/index.js';
-	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { CircularProgress } from '$lib/components/ui/circular-progress/index.js';
-	import { Spinner } from '$lib/components/ui/spinner/index.js';
-	import TorrentStat from '$lib/components/download-dialogs/torrent-stat.svelte';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import CopyButton from '$lib/components/copy-button.svelte';
+	import CancelDownloadDialog from '$lib/components/downloads/cancel-download-dialog.svelte';
+	import DownloadProgressPanel from '$lib/components/downloads/download-progress-panel.svelte';
+	import ImportFilePicker from '$lib/components/downloads/import-file-picker.svelte';
 	import { getDownloadStatusBadge } from '$lib/components/downloads/download-status.js';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 	import Globe from '@lucide/svelte/icons/globe';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
-	import Circle from '@lucide/svelte/icons/circle';
-	import CircleCheck from '@lucide/svelte/icons/circle-check';
-	import Gauge from '@lucide/svelte/icons/gauge';
 	import HardDrive from '@lucide/svelte/icons/hard-drive';
 	import Film from '@lucide/svelte/icons/film';
-	import Users from '@lucide/svelte/icons/users';
-	import Clock from '@lucide/svelte/icons/clock';
-	import ClockAlert from '@lucide/svelte/icons/clock-alert';
-	import Check from '@lucide/svelte/icons/check';
-	import Copy from '@lucide/svelte/icons/copy';
-	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import CircleX from '@lucide/svelte/icons/circle-x';
-	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { resolve } from '$app/paths';
-	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
-	import client from '$lib/api';
-	import type { TorrentImportCandidate, TorrentWithProgress } from '$lib/api/api';
+	import type { TorrentWithProgress } from '$lib/api/api';
 	import {
 		cn,
 		formatBytes,
-		formatDownloadSpeed,
 		formatLastUpdated,
-		formatSecondsToOptimalUnit,
 		formatTorrentSeasonEpisodeRange,
 		getTorrentQualityString
 	} from '$lib/utils';
@@ -49,19 +32,11 @@
 
 	let { torrent }: { torrent: TorrentWithProgress } = $props();
 
-	let progress = $derived(torrent.download_progress);
 	let statusBadge = $derived(getDownloadStatusBadge(torrent));
 	let waitingForImport = $derived(
 		statusBadge.isFinished && !torrent.import_error && !torrent.imported
 	);
-	let downloadedLabel = $derived(formatBytes(progress?.downloaded_bytes));
-	let totalLabel = $derived(formatBytes(progress?.total_bytes));
-	let speedLabel = $derived(formatDownloadSpeed(progress?.download_speed_bytes_per_second));
-	let etaLabel = $derived(
-		progress?.eta_seconds != null ? formatSecondsToOptimalUnit(progress.eta_seconds) : undefined
-	);
-	let seedersLabel = $derived(progress?.seeders != null ? String(progress.seeders) : undefined);
-	let leechersLabel = $derived(progress?.leechers != null ? String(progress.leechers) : undefined);
+	let totalLabel = $derived(formatBytes(torrent.download_progress?.total_bytes));
 	let addedLabel = $derived(formatLastUpdated(torrent.initiated_at));
 	let seasonEpisodeLabel = $derived(
 		formatTorrentSeasonEpisodeRange(torrent.seasons, torrent.episodes)
@@ -84,121 +59,7 @@
 			!torrent.media.is_show
 	);
 
-	// The import error is a raw exception message, so it can be arbitrarily long.
-	// It is clamped in the markup and copyable in full.
-	let importErrorCopied = $state(false);
-	let importErrorCopyReset: ReturnType<typeof setTimeout> | undefined;
-
-	async function copyImportError() {
-		if (!torrent.import_error) return;
-		try {
-			// `navigator.clipboard` is undefined when the app is served over plain
-			// http, which is common for self-hosted setups on a LAN.
-			await navigator.clipboard.writeText(torrent.import_error);
-		} catch {
-			toast.error('Could not copy the error to the clipboard.');
-			return;
-		}
-		importErrorCopied = true;
-		clearTimeout(importErrorCopyReset);
-		importErrorCopyReset = setTimeout(() => (importErrorCopied = false), 2000);
-	}
-
-	let candidates = $state<TorrentImportCandidate[] | null>(null);
-	let candidatesLoading = $state(false);
-	let candidatesError = $state<string | null>(null);
-	let candidatesFetchedForTorrentId = $state<string | null>(null);
-	let selectedPath = $state<string | null>(null);
-	let resolving = $state(false);
-
-	$effect(() => {
-		if (!canResolveMultipleVideoFiles) return;
-		if (candidatesFetchedForTorrentId === torrent.id) return;
-		fetchCandidates();
-	});
-
-	async function fetchCandidates() {
-		const movieId = torrent.media?.id;
-		if (!movieId) return;
-
-		candidatesLoading = true;
-		candidatesError = null;
-		candidatesFetchedForTorrentId = torrent.id!;
-
-		const { data, error } = await client.GET(
-			'/api/v1/movies/{movie_id}/torrents/{torrent_id}/import-candidates',
-			{ params: { path: { movie_id: movieId, torrent_id: torrent.id! } } }
-		);
-
-		candidatesLoading = false;
-		if (error) {
-			candidatesError = 'Failed to load the files found in this download.';
-			return;
-		}
-		candidates = data;
-		selectedPath = data[0]?.relative_path ?? null;
-	}
-
-	async function resolveImport() {
-		const movieId = torrent.media?.id;
-		if (!movieId || !selectedPath) return;
-
-		resolving = true;
-		const { error, response } = await client.POST(
-			'/api/v1/movies/{movie_id}/torrents/{torrent_id}/import',
-			{
-				params: {
-					path: { movie_id: movieId, torrent_id: torrent.id! },
-					query: { relative_path: selectedPath }
-				}
-			}
-		);
-		resolving = false;
-
-		if (error) {
-			if (response.status === 409) {
-				toast.info('This download was already resolved.');
-			} else {
-				toast.error('Failed to import the selected file.');
-			}
-			await invalidateAll();
-			return;
-		}
-
-		toast.success('Import resolved successfully.');
-		await invalidateAll();
-	}
-
 	let cancelConfirmOpen = $state(false);
-	let removeFromClient = $state(false);
-	let cancelling = $state(false);
-
-	async function cancelDownload() {
-		cancelling = true;
-		const { error } = await client.POST('/api/v1/torrent/{torrent_id}/cancel', {
-			params: {
-				path: { torrent_id: torrent.id! },
-				query: { remove_from_client: removeFromClient }
-			}
-		});
-		cancelling = false;
-
-		if (error) {
-			toast.error('Failed to cancel the download.');
-			return;
-		}
-
-		cancelConfirmOpen = false;
-		toast.success('Download cancelled.');
-		await invalidateAll();
-	}
-
-	function formatDuration(seconds: number | null | undefined): string {
-		if (seconds == null || seconds <= 0) return 'unknown length';
-		const hours = Math.floor(seconds / 3600);
-		const minutes = Math.floor((seconds % 3600) / 60);
-		return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-	}
 </script>
 
 <Dialog.Content class="w-full max-w-[500px] rounded-lg p-6 shadow-lg">
@@ -269,116 +130,26 @@
 			{statusBadge.label}
 		</div>
 		{#if torrent.import_error}
+			<!-- The import error is a raw exception message, so it can be arbitrarily
+			     long. It is clamped here and copyable in full. -->
 			<div class="group/error flex items-start gap-2">
 				<p class="line-clamp-3 min-w-0 flex-1 text-xs font-normal break-words">
 					{torrent.import_error}
 				</p>
-				<button
-					type="button"
-					onclick={copyImportError}
-					class="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-normal opacity-0 transition-opacity group-hover/error:opacity-100 hover:bg-current/10 focus-visible:opacity-100"
-				>
-					{#if importErrorCopied}
-						<Check class="size-3" />
-						Copied
-					{:else}
-						<Copy class="size-3" />
-						Copy
-					{/if}
-				</button>
+				<CopyButton
+					text={torrent.import_error}
+					class="opacity-0 transition-opacity group-hover/error:opacity-100 focus-visible:opacity-100"
+				/>
 			</div>
 		{/if}
 	</div>
 
 	{#if showLiveProgress}
-		{#if progress}
-			<div class="flex flex-col items-center gap-1 py-2">
-				{#if waitingForImport}
-					<ClockAlert class="h-[72px] w-[72px] text-muted-foreground" />
-				{:else}
-					<CircularProgress value={progress.progress} size={72} strokeWidth={6}>
-						<span class="text-base font-semibold">{Math.round(progress.progress)}%</span>
-					</CircularProgress>
-				{/if}
-				{#if waitingForImport}
-					<p class="text-xs text-muted-foreground">Waiting for import to run</p>
-				{:else if downloadedLabel && totalLabel}
-					<p class="text-xs text-muted-foreground">{downloadedLabel} of {totalLabel}</p>
-				{:else if totalLabel}
-					<p class="text-xs text-muted-foreground">{totalLabel} total</p>
-				{/if}
-			</div>
-
-			<div class="grid grid-cols-2 gap-2">
-				<TorrentStat icon={Gauge} label="Speed" value={speedLabel ?? 'idle'} />
-				<TorrentStat icon={Clock} label="ETA" value={etaLabel ?? 'unknown'} />
-				<TorrentStat
-					icon={Users}
-					label="Peers"
-					value={seedersLabel != null || leechersLabel != null
-						? `${seedersLabel ?? '0'} seeders, ${leechersLabel ?? '0'} leechers`
-						: 'unknown'}
-				/>
-			</div>
-		{:else}
-			<p class="text-sm text-muted-foreground">
-				Live progress isn't available for this download client.
-			</p>
-		{/if}
+		<DownloadProgressPanel progress={torrent.download_progress} {waitingForImport} />
 	{/if}
 
 	{#if canResolveMultipleVideoFiles}
-		<div class="space-y-2 border-t pt-3">
-			<p class="text-sm font-medium">Multiple video files were found — pick one to import:</p>
-			{#if candidatesLoading}
-				<div class="flex items-center justify-center py-4">
-					<Spinner class="size-6" />
-				</div>
-			{:else if candidatesError}
-				<p class="text-xs text-destructive">{candidatesError}</p>
-			{:else if candidates && candidates.length === 0}
-				<p class="text-xs text-muted-foreground">
-					No video files were found anymore in this download's directory.
-				</p>
-			{:else if candidates}
-				<div class="max-h-[220px] space-y-1 overflow-y-auto pr-1">
-					{#each candidates as candidate (candidate.relative_path)}
-						<button
-							type="button"
-							class={cn(
-								'flex w-full items-start gap-2 rounded-md border p-2 text-left text-xs transition-colors hover:bg-muted',
-								selectedPath === candidate.relative_path && 'border-primary bg-muted'
-							)}
-							onclick={() => (selectedPath = candidate.relative_path)}
-						>
-							{#if selectedPath === candidate.relative_path}
-								<CircleCheck class="mt-0.5 size-3.5 shrink-0 text-primary" />
-							{:else}
-								<Circle class="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-							{/if}
-							<span class="min-w-0 flex-1 space-y-0.5">
-								<span class="block truncate font-medium" title={candidate.relative_path}>
-									{candidate.file_name}
-								</span>
-								<span class="flex flex-wrap items-center gap-x-1.5 text-muted-foreground">
-									<span>{formatBytes(candidate.size_bytes) ?? 'unknown size'}</span>
-									<span>&middot;</span>
-									<span>{getTorrentQualityString(candidate.quality)}</span>
-									<span>&middot;</span>
-									<span>{formatDuration(candidate.duration_seconds)}</span>
-								</span>
-							</span>
-						</button>
-					{/each}
-				</div>
-				<Button class="w-full" disabled={!selectedPath || resolving} onclick={resolveImport}>
-					{#if resolving}
-						<Spinner class="mr-1 size-4" />
-					{/if}
-					Import selected file
-				</Button>
-			{/if}
-		</div>
+		<ImportFilePicker movieId={torrent.media!.id} torrentId={torrent.id!} />
 	{/if}
 
 	<div class="border-t pt-3">
@@ -393,56 +164,4 @@
 	</div>
 </Dialog.Content>
 
-<AlertDialog.Root bind:open={cancelConfirmOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>Cancel this download?</AlertDialog.Title>
-			<AlertDialog.Description>
-				This removes the download from your homepage. It stays on record as cancelled, so it won't
-				be re-imported automatically.
-			</AlertDialog.Description>
-		</AlertDialog.Header>
-		<div class="flex items-start space-x-2 py-2">
-			<Checkbox bind:checked={removeFromClient} id="remove-from-client" class="mt-0.5" />
-			<Label
-				for="remove-from-client"
-				class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-			>
-				Also remove it from the download client
-				<br />
-				<span class="text-sm font-normal text-muted-foreground">
-					The downloaded data is left in place, only the entry in the client is removed.
-				</span>
-			</Label>
-		</div>
-		{#if removeFromClient && !torrent.usenet}
-			<div
-				class="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive"
-			>
-				<TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
-				<span>
-					Removing an unfinished or unseeded torrent from the client may count as a Hit & Run on
-					private trackers, which can lead to warnings or a ban.
-				</span>
-			</div>
-		{/if}
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel disabled={cancelling}>Keep downloading</AlertDialog.Cancel>
-			<AlertDialog.Action
-				onclick={(e) => {
-					e.preventDefault();
-					cancelDownload();
-				}}
-				disabled={cancelling}
-				class={buttonVariants({ variant: 'destructive' })}
-			>
-				{#if cancelling}
-					<LoaderCircle class="animate-spin" />
-				{:else}
-					<CircleX />
-				{/if}
-				Cancel Download
-			</AlertDialog.Action>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<CancelDownloadDialog {torrent} bind:open={cancelConfirmOpen} />

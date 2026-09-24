@@ -77,7 +77,7 @@
 	}
 </script>
 
-<AlertDialog.Root bind:open={() => deleteDialog.open, (v) => (deleteDialog.open = v)}>
+<AlertDialog.Root bind:open={deleteDialog.open}>
 	<AlertDialog.Trigger>
 		{#snippet child({ props })}
 			<DropdownMenu.Item

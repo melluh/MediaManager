@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { MediaImportSuggestion } from '$lib/api/api';
-	import { getContext } from 'svelte';
-	import type { Crumb } from '$lib/components/nav/dashboard-header.svelte';
+	import { setCrumbs } from '$lib/context.svelte';
 	import { rescanImportableMedia, importMatchedMedia } from '$lib/api/importable';
 	import { invalidateAll } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -11,7 +10,8 @@
 		type BulkImportStatus
 	} from '$lib/components/import-media/importable-media-row.svelte';
 	import { getConfidenceMeta } from '$lib/components/import-media/confidence';
-	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import PageHeading from '$lib/components/page-heading.svelte';
+	import RescanButton from '$lib/components/import-media/rescan-button.svelte';
 	import Download from '@lucide/svelte/icons/download';
 	import { toast } from 'svelte-sonner';
 	import PageLoading from '$lib/components/page-loading.svelte';
@@ -37,8 +37,7 @@
 		emptyMessage: string;
 	} = $props();
 
-	const setCrumbs: (crumbs: Crumb[]) => void = getContext('setCrumbs');
-	setCrumbs([{ label: parentCrumbLabel, href: parentCrumbHref }, { label: crumb }]);
+	setCrumbs(() => [{ label: parentCrumbLabel, href: parentCrumbHref }, { label: crumb }]);
 
 	let isRescanning = $state(false);
 
@@ -136,9 +135,7 @@
 </svelte:head>
 
 <main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0">
-	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
-		{title}
-	</h1>
+	<PageHeading>{title}</PageHeading>
 	{#await importable}
 		<PageLoading message="Loading importable media…" />
 	{:then media}
@@ -148,14 +145,7 @@
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<div class="flex flex-wrap items-center gap-4">
 				{#if media.length > 0}
-					<Button variant="outline" size="sm" onclick={rescan} disabled={isRescanning}>
-						{#if isRescanning}
-							<Spinner class="size-4" />
-						{:else}
-							<RefreshCw class="size-4" />
-						{/if}
-						Rescan
-					</Button>
+					<RescanButton rescanning={isRescanning} onclick={rescan} />
 				{/if}
 				<p class="text-sm text-muted-foreground">{summarize(media.length, needingAttention)}</p>
 			</div>
@@ -205,14 +195,7 @@
 		{:else}
 			<div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
 				<p class="text-muted-foreground">{emptyMessage}</p>
-				<Button variant="outline" size="sm" onclick={rescan} disabled={isRescanning}>
-					{#if isRescanning}
-						<Spinner class="size-4" />
-					{:else}
-						<RefreshCw class="size-4" />
-					{/if}
-					Rescan
-				</Button>
+				<RescanButton rescanning={isRescanning} onclick={rescan} />
 			</div>
 		{/if}
 	{/await}

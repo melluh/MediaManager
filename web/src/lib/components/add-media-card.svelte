@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import ImageOff from '@lucide/svelte/icons/image-off';
 	import type { MetaDataProviderSearchResult } from '$lib/api/api';
 	import ExternalPosterImage from '$lib/components/external-poster-image.svelte';
 	import AddMediaDialog from '$lib/components/add-media-dialog/add-media-dialog.svelte';
@@ -26,7 +25,7 @@
 	}
 </script>
 
-<Dialog.Root bind:open={() => detailsDialog.open, (v) => (detailsDialog.open = v)}>
+<Dialog.Root bind:open={detailsDialog.open}>
 	<Dialog.Trigger>
 		{#snippet child({ props })}
 			<MediaCard
@@ -39,18 +38,12 @@
 				triggerProps={{ ...props, onmouseenter: prefetchDetails, onfocus: prefetchDetails }}
 			>
 				{#snippet poster()}
-					{#if hasPoster}
-						<ExternalPosterImage
-							className="h-full w-full object-cover"
-							posterImages={result.poster_images ?? []}
-							alt={`${result.name}'s Poster Image`}
-							bind:loaded={posterImageLoaded}
-						/>
-					{:else}
-						<div class="flex h-full w-full items-center justify-center bg-muted">
-							<ImageOff class="h-12 w-12 text-gray-400" />
-						</div>
-					{/if}
+					<ExternalPosterImage
+						className="h-full w-full object-cover"
+						posterImages={result.poster_images ?? []}
+						alt={`${result.name}'s Poster Image`}
+						bind:loaded={posterImageLoaded}
+					/>
 				{/snippet}
 			</MediaCard>
 		{/snippet}

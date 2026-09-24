@@ -1,17 +1,23 @@
 <script lang="ts">
 	import AppSidebar from '$lib/components/nav/app-sidebar.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import DashboardHeader, { type Crumb } from '$lib/components/nav/dashboard-header.svelte';
+	import DashboardHeader from '$lib/components/nav/dashboard-header.svelte';
 	import PageLoading from '$lib/components/page-loading.svelte';
 	import PageLoadError from '$lib/components/page-load-error.svelte';
 	import type { LayoutProps } from './$types';
-	import { setContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import type { UserRead } from '$lib/api/api';
 	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
 	import { serviceHealth } from '$lib/hooks/service-health.svelte.js';
+	import { Resolved } from '$lib/hooks/resolved.svelte';
+	import {
+		setCrumbSetter,
+		setHeroHeaderSetter,
+		setUserContext,
+		type Crumb,
+		type LoadStatus
+	} from '$lib/context.svelte';
 
 	let { data, children }: LayoutProps = $props();
 	let crumbs: Crumb[] = $state([]);
@@ -22,40 +28,34 @@
 
 	// The user is resolved here rather than in `load` so the layout can paint a
 	// loading indicator while /users/me is in flight, instead of blocking first paint.
-	let user = $state<UserRead | undefined>(undefined);
-	let status = $state<'loading' | 'ready' | 'error'>('loading');
+	// A background refresh (e.g. refreshAll()/invalidateAll() from elsewhere in the
+	// app) keeps the previous user while the new one loads; regressing to 'loading'
+	// would tear down and remount the whole dashboard on every such refresh, wiping
+	// any page-local state (like an open dialog) beneath it.
+	const userResult = new Resolved(() => data.user);
+	let user = $derived(userResult.value?.state === 'ok' ? userResult.value.user : undefined);
+	// 'unauthorized' stays on the loading indicator: we're on our way out of the dashboard.
+	let status: LoadStatus = $derived(
+		userResult.value?.state === 'ok'
+			? 'ready'
+			: userResult.value?.state === 'unreachable'
+				? 'error'
+				: 'loading'
+	);
 
-	setContext('user', () => user);
-	setContext('setCrumbs', (newCrumbs: Crumb[]) => {
+	setUserContext(() => user);
+	setCrumbSetter((newCrumbs) => {
 		crumbs = newCrumbs;
 	});
-	setContext('setHeroHeader', (active: boolean) => {
+	setHeroHeaderSetter((active) => {
 		heroHeader = active;
 	});
 
 	$effect(() => {
-		const pending = data.user;
-		let cancelled = false;
-		// Only show the full-page "signing you in" loading state before we have a user at
-		// all. A background refresh (e.g. refreshAll()/invalidateAll() from elsewhere in the
-		// app) re-runs this effect with a new `data.user` promise; regressing `status` to
-		// 'loading' here would tear down and remount the whole dashboard on every such
-		// refresh, wiping any page-local state (like an open dialog) beneath it.
-		if (status !== 'ready') status = 'loading';
-
-		pending.then((result) => {
-			if (cancelled) return;
-			if (result.state === 'unauthorized') {
-				// Stay on the loading indicator, we're on our way out of the dashboard.
-				goto(resolve('/login', {}));
-				return;
-			}
-			if (result.state === 'unreachable') {
-				status = 'error';
-				return;
-			}
-			user = result.user;
-			status = 'ready';
+		const result = userResult.value;
+		if (result?.state === 'unauthorized') {
+			goto(resolve('/login', {}));
+		} else if (result?.state === 'ok') {
 			// Only poll once we know we're authenticated, otherwise these fire 401s
 			// while the session is still being established.
 			notificationCount.startPolling();
@@ -64,11 +64,7 @@
 				toast.info('Your account requires verification. Redirecting...');
 				goto(resolve('/login/verify', {}));
 			}
-		});
-
-		return () => {
-			cancelled = true;
-		};
+		}
 	});
 </script>
 

@@ -2,15 +2,14 @@
 	import { toast } from 'svelte-sonner';
 	import client from '$lib/api';
 	import { refreshAll } from '$app/navigation';
-	import { getContext } from 'svelte';
-	import type { UserReadWithPermissions } from '$lib/api/api';
+	import { getCurrentUser } from '$lib/context.svelte';
 	import InlineEditField from '$lib/components/inline-edit-field.svelte';
 	import ChangePasswordDialog from '$lib/components/change-password-dialog.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 
 	let { passwordLoginEnabled = true }: { passwordLoginEnabled?: boolean } = $props();
 
-	let currentUser: () => UserReadWithPermissions = getContext('user');
+	let currentUser = getCurrentUser();
 
 	let canEditAccount = $derived(currentUser().permissions.can_edit_account);
 	let canChangePassword = $derived(currentUser().permissions.can_change_password);

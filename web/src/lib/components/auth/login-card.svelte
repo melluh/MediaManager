@@ -13,7 +13,8 @@
 	import { handleOauth } from '$lib/utils.ts';
 	import { resolve } from '$app/paths';
 	import CheckIcon from '@lucide/svelte/icons/check';
-	import Spinner from '../ui/spinner/spinner.svelte';
+	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
+	import OAuthButtons from '$lib/components/auth/oauth-buttons.svelte';
 
 	let {
 		oauthProviderNames,
@@ -152,31 +153,13 @@
 				</form>
 			{/if}
 
-			{#if passwordLoginEnabled && oauthProviderNames.length > 0}
-				<div
-					class="relative mt-4 text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border"
-				>
-					<span class="relative z-10 bg-background px-2 text-muted-foreground">
-						Or continue with
-					</span>
-				</div>
-			{/if}
-
-			{#each oauthProviderNames as name, i (name)}
-				<Button
-					class={passwordLoginEnabled || i > 0 ? 'mt-2 w-full' : 'w-full'}
-					disabled={oauthLoading}
-					onclick={onOauthClick}
-					variant={singleOauthOnly ? 'default' : 'outline'}
-				>
-					{#if oauthLoading}
-						<Spinner />
-					{:else if singleOauthOnly}
-						<LogInIcon class="size-4" />
-					{/if}
-					Login with {name}
-				</Button>
-			{/each}
+			<OAuthButtons
+				providerNames={oauthProviderNames}
+				divider={passwordLoginEnabled}
+				primary={singleOauthOnly}
+				loading={oauthLoading}
+				onclick={onOauthClick}
+			/>
 
 			{#if registrationEnabled}
 				<div class="mt-6 text-center text-sm">

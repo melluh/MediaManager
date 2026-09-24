@@ -105,7 +105,7 @@ export function convertTorrentEpisodeRangeToIntegerRange(episodes: number[]): st
 	}
 }
 
-function padSeasonOrEpisodeNumber(n: number): string {
+export function padSeasonOrEpisodeNumber(n: number): string {
 	return String(n).padStart(2, '0');
 }
 
