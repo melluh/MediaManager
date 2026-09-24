@@ -12,10 +12,12 @@ qBittorrent is a popular BitTorrent client that MediaManager can integrate with 
   Hostname or IP of the qBittorrent server. Include the protocol (http/https).
 * `port`\
   Port of the qBittorrent Web UI/API. Default is `8080`.
+* `api_key`\
+  API key for qBittorrent Web UI authentication, generated in qBittorrent under _Options → WebUI_. Requires qBittorrent v5.2.0 or newer. When set, `username` and `password` are ignored. Recommended over username/password.
 * `username`\
-  Username for qBittorrent Web UI authentication. Default is `admin`.
+  Username for qBittorrent Web UI authentication, used when no `api_key` is set. Default is `admin`.
 * `password`\
-  Password for qBittorrent Web UI authentication. Default is `admin`.
+  Password for qBittorrent Web UI authentication, used when no `api_key` is set. Default is `admin`.
 
 ## Transmission Settings (`[torrents.transmission]`)
 
@@ -65,8 +67,7 @@ Here's a complete example of the download clients section in your `config.toml`:
     enabled = true
     host = "http://qbittorrent"
     port = 8080
-    username = "admin"
-    password = "your_secure_password"
+    api_key = "your_qbittorrent_api_key"
 
     # Transmission configuration
     [torrents.transmission]

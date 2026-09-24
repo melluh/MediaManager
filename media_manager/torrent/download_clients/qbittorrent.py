@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import ClassVar
 
 import qbittorrentapi
@@ -79,6 +80,12 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
         "unknown": DownloadState.unknown,
     }
 
+    # How long to wait for an added torrent to show up in qBittorrent. Torrents added
+    # by URL are fetched by qBittorrent in the background, so the add call itself can
+    # report success (as "pending") for a torrent that never actually gets added.
+    ADD_VERIFY_TIMEOUT_SECONDS = 30
+    ADD_VERIFY_POLL_INTERVAL_SECONDS = 1
+
     def __init__(self) -> None:
         self.config = MediaManagerConfig().torrents.qbittorrent
         self.api_client = qbittorrentapi.Client(
@@ -86,7 +93,14 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
             port=self.config.port,
             password=self.config.password,
             username=self.config.username,
+            # When set, qbittorrent-api sends it as a bearer token on every request
+            # instead of using a session cookie.
+            api_key=self.config.api_key or None,
         )
+        # Log in once; the session is shared by every thread using this client.
+        # Don't log out after individual calls: that invalidates the session for
+        # any other thread mid-request (which surfaces as 403 Forbidden errors).
+        # qbittorrentapi re-authenticates on its own if the session expires.
         try:
             self.api_client.auth_log_in()
         except Exception:
@@ -141,31 +155,28 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
         :return: The torrent object with calculated hash and initial status.
         """
         torrent_hash = get_torrent_hash(torrent=indexer_result)
-        answer = None
 
-        try:
-            self.api_client.auth_log_in()
-            answer = self.api_client.torrents_add(
-                category=self.config.category_name,
-                urls=indexer_result.download_url,
-                save_path=sanitize_torrent_title(indexer_result.title),
-            )
-        finally:
-            self.api_client.auth_log_out()
-
-        # Check if torrent was successfully added or queued
-        success = (
-            answer == "Ok." or
-            (hasattr(answer, "success_count") and answer.success_count > 0) or
-            (hasattr(answer, "pending_count") and answer.pending_count > 0)
+        answer = self.api_client.torrents_add(
+            category=self.config.category_name,
+            urls=indexer_result.download_url,
+            save_path=sanitize_torrent_title(indexer_result.title),
         )
+        log.debug(f"qBittorrent torrents_add answer: {answer}")
 
-        if not success:
-            log.error(f"Failed to download torrent, no success indicators in API Answer: {answer}")
-            msg = f"Failed to download torrent, no success indicators in API Answer: {answer}"
+        # Older qBittorrent versions answer "Ok."/"Fails.", newer ones return counts.
+        if isinstance(answer, str):
+            accepted = answer == "Ok."
+        else:
+            accepted = answer.get("failure_count", 0) == 0 and (
+                answer.get("success_count", 0) + answer.get("pending_count", 0) > 0
+            )
+        if not accepted:
+            msg = f"qBittorrent rejected torrent '{indexer_result.title}': {answer}"
+            log.error(msg)
             raise RuntimeError(msg)
 
-        log.info(f"Successfully processed torrent: {indexer_result.title}")
+        self._wait_until_added(torrent_hash, indexer_result.title)
+        log.info(f"Successfully added torrent to qBittorrent: {indexer_result.title}")
 
         # Create and return torrent object
         torrent = Torrent(
@@ -181,6 +192,30 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
 
         return torrent
 
+    def _wait_until_added(self, torrent_hash: str, title: str) -> None:
+        """
+        Block until qBittorrent lists the torrent, raising if it never shows up.
+
+        :param torrent_hash: The info hash of the added torrent.
+        :param title: The torrent title, for log and error messages.
+        """
+        deadline = time.monotonic() + self.ADD_VERIFY_TIMEOUT_SECONDS
+        while True:
+            if self.api_client.torrents_info(torrent_hashes=torrent_hash):
+                return
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(self.ADD_VERIFY_POLL_INTERVAL_SECONDS)
+
+        msg = (
+            f"qBittorrent accepted torrent '{title}' but it did not appear within "
+            f"{self.ADD_VERIFY_TIMEOUT_SECONDS}s. qBittorrent most likely failed to "
+            f"fetch the download URL; check that it can reach the indexer and "
+            f"check the qBittorrent log."
+        )
+        log.error(msg)
+        raise RuntimeError(msg)
+
     def remove_torrent(self, torrent: Torrent, delete_data: bool = False) -> None:
         """
         Remove a torrent from the download client.
@@ -189,13 +224,9 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
         :param delete_data: Whether to delete the downloaded data.
         """
         log.info(f"Removing torrent: {torrent.title}")
-        try:
-            self.api_client.auth_log_in()
-            self.api_client.torrents_delete(
-                torrent_hashes=torrent.hash, delete_files=delete_data
-            )
-        finally:
-            self.api_client.auth_log_out()
+        self.api_client.torrents_delete(
+            torrent_hashes=torrent.hash, delete_files=delete_data
+        )
 
     def get_torrent_status(self, torrent: Torrent) -> TorrentStatus:
         """
@@ -204,11 +235,7 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
         :param torrent: The torrent to get the status of.
         :return: The status of the torrent.
         """
-        try:
-            self.api_client.auth_log_in()
-            info = self.api_client.torrents_info(torrent_hashes=torrent.hash)
-        finally:
-            self.api_client.auth_log_out()
+        info = self.api_client.torrents_info(torrent_hashes=torrent.hash)
 
         if not info:
             log.warning(f"No information found for torrent: {torrent.id}")
@@ -240,11 +267,7 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
         # hex hashes, same as get_torrent_hash(), but nothing guarantees that
         # across versions, so don't rely on exact casing lining up.
         wanted_hashes = {torrent.hash.lower(): torrent.hash for torrent in torrents}
-        try:
-            self.api_client.auth_log_in()
-            info = self.api_client.torrents_info()
-        finally:
-            self.api_client.auth_log_out()
+        info = self.api_client.torrents_info()
 
         progress: dict[str, DownloadProgress] = {}
         for t in info:
@@ -271,11 +294,7 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
 
         :param torrent: The torrent to pause.
         """
-        try:
-            self.api_client.auth_log_in()
-            self.api_client.torrents_pause(torrent_hashes=torrent.hash)
-        finally:
-            self.api_client.auth_log_out()
+        self.api_client.torrents_pause(torrent_hashes=torrent.hash)
 
     def resume_torrent(self, torrent: Torrent) -> None:
         """
@@ -283,15 +302,13 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
 
         :param torrent: The torrent to resume.
         """
-        try:
-            self.api_client.auth_log_in()
-            self.api_client.torrents_resume(torrent_hashes=torrent.hash)
-        finally:
-            self.api_client.auth_log_out()
+        self.api_client.torrents_resume(torrent_hashes=torrent.hash)
 
     def ping(self) -> bool:
+        # Call an endpoint that requires authentication. Merely logging in succeeds
+        # whenever the credentials are valid, even if actual API calls are failing.
         try:
-            self.api_client.auth_log_in()
+            self.api_client.app_version()
         except Exception:  # noqa: BLE001 # ping should report failure for any reason
             return False
         else:

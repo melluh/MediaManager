@@ -6,6 +6,8 @@ class QbittorrentConfig(BaseSettings):
     port: int = 8080
     username: str = "admin"
     password: str = "admin"  # noqa: S105
+    # API key (qBittorrent v5.2.0+). When set, it is used instead of username/password.
+    api_key: str = ""
     enabled: bool = False
 
     category_name: str = "MediaManager"

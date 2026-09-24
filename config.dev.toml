@@ -94,6 +94,9 @@ user = ""
 enabled = false
 host = "http://localhost"
 port = 8080
+# Preferred: API key from qBittorrent's WebUI settings (qBittorrent v5.2.0+).
+# When set, username and password are ignored.
+api_key = ""
 username = "admin"
 password = "admin"
 
