@@ -1,8 +1,10 @@
 from pathlib import Path
 
+from media_manager.common.schemas import SubtitleTrack
 from media_manager.torrent.schemas import Quality
 from media_manager.torrent.video_probe import (
     EMPTY_PROBE,
+    _sanitize_tag,
     _to_probe,
     probe_video_file,
     resolve_file_quality,
@@ -44,6 +46,63 @@ def test_to_probe_reads_video_audio_and_format():
 
 def test_to_probe_tolerates_missing_streams_and_format():
     assert _to_probe({}) == EMPTY_PROBE
+    assert _to_probe({}).subtitles == []
+
+
+def test_to_probe_reads_all_subtitle_streams_with_language_and_disposition():
+    probe = _to_probe(
+        {
+            "streams": [
+                {
+                    "codec_type": "subtitle",
+                    "codec_name": "subrip",
+                    "tags": {"language": "eng"},
+                    "disposition": {"forced": 1, "hearing_impaired": 0},
+                },
+                {
+                    "codec_type": "subtitle",
+                    "codec_name": "ass",
+                    "tags": {"language": "fre"},
+                    "disposition": {"forced": 0, "hearing_impaired": 1},
+                },
+            ]
+        }
+    )
+
+    assert probe.subtitles == [
+        SubtitleTrack(
+            language="eng",
+            source="embedded",
+            forced=True,
+            hearing_impaired=False,
+            codec="subrip",
+        ),
+        SubtitleTrack(
+            language="fre",
+            source="embedded",
+            forced=False,
+            hearing_impaired=True,
+            codec="ass",
+        ),
+    ]
+
+
+def test_sanitize_tag_rejects_hostile_language_values():
+    # Container metadata comes from the file itself (an untrusted download),
+    # so it must never be trusted as a plain string: oversized values are
+    # truncated, control characters and non-string JSON types are rejected
+    # outright rather than passed through.
+    assert _sanitize_tag("eng") == "eng"
+    assert _sanitize_tag("a" * 100) == "a" * 32
+    assert _sanitize_tag("en\x00g\x1b") == "eng"
+    # Not HTML-escaped here - sanitization only bounds length/control chars;
+    # safety against injection is enforced by never using {@html} on the
+    # frontend and by Svelte's default escaping of plain interpolation.
+    assert _sanitize_tag("<script>alert(1)</script>") == "<script>alert(1)</script>"
+    assert _sanitize_tag("   ") is None
+    assert _sanitize_tag(None) is None
+    assert _sanitize_tag(12345) is None
+    assert _sanitize_tag({"nested": "dict"}) is None
 
 
 def test_probe_video_file_caches_per_file_revision(tmp_path: Path, monkeypatch):
@@ -56,9 +115,7 @@ def test_probe_video_file_caches_per_file_revision(tmp_path: Path, monkeypatch):
         calls.append(path)
         return EMPTY_PROBE
 
-    monkeypatch.setattr(
-        "media_manager.torrent.video_probe._run_ffprobe", _fake_run
-    )
+    monkeypatch.setattr("media_manager.torrent.video_probe._run_ffprobe", _fake_run)
 
     probe_video_file(file)
     probe_video_file(file)
@@ -85,6 +142,4 @@ def test_resolve_file_quality_falls_back_to_filename():
 
 
 def test_resolve_file_quality_falls_back_to_torrent_quality():
-    assert (
-        resolve_file_quality(None, "movie.mkv", Quality.hd) == Quality.hd
-    )
+    assert resolve_file_quality(None, "movie.mkv", Quality.hd) == Quality.hd

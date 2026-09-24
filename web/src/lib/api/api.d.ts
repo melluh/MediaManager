@@ -2169,6 +2169,8 @@ export interface components {
 			audio_channels?: number | null;
 			/** Container */
 			container?: string | null;
+			/** Subtitles */
+			subtitles?: components['schemas']['SubtitleTrack'][];
 		};
 		/** MediaImportSuggestion */
 		MediaImportSuggestion: {
@@ -3021,6 +3023,41 @@ export interface components {
 			embedded: boolean;
 		};
 		/**
+		 * SubtitleTrack
+		 * @description A subtitle track discovered for a media file - either embedded in the
+		 *     video container (found by ffprobe) or a sidecar file sitting next to it.
+		 *
+		 *     Distinct from `media_manager.indexer.classification.SubtitleInfo`, which
+		 *     describes subtitles *claimed* by a release's title before anything is
+		 *     downloaded; this describes what was actually found on disk.
+		 *
+		 *     All string fields are treated as untrusted: they originate from a
+		 *     downloaded file's own metadata or filename, so values are sanitized
+		 *     (length-capped, allowlisted) before being placed here rather than passed
+		 *     through raw.
+		 */
+		SubtitleTrack: {
+			/** Language */
+			language?: string | null;
+			/**
+			 * Source
+			 * @enum {string}
+			 */
+			source: 'embedded' | 'sidecar';
+			/**
+			 * Forced
+			 * @default false
+			 */
+			forced: boolean;
+			/**
+			 * Hearing Impaired
+			 * @default false
+			 */
+			hearing_impaired: boolean;
+			/** Codec */
+			codec?: string | null;
+		};
+		/**
 		 * SuggestedTorrentPick
 		 * @description One torrent proposed as part of a season download plan, and the slice of
 		 *     the user's request it covers. `covers_episodes` is only set for an
@@ -3418,6 +3455,7 @@ export type Show = components['schemas']['Show'];
 export type ShowSummary = components['schemas']['ShowSummary'];
 export type SlotDownloadPlan = components['schemas']['SlotDownloadPlan'];
 export type SubtitleInfo = components['schemas']['SubtitleInfo'];
+export type SubtitleTrack = components['schemas']['SubtitleTrack'];
 export type SuggestedTorrentPick = components['schemas']['SuggestedTorrentPick'];
 export type SystemHealth = components['schemas']['SystemHealth'];
 export type Torrent = components['schemas']['Torrent'];

@@ -4,7 +4,6 @@ from uuid import UUID
 
 class DownloadedMediaType(StrEnum):
     movie = "movie"
-    episode = "episode"
 
 
 _cache: dict[tuple[DownloadedMediaType, UUID], bool] = {}

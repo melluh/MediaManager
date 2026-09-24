@@ -2,16 +2,10 @@ import asyncio
 import shutil
 from collections.abc import Sequence
 from pathlib import Path
-from types import SimpleNamespace
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
-from media_manager.common.downloaded_status_cache import (
-    DownloadedMediaType,
-    get_cached_downloaded,
-    set_cached_downloaded_statuses,
-)
 from media_manager.common.library_scan import (
     LibraryScanCounts,
     count_plans,
@@ -170,10 +164,20 @@ class TvService(BaseMediaService[Show, Show]):
         public_episode_files = [
             PublicEpisodeFile.model_validate(x) for x in episode_files
         ]
+        imported_by_key = {
+            (episode_id, file_path_suffix): imported
+            for episode_id, file_path_suffix, imported in (
+                await self.tv_repository.get_episode_file_import_status(
+                    episode_ids=[ef.episode_id for ef in public_episode_files]
+                )
+            )
+        }
         for episode_file in public_episode_files:
-            exists = await self.episode_file_exists_on_file(episode_file=episode_file)
-            episode_file.downloaded = exists
-            episode_file.imported = exists
+            imported = imported_by_key.get(
+                (episode_file.episode_id, episode_file.file_path_suffix), False
+            )
+            episode_file.downloaded = imported
+            episode_file.imported = imported
 
         show = await self.tv_repository.get_show_summary_by_season_id(
             season_id=season.id
@@ -292,12 +296,16 @@ class TvService(BaseMediaService[Show, Show]):
             season for season in show.seasons if season.number in requested_numbers
         ]
 
-        downloaded_by_pair: dict[tuple[SeasonNumber, EpisodeNumber], bool] = {}
-        for season in seasons:
-            for episode in season.episodes:
-                downloaded_by_pair[
-                    (season.number, episode.number)
-                ] = await self.is_episode_downloaded(episode_id=episode.id)
+        episode_statuses = await self.get_episode_downloaded_statuses(
+            episode_ids=[
+                episode.id for season in seasons for episode in season.episodes
+            ]
+        )
+        downloaded_by_pair: dict[tuple[SeasonNumber, EpisodeNumber], bool] = {
+            (season.number, episode.number): episode_statuses[episode.id]
+            for season in seasons
+            for episode in season.episodes
+        }
 
         search_errors: list[str] = []
         try:
@@ -336,13 +344,16 @@ class TvService(BaseMediaService[Show, Show]):
         public_show = PublicShow.model_validate(show)
         public_seasons: list[PublicSeason] = []
 
+        episode_statuses = await self.get_episode_downloaded_statuses(
+            episode_ids=[
+                episode.id for season in show.seasons for episode in season.episodes
+            ]
+        )
         for season in show.seasons:
             public_season = PublicSeason.model_validate(season)
 
             for episode in public_season.episodes:
-                episode.downloaded = await self.is_episode_downloaded(
-                    episode_id=episode.id
-                )
+                episode.downloaded = episode_statuses[episode.id]
 
             # A season is considered downloaded if it has episodes and all of them are downloaded.
             public_season.downloaded = bool(public_season.episodes) and all(
@@ -371,107 +382,26 @@ class TvService(BaseMediaService[Show, Show]):
         """
         return await self.tv_repository.get_show_by_slug(slug=slug)
 
-    async def is_episode_downloaded(self, episode_id: EpisodeId) -> bool:
-        """
-        Check if an episode is downloaded and imported (file exists on disk).
-
-        Reads the shared cache populated by the periodic
-        `rescan_downloaded_episodes` scan, so this never touches the
-        filesystem or the database on the request path. If the scan hasn't
-        run yet (e.g. briefly after startup), falls back to a cheap DB-only
-        signal (does the episode have any file record, and is it imported).
-
-        :param episode_id: The ID of the episode.
-        :return: True if the episode is downloaded and imported, False otherwise.
-        """
-        cached = get_cached_downloaded(DownloadedMediaType.episode, episode_id)
-        if cached is not None:
-            return cached
-
-        episode_files = await self.tv_repository.get_episode_files_by_episode_id(
-            episode_id=episode_id
-        )
-        for episode_file in episode_files:
-            if await self.episode_file_exists_on_file(episode_file=episode_file):
-                return True
-        return False
-
-    async def rescan_downloaded_episodes(self) -> None:
-        """
-        Recompute which episodes are downloaded by checking each season's
-        directory on disk once, and refresh the shared cache read by
-        `is_episode_downloaded`. Runs on a schedule so show-lookup endpoints
-        never scan the filesystem themselves.
-        """
-        rows = await self.tv_repository.get_episode_scan_rows()
-        episode_ids_with_files = await self.tv_repository.get_episode_ids_with_files()
-        statuses = await asyncio.to_thread(
-            self._scan_downloaded_episodes, rows, episode_ids_with_files
-        )
-        set_cached_downloaded_statuses(DownloadedMediaType.episode, statuses)
-
-    def _scan_downloaded_episodes(
-        self,
-        rows: Sequence[tuple[ShowId, str, str | None, int, EpisodeId, int]],
-        episode_ids_with_files: set[EpisodeId],
+    async def get_episode_downloaded_statuses(
+        self, episode_ids: Sequence[EpisodeId]
     ) -> dict[EpisodeId, bool]:
-        video_extensions = {".mkv", ".mp4", ".avi", ".mov"}
-        statuses: dict[EpisodeId, bool] = {}
-        season_filenames_by_key: dict[tuple[ShowId, int], list[str]] = {}
+        """
+        Whether each episode has at least one imported file, computed from
+        the same query `get_public_episode_files_by_season_id` reads to
+        build a season's file list - so the season/show aggregate can never
+        disagree with what that list shows.
 
-        for (
-            show_id,
-            show_directory_name,
-            show_library,
-            season_number,
-            episode_id,
-            episode_number,
-        ) in rows:
-            if episode_id not in episode_ids_with_files:
-                statuses[episode_id] = False
-                continue
-
-            season_key = (show_id, season_number)
-            filenames = season_filenames_by_key.get(season_key)
-            if filenames is None:
-                misc_config = get_config().misc
-                show_dir = self.get_root_directory(
-                    media=SimpleNamespace(
-                        directory_name=show_directory_name, library=show_library
-                    ),
-                    default_dir=misc_config.tv_directory,
-                    libraries=misc_config.tv_libraries,
-                )
-                season_dir = show_dir / season_directory_name(season_number)
-                try:
-                    filenames = (
-                        [f.name.lower() for f in season_dir.iterdir() if f.is_file()]
-                        if season_dir.exists()
-                        else []
-                    )
-                except OSError as e:
-                    log.error(
-                        f"Disk check failed for season directory {season_dir}: {e}"
-                    )
-                    filenames = []
-                season_filenames_by_key[season_key] = filenames
-
-            episode_token = f"s{season_number:02d}e{episode_number:02d}"
-            statuses[episode_id] = any(
-                episode_token in name and Path(name).suffix in video_extensions
-                for name in filenames
-            )
-
+        :param episode_ids: The episodes to check.
+        :return: A status for every given episode id, defaulting to False
+            for one with no file records at all.
+        """
+        statuses: dict[EpisodeId, bool] = dict.fromkeys(episode_ids, False)
+        rows = await self.tv_repository.get_episode_file_import_status(
+            episode_ids=list(episode_ids)
+        )
+        for episode_id, _file_path_suffix, imported in rows:
+            statuses[episode_id] = statuses[episode_id] or imported
         return statuses
-
-    async def episode_file_exists_on_file(self, episode_file: EpisodeFile) -> bool:
-        """
-        Check if an episode file exists on the filesystem.
-
-        :param episode_file: The episode file to check.
-        :return: True if the file exists, False otherwise.
-        """
-        return await self.media_file_is_imported(media_file=episode_file)
 
     async def get_show_by_external_id(
         self, external_id: int, metadata_provider: str

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import shutil
 import subprocess
 import threading
@@ -9,8 +10,9 @@ from collections import OrderedDict
 from collections.abc import Iterable
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from media_manager.common.schemas import SubtitleTrack
 from media_manager.indexer.title_parsing import derive_quality
 from media_manager.torrent.schemas import Quality
 
@@ -53,6 +55,10 @@ class VideoProbe(BaseModel):
     audio_codec: str | None = None
     audio_channels: int | None = None
     container: str | None = None
+    subtitles: list[SubtitleTrack] = Field(default_factory=list)
+    """Embedded subtitle streams found by ffprobe. Sidecar subtitle files are
+    a separate concern (see `media_manager.common.media_files`) and are not
+    part of this model."""
 
 
 EMPTY_PROBE = VideoProbe()
@@ -137,7 +143,9 @@ def _run_ffprobe(path: Path) -> VideoProbe:
                 "-v",
                 "error",
                 "-show_entries",
-                "stream=codec_type,codec_name,width,height,channels:format=duration,format_name",
+                "stream=codec_type,codec_name,width,height,channels:"
+                "stream_tags=language:stream_disposition=forced,hearing_impaired:"
+                "format=duration,format_name",
                 "-of",
                 "json",
                 str(path),
@@ -164,6 +172,7 @@ def _to_probe(probe_data: dict) -> VideoProbe:
     streams = probe_data.get("streams") or []
     video_stream = _first_stream_of_type(streams, "video")
     audio_stream = _first_stream_of_type(streams, "audio")
+    subtitle_streams = _streams_of_type(streams, "subtitle")
 
     height = _as_int(video_stream.get("height"))
     return VideoProbe(
@@ -175,26 +184,62 @@ def _to_probe(probe_data: dict) -> VideoProbe:
         audio_codec=_as_str(audio_stream.get("codec_name")),
         audio_channels=_as_int(audio_stream.get("channels")),
         container=_extract_container(probe_data),
+        subtitles=[_to_subtitle_track(stream) for stream in subtitle_streams],
+    )
+
+
+def _to_subtitle_track(stream: dict) -> SubtitleTrack:
+    tags = stream.get("tags")
+    disposition = stream.get("disposition")
+    return SubtitleTrack(
+        language=_sanitize_tag((tags or {}).get("language")),
+        source="embedded",
+        forced=_as_bool((disposition or {}).get("forced")),
+        hearing_impaired=_as_bool((disposition or {}).get("hearing_impaired")),
+        codec=_as_str(stream.get("codec_name")),
     )
 
 
 def _first_stream_of_type(streams: list, codec_type: str) -> dict:
-    return next(
-        (
-            stream
-            for stream in streams
-            if isinstance(stream, dict) and stream.get("codec_type") == codec_type
-        ),
-        {},
-    )
+    return next(iter(_streams_of_type(streams, codec_type)), {})
+
+
+def _streams_of_type(streams: list, codec_type: str) -> list[dict]:
+    return [
+        stream
+        for stream in streams
+        if isinstance(stream, dict) and stream.get("codec_type") == codec_type
+    ]
 
 
 def _as_int(value: object) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
+def _as_bool(value: object) -> bool:
+    # ffprobe reports disposition flags as 0/1 ints, never JSON booleans -
+    # anything else (missing key, unexpected type) is treated as unset rather
+    # than trusted as truthy, since this is attacker-controlled file metadata.
+    return isinstance(value, int) and not isinstance(value, bool) and value != 0
+
+
 def _as_str(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
+
+
+# ffprobe stream tags come from the video file's own container metadata,
+# which is untrusted (the file may be a hostile download): cap length and
+# strip anything that isn't a printable, non-control character before this
+# value is ever stored or displayed.
+_MAX_TAG_LENGTH = 32
+_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _sanitize_tag(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = _CONTROL_CHARS.sub("", value).strip()[:_MAX_TAG_LENGTH]
+    return cleaned or None
 
 
 def _extract_container(probe_data: dict) -> str | None:

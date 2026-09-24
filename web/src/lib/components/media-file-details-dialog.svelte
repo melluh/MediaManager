@@ -13,6 +13,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import TorrentStat from '$lib/components/download-dialogs/torrent-stat.svelte';
 	import AudioLines from '@lucide/svelte/icons/audio-lines';
+	import Captions from '@lucide/svelte/icons/captions';
 	import Clock from '@lucide/svelte/icons/clock';
 	import FileQuestionMark from '@lucide/svelte/icons/file-question-mark';
 	import Film from '@lucide/svelte/icons/film';
@@ -63,6 +64,19 @@
 		const named: Record<number, string> = { 1: 'mono', 2: 'stereo', 6: '5.1', 8: '7.1' };
 		return named[channels] ?? `${channels} channels`;
 	}
+
+	// Subtitle language/track fields ultimately come from a downloaded file's
+	// own filename or embedded metadata - untrusted input. The backend already
+	// sanitizes them, but they're still rendered as plain text interpolation
+	// here (never `{@html}`) as defense in depth.
+	let subtitles = $derived(details?.subtitles ?? []);
+
+	function formatSubtitleLabel(subtitle: (typeof subtitles)[number]): string {
+		const parts = [subtitle.language ?? 'unknown'];
+		if (subtitle.forced) parts.push('forced');
+		if (subtitle.hearing_impaired) parts.push('SDH');
+		return parts.join(' · ');
+	}
 </script>
 
 <Dialog.Content class="w-full max-w-[500px] rounded-lg p-6 shadow-lg">
@@ -105,6 +119,19 @@
 			<TorrentStat icon={Package} label="Container" value={details.container ?? UNKNOWN} />
 			<TorrentStat icon={Film} label="Video" value={details.video_codec ?? UNKNOWN} />
 			<TorrentStat icon={AudioLines} label="Audio" value={audioLabel ?? UNKNOWN} />
+			<div class="col-span-2">
+				<TorrentStat icon={Captions} label="Subtitles">
+					{#if subtitles.length === 0}
+						<span>none</span>
+					{:else}
+						<div class="flex flex-wrap gap-1">
+							{#each subtitles as subtitle, i (i)}
+								<Badge variant="secondary">{formatSubtitleLabel(subtitle)}</Badge>
+							{/each}
+						</div>
+					{/if}
+				</TorrentStat>
+			</div>
 		</div>
 	{:else}
 		<div

@@ -10,12 +10,17 @@ real path with `locate_media_file`.
 import asyncio
 import mimetypes
 import os
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from stat import S_ISREG
 
-from media_manager.common.schemas import MediaFileDetails, PublicMediaFile
+from media_manager.common.schemas import (
+    MediaFileDetails,
+    PublicMediaFile,
+    SubtitleTrack,
+)
 from media_manager.torrent.utils import remove_special_characters
 from media_manager.torrent.video_probe import EMPTY_PROBE, probe_video_files
 
@@ -129,6 +134,72 @@ def match_stem(
     return (matched.path, matched.size_bytes) if matched else None
 
 
+SUBTITLE_EXTENSIONS = {".srt", ".ass", ".ssa", ".vtt", ".sub"}
+
+
+def is_subtitle_file(path: Path) -> bool:
+    # Extension-based, not mimetypes.guess_type: .ass/.ssa/.vtt don't
+    # reliably map to a text/* mimetype, which is exactly what limits
+    # torrent/utils.py:classify_media_files to recognizing only .srt today.
+    return path.suffix.lower() in SUBTITLE_EXTENSIONS
+
+
+def match_sidecar_subtitles(
+    entries: list[DirectoryEntry], stem: str, exclude: Path | None
+) -> list[SubtitleTrack]:
+    """
+    Sidecar subtitle files matching the same filename stem as a media file
+    (e.g. "Movie (2020).en.srt" next to "Movie (2020).mkv"), excluding
+    whichever entry was already resolved as the main file.
+    """
+    prefix = f"{stem}."
+    return [
+        _parse_sidecar_subtitle(entry, stem)
+        for entry in entries
+        if entry.path.name.startswith(prefix)
+        and entry.path != exclude
+        and is_subtitle_file(entry.path)
+    ]
+
+
+# Tokens parsed out of a sidecar filename are untrusted text (the filename
+# comes from a downloaded file, not the user) - only an exact match against
+# these fixed, narrow allowlists is trusted; anything else is dropped rather
+# than passed through.
+_LANGUAGE_TOKEN = re.compile(r"^[a-z]{2,3}$")
+_HEARING_IMPAIRED_TOKENS = {"sdh", "hi", "cc"}
+
+
+def _parse_sidecar_subtitle(entry: DirectoryEntry, stem: str) -> SubtitleTrack:
+    name_without_extension = entry.path.stem
+    remainder = name_without_extension[len(stem) :].strip(".")
+    words = [word.lower() for word in remainder.split(".") if word]
+
+    forced = "forced" in words
+    hearing_impaired = any(word in _HEARING_IMPAIRED_TOKENS for word in words)
+    # "sdh"/"cc" also happen to match the 2-3 letter language pattern, so
+    # marker words are excluded from language candidacy - otherwise
+    # ".sdh.en.srt" would misread "sdh" as the language instead of "en".
+    language = next(
+        (
+            word
+            for word in words
+            if word != "forced"
+            and word not in _HEARING_IMPAIRED_TOKENS
+            and _LANGUAGE_TOKEN.match(word)
+        ),
+        None,
+    )
+
+    return SubtitleTrack(
+        language=language,
+        source="sidecar",
+        forced=forced,
+        hearing_impaired=hearing_impaired,
+        codec=entry.path.suffix.lower().removeprefix("."),
+    )
+
+
 async def attach_media_file_details(
     files: Sequence[PublicMediaFile], locations: Sequence[MediaFileLocation]
 ) -> None:
@@ -147,7 +218,7 @@ async def attach_media_file_details(
     if not files:
         return
 
-    resolved_paths, sizes, expected_paths = await asyncio.to_thread(
+    resolved_paths, sizes, expected_paths, sidecar_subtitles = await asyncio.to_thread(
         _resolve_batch, [file.relative_path for file in files], locations
     )
 
@@ -171,6 +242,10 @@ async def attach_media_file_details(
             continue
 
         probe = probe_by_index.get(index, EMPTY_PROBE)
+        # A fresh list, never probe.subtitles directly: `probe` may be the
+        # shared EMPTY_PROBE singleton or a cached VideoProbe, and appending
+        # this file's sidecar subtitles to it in place would corrupt the
+        # ffprobe cache or leak them onto every other unprobed file.
         file.details = MediaFileDetails(
             size_bytes=sizes[index],
             probed_quality=probe.quality,
@@ -181,6 +256,7 @@ async def attach_media_file_details(
             audio_codec=probe.audio_codec,
             audio_channels=probe.audio_channels,
             container=probe.container,
+            subtitles=[*probe.subtitles, *sidecar_subtitles[index]],
         )
 
 
@@ -191,19 +267,37 @@ def is_video_file(path: Path) -> bool:
 def _resolve_batch(
     relative_paths: Sequence[str | None],
     locations: Sequence[MediaFileLocation],
-) -> tuple[list[Path | None], list[int | None], list[Path]]:
+) -> tuple[list[Path | None], list[int | None], list[Path], list[list[SubtitleTrack]]]:
     listings: dict[Path, list[DirectoryEntry]] = {}
     resolved_paths: list[Path | None] = []
     sizes: list[int | None] = []
     expected_paths: list[Path] = []
+    sidecar_subtitles: list[list[SubtitleTrack]] = []
     for relative_path, location in zip(relative_paths, locations, strict=True):
         if relative_path:
-            # A record that knows where its file was written needs no listing.
+            # A record that knows where its file was written needs no listing
+            # to find *itself* - but sidecar subtitles still need one, so
+            # this reuses the same per-directory `listings` cache the
+            # stem-matching branch below relies on.
             path = location.media_root / relative_path
             size = _file_size(path)
             expected_paths.append(path)
             resolved_paths.append(path if size is not None else None)
             sizes.append(size)
+            if size is None:
+                sidecar_subtitles.append([])
+                continue
+            directory = path.parent
+            if directory not in listings:
+                listings[directory] = list_directory(directory)
+            # Matched against the resolved file's own stem, not
+            # `location.stem`: a `relative_path` can point at a hand-renamed
+            # file (or one written by another tool) that doesn't follow this
+            # app's naming scheme at all, and sidecars sitting next to it
+            # follow *its* name, not the canonical one.
+            sidecar_subtitles.append(
+                match_sidecar_subtitles(listings[directory], path.stem, exclude=path)
+            )
             continue
         if location.directory not in listings:
             listings[location.directory] = list_directory(location.directory)
@@ -213,7 +307,14 @@ def _resolve_batch(
         )
         resolved_paths.append(matched[0] if matched else None)
         sizes.append(matched[1] if matched else None)
-    return resolved_paths, sizes, expected_paths
+        sidecar_subtitles.append(
+            match_sidecar_subtitles(
+                listings[location.directory],
+                location.stem,
+                exclude=matched[0] if matched else None,
+            )
+        )
+    return resolved_paths, sizes, expected_paths, sidecar_subtitles
 
 
 def _file_size(path: Path) -> int | None:

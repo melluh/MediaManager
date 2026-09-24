@@ -361,41 +361,31 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             )
         return grouped
 
-    async def get_episode_ids_with_files(self) -> set[EpisodeId]:
+    async def get_episode_file_import_status(
+        self, episode_ids: Sequence[EpisodeId]
+    ) -> Sequence[tuple[EpisodeId, str, bool]]:
         """
-        IDs of every episode that has at least one EpisodeFile row, in a
-        single query - used by the downloaded-status scan instead of
-        querying per episode.
-        """
-        stmt = select(distinct(EpisodeFile.episode_id))
-        results = (await self.db.execute(stmt)).scalars().all()
-        return set(results)
+        (episode_id, file_path_suffix, imported) for every EpisodeFile
+        belonging to the given episodes - the one query every "is this
+        file/episode downloaded" computation is built from, so the per-file
+        view and the season/show aggregate can never disagree.
 
-    async def get_episode_scan_rows(
-        self,
-    ) -> Sequence[tuple[ShowId, str, str | None, int, EpisodeId, int]]:
+        A file counts as imported if it has no torrent (manually imported or
+        adopted by a library scan) or its torrent's `imported` flag is set -
+        the same rule as `BaseMediaService.media_file_is_imported`, applied
+        in bulk instead of one file at a time.
         """
-        Minimal (show_id, show_directory_name, show_library, season_number,
-        episode_id, episode_number) rows for every episode, for the
-        downloaded-status scan. Avoids hydrating full Show/Season/Episode
-        ORM objects and Pydantic schemas for every show in the library.
-
-        show_id (not just name/library) is included so the scan can key its
-        per-season directory-listing cache uniquely per show, even though
-        two shows could theoretically resolve to the same on-disk directory.
-        """
+        if not episode_ids:
+            return []
         stmt = (
             select(
-                Show.id,
-                Show.directory_name,
-                Show.library,
-                Season.number,
-                Episode.id,
-                Episode.number,
+                EpisodeFile.episode_id,
+                EpisodeFile.file_path_suffix,
+                EpisodeFile.torrent_id.is_(None) | TorrentModel.imported.is_(True),
             )
-            .select_from(Show)
-            .join(Season, Season.show_id == Show.id)
-            .join(Episode, Episode.season_id == Season.id)
+            .select_from(EpisodeFile)
+            .outerjoin(TorrentModel, EpisodeFile.torrent_id == TorrentModel.id)
+            .where(EpisodeFile.episode_id.in_(episode_ids))
         )
         return (await self.db.execute(stmt)).all()
 

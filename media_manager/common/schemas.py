@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -66,6 +67,33 @@ class BaseMediaFile(BaseModel):
     relative_path: str | None = None
 
 
+class SubtitleTrack(BaseModel):
+    """
+    A subtitle track discovered for a media file - either embedded in the
+    video container (found by ffprobe) or a sidecar file sitting next to it.
+
+    Distinct from `media_manager.indexer.classification.SubtitleInfo`, which
+    describes subtitles *claimed* by a release's title before anything is
+    downloaded; this describes what was actually found on disk.
+
+    All string fields are treated as untrusted: they originate from a
+    downloaded file's own metadata or filename, so values are sanitized
+    (length-capped, allowlisted) before being placed here rather than passed
+    through raw.
+    """
+
+    language: str | None = None
+    """Raw language as reported by the source: an ISO 639-2 code (e.g.
+    "eng") for embedded streams, whatever short code the sidecar filename
+    uses (e.g. "en") for sidecar files. Not normalized across vocabularies."""
+    source: Literal["embedded", "sidecar"]
+    forced: bool = False
+    hearing_impaired: bool = False
+    codec: str | None = None
+    """Embedded: ffprobe's codec_name (e.g. "subrip"). Sidecar: the file's
+    extension without the dot (e.g. "srt")."""
+
+
 class MediaFileDetails(BaseModel):
     """
     What the file on disk itself says about the media, as opposed to what the
@@ -83,6 +111,11 @@ class MediaFileDetails(BaseModel):
     audio_codec: str | None = None
     audio_channels: int | None = None
     container: str | None = None
+    subtitles: list[SubtitleTrack] = Field(default_factory=list)
+    """Subtitle tracks found for this file: embedded streams plus sidecar
+    files matching the same filename stem. Empty list means none were found,
+    which is distinct from `None` fields elsewhere in this model that mean
+    "couldn't be determined"."""
 
 
 class WatchUrl(BaseModel):
