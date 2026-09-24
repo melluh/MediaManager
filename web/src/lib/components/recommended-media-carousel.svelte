@@ -25,14 +25,14 @@
 <Carousel.Root class="w-full md:px-12" opts={carouselOpts.opts}>
 	<Carousel.Content class={isError ? 'pointer-events-none blur-xs' : ''}>
 		{#if isLoading || isError}
-			{#each { length: 5 }}
-				<Carousel.Item class="basis-2/5 lg:basis-1/5">
+			{#each { length: 6 }}
+				<Carousel.Item class="basis-2/5 lg:basis-1/6">
 					<MediaCardSkeleton pulsating={!isError} />
 				</Carousel.Item>
 			{/each}
 		{:else}
 			{#each media as mediaItem (mediaItem.external_id)}
-				<Carousel.Item class="basis-2/5 lg:basis-1/5">
+				<Carousel.Item class="basis-2/5 lg:basis-1/6">
 					<AddMediaCard {isShow} result={mediaItem} />
 				</Carousel.Item>
 			{/each}
