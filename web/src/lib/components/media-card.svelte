@@ -11,6 +11,7 @@
 		runtime = null,
 		genres = [],
 		posterLoaded = true,
+		hasPoster = true,
 		poster,
 		indicators,
 		href,
@@ -24,6 +25,9 @@
 		runtime?: number | null;
 		genres?: string[] | null;
 		posterLoaded?: boolean;
+		// Without a poster there's nothing to identify the card by, so the
+		// title overlay stays visible instead of only appearing on hover.
+		hasPoster?: boolean;
 		poster: Snippet;
 		indicators?: Snippet;
 		href?: string;
@@ -53,7 +57,12 @@
 			</div>
 		{/if}
 		<div
-			class="absolute inset-0 flex flex-col justify-end gap-1 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-3 text-white opacity-0 transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100"
+			class={cn(
+				'absolute inset-0 flex flex-col justify-end gap-1 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-3 text-white transition-opacity duration-200',
+				hasPoster
+					? 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
+					: 'opacity-100'
+			)}
 		>
 			<div class="flex items-start justify-between gap-2">
 				<p class="leading-tight font-semibold">

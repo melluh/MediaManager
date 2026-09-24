@@ -11,6 +11,7 @@
 	let posterImageLoaded = $state(false);
 	let { result, isShow = true }: { result: MetaDataProviderSearchResult; isShow: boolean } =
 		$props();
+	const hasPoster = $derived((result.poster_images?.length ?? 0) > 0);
 	const detailsDialog = $derived(
 		shallowDialog(`addMedia:${result.metadata_provider}-${result.media_type}-${result.external_id}`)
 	);
@@ -34,10 +35,11 @@
 				runtime={result.runtime}
 				genres={result.genres}
 				posterLoaded={posterImageLoaded}
+				{hasPoster}
 				triggerProps={{ ...props, onmouseenter: prefetchDetails, onfocus: prefetchDetails }}
 			>
 				{#snippet poster()}
-					{#if (result.poster_images?.length ?? 0) > 0}
+					{#if hasPoster}
 						<ExternalPosterImage
 							className="h-full w-full object-cover"
 							posterImages={result.poster_images ?? []}
