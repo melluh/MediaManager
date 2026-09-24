@@ -101,12 +101,12 @@
 			files={movieFiles}
 			leadingLabel="File Path"
 			leadingCell={filePathCell}
-			emptyMessage="You haven't downloaded this movie yet."
+			emptyDescription="This movie hasn't been downloaded or imported yet."
 			dialogKeyPrefix="movieFileDetails"
 		/>
 	</section>
 	<section class="mt-4 flex flex-col gap-3">
 		<h2 class="text-lg font-semibold">Torrents</h2>
-		<DownloadTable torrents={movieTorrents} />
+		<DownloadTable torrents={movieTorrents} emptyTitle="No torrents for this movie" />
 	</section>
 </MediaHeroHeader>

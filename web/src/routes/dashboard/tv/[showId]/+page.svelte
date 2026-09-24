@@ -151,7 +151,7 @@
 	<section class="mt-4 flex flex-col gap-3">
 		<h2 class="text-lg font-semibold">Torrents</h2>
 		<div class="w-full overflow-x-auto">
-			<DownloadTable torrents={showTorrentsWithProgress} />
+			<DownloadTable torrents={showTorrentsWithProgress} emptyTitle="No torrents for this show" />
 		</div>
 	</section>
 </MediaHeroHeader>
