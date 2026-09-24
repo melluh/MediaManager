@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from media_manager.common.schemas import SubtitleTrack
+from media_manager.common.languages import UNKNOWN_LANGUAGE
+from media_manager.common.schemas import SubtitleLanguage, SubtitleTrack
 from media_manager.torrent.schemas import Quality
 from media_manager.torrent.video_probe import (
     EMPTY_PROBE,
@@ -71,20 +72,42 @@ def test_to_probe_reads_all_subtitle_streams_with_language_and_disposition():
 
     assert probe.subtitles == [
         SubtitleTrack(
-            language="eng",
+            language=SubtitleLanguage(code="eng", name="English"),
             source="embedded",
             forced=True,
             hearing_impaired=False,
             codec="subrip",
         ),
         SubtitleTrack(
-            language="fre",
+            language=SubtitleLanguage(code="fra", name="French"),
             source="embedded",
             forced=False,
             hearing_impaired=True,
             codec="ass",
         ),
     ]
+
+
+def test_to_probe_reports_untagged_and_undetermined_subtitles_as_unknown():
+    probe = _to_probe(
+        {
+            "streams": [
+                {"codec_type": "subtitle", "codec_name": "subrip"},
+                {
+                    "codec_type": "subtitle",
+                    "codec_name": "subrip",
+                    "tags": {"language": "und"},
+                },
+                {
+                    "codec_type": "subtitle",
+                    "codec_name": "subrip",
+                    "tags": {"language": "<script>"},
+                },
+            ]
+        }
+    )
+
+    assert [track.language for track in probe.subtitles] == [UNKNOWN_LANGUAGE] * 3
 
 
 def test_sanitize_tag_rejects_hostile_language_values():

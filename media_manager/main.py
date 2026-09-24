@@ -73,6 +73,7 @@ from media_manager.scheduler import (
     import_all_movie_torrents_task,
     import_all_show_torrents_task,
     refresh_tmdb_title_index_task,
+    rescan_movie_subtitle_languages_task,
     scan_importable_movies_task,
     scan_importable_shows_task,
     update_all_movies_metadata_task,
@@ -203,6 +204,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
                 update_all_non_ended_shows_metadata_task.kiq(),
                 scan_importable_movies_task.kiq(),
                 scan_importable_shows_task.kiq(),
+                # In-memory cache: empty on every start until this runs.
+                rescan_movie_subtitle_languages_task.kiq(),
             ]
             # Only kicked when missing/stale, so a normal restart doesn't
             # redownload TMDB's daily export every time.

@@ -8,8 +8,9 @@
 	import HardDrive from '@lucide/svelte/icons/hard-drive';
 	import Gauge from '@lucide/svelte/icons/gauge';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
-	import { qualityMap } from '$lib/utils';
-	import type { MovieListItem, Quality, ShowSummary } from '$lib/api/api';
+	import Captions from '@lucide/svelte/icons/captions';
+	import { NO_SUBTITLES_KEY, qualityMap, subtitleLanguageKey } from '$lib/utils';
+	import type { MovieListItem, Quality, ShowSummary, SubtitleLanguage } from '$lib/api/api';
 	import type { DownloadedFilter, MediaSortOption } from '$lib/utils';
 
 	let {
@@ -18,7 +19,8 @@
 		sortBy = $bindable(),
 		selectedGenres = $bindable(),
 		downloadedFilter = $bindable(),
-		selectedQualities = $bindable()
+		selectedQualities = $bindable(),
+		selectedSubtitles = $bindable()
 	}: {
 		items: (MovieListItem | ShowSummary)[];
 		isShow: boolean;
@@ -26,6 +28,7 @@
 		selectedGenres: string[];
 		downloadedFilter: DownloadedFilter;
 		selectedQualities: Quality[];
+		selectedSubtitles: string[];
 	} = $props();
 
 	const sortOptions: { value: MediaSortOption; label: string }[] = [
@@ -57,6 +60,33 @@
 		].sort((a, b) => a - b)
 	);
 
+	// Languages found across the library, keyed like the filter itself so
+	// regional variants get their own checkbox. Unknown is listed last.
+	let availableSubtitleLanguages = $derived.by(() => {
+		const byKey: Record<string, SubtitleLanguage> = {};
+		for (const item of items) {
+			if (!('subtitle_languages' in item)) continue;
+			for (const language of item.subtitle_languages ?? []) {
+				byKey[subtitleLanguageKey(language)] = language;
+			}
+		}
+		return Object.entries(byKey).sort(([, a], [, b]) => {
+			if ((a.code === 'und') !== (b.code === 'und')) return a.code === 'und' ? 1 : -1;
+			return a.name.localeCompare(b.name);
+		});
+	});
+	// Only offered once the backend's subtitle scan has reported on at least
+	// one movie - before that, every option would match nothing.
+	let hasSubtitleData = $derived(
+		items.some((item) => 'subtitle_languages' in item && item.subtitle_languages != null)
+	);
+
+	function toggleSubtitle(key: string) {
+		selectedSubtitles = selectedSubtitles.includes(key)
+			? selectedSubtitles.filter((k) => k !== key)
+			: [...selectedSubtitles, key];
+	}
+
 	function toggleGenre(genre: string) {
 		selectedGenres = selectedGenres.includes(genre)
 			? selectedGenres.filter((g) => g !== genre)
@@ -70,13 +100,17 @@
 	}
 
 	let hasActiveFilters = $derived(
-		selectedGenres.length > 0 || downloadedFilter !== 'all' || selectedQualities.length > 0
+		selectedGenres.length > 0 ||
+			downloadedFilter !== 'all' ||
+			selectedQualities.length > 0 ||
+			selectedSubtitles.length > 0
 	);
 
 	function resetFilters() {
 		selectedGenres = [];
 		downloadedFilter = 'all';
 		selectedQualities = [];
+		selectedSubtitles = [];
 	}
 </script>
 
@@ -153,6 +187,39 @@
 							onCheckedChange={() => toggleQuality(quality)}
 						>
 							{qualityMap[quality]}
+						</DropdownMenu.CheckboxItem>
+					{/each}
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
+		{/if}
+
+		{#if hasSubtitleData}
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline' })}>
+					<Captions class="size-4 text-muted-foreground" />
+					Subtitles
+					{#if selectedSubtitles.length > 0}
+						<Badge variant="secondary" class="ml-1">{selectedSubtitles.length}</Badge>
+					{/if}
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="start" class="max-h-80 overflow-y-auto">
+					<DropdownMenu.CheckboxItem
+						checked={selectedSubtitles.includes(NO_SUBTITLES_KEY)}
+						closeOnSelect={false}
+						onCheckedChange={() => toggleSubtitle(NO_SUBTITLES_KEY)}
+					>
+						None
+					</DropdownMenu.CheckboxItem>
+					{#if availableSubtitleLanguages.length > 0}
+						<DropdownMenu.Separator />
+					{/if}
+					{#each availableSubtitleLanguages as [key, language] (key)}
+						<DropdownMenu.CheckboxItem
+							checked={selectedSubtitles.includes(key)}
+							closeOnSelect={false}
+							onCheckedChange={() => toggleSubtitle(key)}
+						>
+							{language.name}
 						</DropdownMenu.CheckboxItem>
 					{/each}
 				</DropdownMenu.Content>

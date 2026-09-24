@@ -148,6 +148,7 @@ class PublicShow(BaseModel):
     continuous_download: bool = False
     library: str
 
+    original_language: str | None = None
     imdb_id: str | None = None
     trailer_url: str | None = None
     tagline: str | None = None

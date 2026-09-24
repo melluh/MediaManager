@@ -2283,7 +2283,8 @@ export interface components {
 		/**
 		 * MovieListItem
 		 * @description Movie plus the file-derived fields needed to filter the library list
-		 *     (downloaded status, download quality) without a per-movie query.
+		 *     (downloaded status, download quality, subtitle languages) without a
+		 *     per-movie query.
 		 */
 		MovieListItem: {
 			/**
@@ -2349,6 +2350,8 @@ export interface components {
 			 */
 			downloaded: boolean;
 			quality?: components['schemas']['Quality'] | null;
+			/** Subtitle Languages */
+			subtitle_languages?: components['schemas']['SubtitleLanguage'][] | null;
 		};
 		/** MovieTorrent */
 		MovieTorrent: {
@@ -2633,6 +2636,8 @@ export interface components {
 			continuous_download: boolean;
 			/** Library */
 			library: string;
+			/** Original Language */
+			original_language?: string | null;
 			/** Imdb Id */
 			imdb_id?: string | null;
 			/** Trailer Url */
@@ -3023,6 +3028,20 @@ export interface components {
 			embedded: boolean;
 		};
 		/**
+		 * SubtitleLanguage
+		 * @description A subtitle's language, normalized across the vocabularies it can be
+		 *     reported in (ISO 639-1/639-2B/639-2T codes, IETF tags, English names) -
+		 *     see `media_manager.common.languages.parse_language`.
+		 */
+		SubtitleLanguage: {
+			/** Code */
+			code: string;
+			/** Region */
+			region?: string | null;
+			/** Name */
+			name: string;
+		};
+		/**
 		 * SubtitleTrack
 		 * @description A subtitle track discovered for a media file - either embedded in the
 		 *     video container (found by ffprobe) or a sidecar file sitting next to it.
@@ -3037,8 +3056,7 @@ export interface components {
 		 *     through raw.
 		 */
 		SubtitleTrack: {
-			/** Language */
-			language?: string | null;
+			language: components['schemas']['SubtitleLanguage'];
 			/**
 			 * Source
 			 * @enum {string}
@@ -3455,6 +3473,7 @@ export type Show = components['schemas']['Show'];
 export type ShowSummary = components['schemas']['ShowSummary'];
 export type SlotDownloadPlan = components['schemas']['SlotDownloadPlan'];
 export type SubtitleInfo = components['schemas']['SubtitleInfo'];
+export type SubtitleLanguage = components['schemas']['SubtitleLanguage'];
 export type SubtitleTrack = components['schemas']['SubtitleTrack'];
 export type SuggestedTorrentPick = components['schemas']['SuggestedTorrentPick'];
 export type SystemHealth = components['schemas']['SystemHealth'];

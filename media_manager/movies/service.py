@@ -15,9 +15,16 @@ from media_manager.common.library_scan import (
 from media_manager.common.media_files import (
     MediaFileLocation,
     attach_media_file_details,
+    distinct_subtitle_languages,
     movie_file_stem,
 )
 from media_manager.common.service import BaseMediaService
+from media_manager.common.subtitle_language_cache import (
+    SubtitleMediaType,
+    get_cached_subtitle_languages,
+    set_cached_subtitle_languages,
+    update_cached_subtitle_languages,
+)
 from media_manager.config import get_config
 from media_manager.exceptions import MediaAlreadyExistsError
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
@@ -146,7 +153,54 @@ class MovieService(BaseMediaService[Movie, Movie]):
                 for movie_file in public_movie_files
             ],
         )
+        # The files were just probed anyway - keep the list filter's view of
+        # this movie current instead of waiting for the next scheduled scan.
+        update_cached_subtitle_languages(
+            SubtitleMediaType.movie,
+            movie.id,
+            distinct_subtitle_languages(public_movie_files),
+        )
         return public_movie_files
+
+    async def rescan_movie_subtitle_languages(self) -> None:
+        """
+        Probe every movie's files on disk and refresh the cache of subtitle
+        languages the movie list's filter reads. Probe results are cached per
+        file revision, so after the first run only new or changed files cost
+        an ffprobe.
+        """
+        movies = await self.movie_repository.get_movies()
+        files_by_movie = (
+            await self.movie_repository.get_all_movie_files_grouped_by_movie()
+        )
+        public_files_by_movie = {
+            movie.id: [
+                PublicMovieFile.model_validate(movie_file)
+                for movie_file in files_by_movie.get(movie.id, [])
+            ]
+            for movie in movies
+        }
+        # One batch for the whole library: a single directory-listing thread
+        # and a bounded pool of ffprobe subprocesses, instead of per movie.
+        all_files = [
+            (movie, movie_file)
+            for movie in movies
+            for movie_file in public_files_by_movie[movie.id]
+        ]
+        await attach_media_file_details(
+            [movie_file for _, movie_file in all_files],
+            [
+                self.get_movie_file_location(movie=movie, movie_file=movie_file)
+                for movie, movie_file in all_files
+            ],
+        )
+        set_cached_subtitle_languages(
+            SubtitleMediaType.movie,
+            {
+                movie_id: distinct_subtitle_languages(movie_files)
+                for movie_id, movie_files in public_files_by_movie.items()
+            },
+        )
 
     def get_movie_file_location(
         self, movie: Movie, movie_file: MovieFile
@@ -315,7 +369,12 @@ class MovieService(BaseMediaService[Movie, Movie]):
             downloaded, quality = download_info.get(movie.id, (False, None))
             list_items.append(
                 MovieListItem(
-                    **movie.model_dump(), downloaded=downloaded, quality=quality
+                    **movie.model_dump(),
+                    downloaded=downloaded,
+                    quality=quality,
+                    subtitle_languages=get_cached_subtitle_languages(
+                        SubtitleMediaType.movie, movie.id
+                    ),
                 )
             )
         return list_items

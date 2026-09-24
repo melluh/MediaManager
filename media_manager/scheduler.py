@@ -115,6 +115,14 @@ async def scan_importable_shows_task(
 
 
 @broker.task
+async def rescan_movie_subtitle_languages_task(
+    movie_service: MovieService = TaskiqDepends(get_movie_service),
+) -> None:
+    log.info("Scanning movie subtitle languages")
+    await movie_service.rescan_movie_subtitle_languages()
+
+
+@broker.task
 async def scan_movie_library_files_task(
     movie_service: MovieService = TaskiqDepends(get_movie_service),
 ) -> None:
@@ -176,6 +184,10 @@ _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
     update_all_non_ended_shows_metadata_task.task_name: [{"cron": "0 * * * *"}],
     scan_importable_movies_task.task_name: [{"cron": "*/5 * * * *"}],
     scan_importable_shows_task.task_name: [{"cron": "*/5 * * * *"}],
+    # Probes every movie file, but probes are cached per file revision, so
+    # only the first run after startup (and new/changed files) is expensive.
+    # Viewing a movie's files also refreshes its entry immediately.
+    rescan_movie_subtitle_languages_task.task_name: [{"cron": "*/15 * * * *"}],
     # Hourly rather than every few minutes: this walks every media directory
     # on disk, and nothing depends on it being immediate - imports record
     # their own paths, and an admin can trigger a scan on demand.

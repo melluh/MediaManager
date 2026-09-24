@@ -45,7 +45,9 @@
 	// Seeded from the history entry's state so filters survive navigating to
 	// a detail page and back (shallow-routed, not part of the URL: see
 	// libraryFilters in app.d.ts).
-	let filters = $state(page.state.libraryFilters ?? defaultMediaLibraryFilters());
+	// Merged over the defaults: a history entry saved before a filter field
+	// existed restores without it.
+	let filters = $state({ ...defaultMediaLibraryFilters(), ...page.state.libraryFilters });
 
 	$effect(() => {
 		const snapshot = $state.snapshot(filters);
@@ -135,6 +137,7 @@
 					bind:selectedGenres={filters.genres}
 					bind:downloadedFilter={filters.downloaded}
 					bind:selectedQualities={filters.qualities}
+					bind:selectedSubtitles={filters.subtitles}
 				/>
 			{/if}
 			{#if user()?.is_superuser}

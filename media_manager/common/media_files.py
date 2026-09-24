@@ -10,15 +10,16 @@ real path with `locate_media_file`.
 import asyncio
 import mimetypes
 import os
-import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from stat import S_ISREG
 
+from media_manager.common.languages import language_or_unknown, parse_language
 from media_manager.common.schemas import (
     MediaFileDetails,
     PublicMediaFile,
+    SubtitleLanguage,
     SubtitleTrack,
 )
 from media_manager.torrent.utils import remove_special_characters
@@ -163,33 +164,32 @@ def match_sidecar_subtitles(
 
 
 # Tokens parsed out of a sidecar filename are untrusted text (the filename
-# comes from a downloaded file, not the user) - only an exact match against
-# these fixed, narrow allowlists is trusted; anything else is dropped rather
-# than passed through.
-_LANGUAGE_TOKEN = re.compile(r"^[a-z]{2,3}$")
+# comes from a downloaded file, not the user) - only a token `parse_language`
+# recognizes is kept; anything else is dropped rather than passed through.
 _HEARING_IMPAIRED_TOKENS = {"sdh", "hi", "cc"}
 
 
 def _parse_sidecar_subtitle(entry: DirectoryEntry, stem: str) -> SubtitleTrack:
     name_without_extension = entry.path.stem
     remainder = name_without_extension[len(stem) :].strip(".")
-    words = [word.lower() for word in remainder.split(".") if word]
+    words = [word for word in remainder.split(".") if word]
+    lowered = [word.lower() for word in words]
 
-    forced = "forced" in words
-    hearing_impaired = any(word in _HEARING_IMPAIRED_TOKENS for word in words)
-    # "sdh"/"cc" also happen to match the 2-3 letter language pattern, so
-    # marker words are excluded from language candidacy - otherwise
-    # ".sdh.en.srt" would misread "sdh" as the language instead of "en".
+    forced = "forced" in lowered
+    hearing_impaired = any(word in _HEARING_IMPAIRED_TOKENS for word in lowered)
+    # Marker words are excluded from language candidacy: "hi" is also the ISO
+    # 639-1 code for Hindi, and ".sdh.en.srt" must not be read as anything
+    # but English. The marker meaning wins.
     language = next(
         (
-            word
+            parsed
             for word in words
-            if word != "forced"
-            and word not in _HEARING_IMPAIRED_TOKENS
-            and _LANGUAGE_TOKEN.match(word)
+            if word.lower() != "forced"
+            and word.lower() not in _HEARING_IMPAIRED_TOKENS
+            and (parsed := parse_language(word)) is not None
         ),
         None,
-    )
+    ) or language_or_unknown(None)
 
     return SubtitleTrack(
         language=language,
@@ -258,6 +258,30 @@ async def attach_media_file_details(
             container=probe.container,
             subtitles=[*probe.subtitles, *sidecar_subtitles[index]],
         )
+
+
+def distinct_subtitle_languages(
+    files: Sequence[PublicMediaFile],
+) -> list[SubtitleLanguage] | None:
+    """
+    Every distinct subtitle language across a set of files already passed
+    through `attach_media_file_details`, sorted by name. None when none of
+    the files exist on disk, which is distinct from existing files that
+    simply have no subtitles (an empty list).
+    """
+    on_disk = [
+        file.details
+        for file in files
+        if file.exists_on_disk and file.details is not None
+    ]
+    if not on_disk:
+        return None
+    languages = {
+        (track.language.code, track.language.region): track.language
+        for details in on_disk
+        for track in details.subtitles
+    }
+    return sorted(languages.values(), key=lambda language: language.name)
 
 
 def is_video_file(path: Path) -> bool:

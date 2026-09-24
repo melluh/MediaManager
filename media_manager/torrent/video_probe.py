@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from media_manager.common.languages import language_or_unknown
 from media_manager.common.schemas import SubtitleTrack
 from media_manager.indexer.title_parsing import derive_quality
 from media_manager.torrent.schemas import Quality
@@ -192,7 +193,7 @@ def _to_subtitle_track(stream: dict) -> SubtitleTrack:
     tags = stream.get("tags")
     disposition = stream.get("disposition")
     return SubtitleTrack(
-        language=_sanitize_tag((tags or {}).get("language")),
+        language=language_or_unknown(_sanitize_tag((tags or {}).get("language"))),
         source="embedded",
         forced=_as_bool((disposition or {}).get("forced")),
         hearing_impaired=_as_bool((disposition or {}).get("hearing_impaired")),

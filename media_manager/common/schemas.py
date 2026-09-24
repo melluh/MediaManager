@@ -71,6 +71,23 @@ class BaseMediaFile(BaseModel):
     relative_path: str | None = None
 
 
+class SubtitleLanguage(BaseModel):
+    """
+    A subtitle's language, normalized across the vocabularies it can be
+    reported in (ISO 639-1/639-2B/639-2T codes, IETF tags, English names) -
+    see `media_manager.common.languages.parse_language`.
+    """
+
+    code: str
+    """ISO 639-3 code (e.g. "eng", "deu", "por"), or "und" when unknown.
+    Stable across sources, so this is what to filter and group by."""
+    region: str | None = None
+    """ISO 3166-1 alpha-2 country, when the source named one (e.g. "BR" for
+    "pt-BR")."""
+    name: str
+    """Human-readable name, e.g. "English", "Portuguese (Brazil)", "Unknown"."""
+
+
 class SubtitleTrack(BaseModel):
     """
     A subtitle track discovered for a media file - either embedded in the
@@ -86,10 +103,10 @@ class SubtitleTrack(BaseModel):
     through raw.
     """
 
-    language: str | None = None
-    """Raw language as reported by the source: an ISO 639-2 code (e.g.
-    "eng") for embedded streams, whatever short code the sidecar filename
-    uses (e.g. "en") for sidecar files. Not normalized across vocabularies."""
+    language: SubtitleLanguage
+    """Normalized language, whichever code the source used (an embedded
+    stream's "ger" and a sidecar's "de" both become "deu"). Always set: a
+    missing or unrecognized code is the explicit Unknown language."""
     source: Literal["embedded", "sidecar"]
     forced: bool = False
     hearing_impaired: bool = False

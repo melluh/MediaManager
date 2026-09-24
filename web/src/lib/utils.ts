@@ -4,7 +4,14 @@ import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { toast } from 'svelte-sonner';
 import client from '$lib/api';
-import type { Show, Movie, MovieListItem, Quality, ShowSummary } from '$lib/api/api';
+import type {
+	Show,
+	Movie,
+	MovieListItem,
+	Quality,
+	ShowSummary,
+	SubtitleLanguage
+} from '$lib/api/api';
 
 export const qualityMap: { [key: number]: string } = {
 	1: '4K/UHD',
@@ -348,14 +355,39 @@ export interface MediaLibraryFilters {
 	genres: string[];
 	downloaded: DownloadedFilter;
 	qualities: Quality[];
+	/** `subtitleLanguageKey`s, plus `NO_SUBTITLES_KEY` for "no subtitles at all". */
+	subtitles: string[];
 }
 
 export function defaultMediaLibraryFilters(): MediaLibraryFilters {
-	return { sortBy: 'newest', genres: [], downloaded: 'all', qualities: [] };
+	return { sortBy: 'newest', genres: [], downloaded: 'all', qualities: [], subtitles: [] };
+}
+
+export const NO_SUBTITLES_KEY = 'none';
+
+/**
+ * Filter key for a subtitle language. Regional variants stay distinct
+ * ("por-BR" vs "por"), matching how the backend dedupes them.
+ */
+export function subtitleLanguageKey(language: SubtitleLanguage): string {
+	return language.region ? `${language.code}-${language.region}` : language.code;
 }
 
 function isMovieListItem(item: MovieListItem | ShowSummary): item is MovieListItem {
 	return 'downloaded' in item;
+}
+
+/**
+ * A movie matches if it has any of the selected languages, or has files but
+ * no subtitles at all when "none" is selected. A movie without a file on
+ * disk (`subtitle_languages` null) has nothing to judge, so it never
+ * matches an active subtitle filter.
+ */
+function matchesSubtitleFilter(item: MovieListItem, selected: string[]): boolean {
+	const languages = item.subtitle_languages;
+	if (languages == null) return false;
+	if (languages.length === 0) return selected.includes(NO_SUBTITLES_KEY);
+	return languages.some((language) => selected.includes(subtitleLanguageKey(language)));
 }
 
 /**
@@ -377,6 +409,9 @@ export function filterAndSortMedia<T extends MovieListItem | ShowSummary>(
 			if (filters.downloaded === 'no' && item.downloaded) return false;
 			if (filters.qualities.length > 0) {
 				if (item.quality == null || !filters.qualities.includes(item.quality)) return false;
+			}
+			if (filters.subtitles.length > 0 && !matchesSubtitleFilter(item, filters.subtitles)) {
+				return false;
 			}
 		}
 		return true;

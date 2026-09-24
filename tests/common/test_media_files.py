@@ -1,10 +1,12 @@
 import asyncio
 from pathlib import Path
 
+from media_manager.common.languages import UNKNOWN_LANGUAGE
 from media_manager.common.media_files import (
     DirectoryEntry,
     MediaFileLocation,
     attach_media_file_details,
+    distinct_subtitle_languages,
     episode_file_stem,
     locate_media_file,
     match_sidecar_subtitles,
@@ -12,8 +14,15 @@ from media_manager.common.media_files import (
     movie_file_stem,
     season_directory_name,
 )
-from media_manager.common.schemas import PublicMediaFile, SubtitleTrack
+from media_manager.common.schemas import (
+    MediaFileDetails,
+    PublicMediaFile,
+    SubtitleLanguage,
+    SubtitleTrack,
+)
 from media_manager.torrent.schemas import Quality
+
+_ENGLISH = SubtitleLanguage(code="eng", name="English")
 
 
 def _public_file(
@@ -229,8 +238,9 @@ def test_match_sidecar_subtitles_finds_companions_excluding_video(tmp_path: Path
 
     tracks = match_sidecar_subtitles(entries, stem="Movie (2020)", exclude=video)
 
-    assert {(t.language, t.forced, t.codec) for t in tracks} == {
-        ("en", False, "srt"),
+    # "en" and "eng" are the same language once normalized.
+    assert {(t.language.code, t.forced, t.codec) for t in tracks} == {
+        ("eng", False, "srt"),
         ("eng", True, "ass"),
     }
     assert all(t.source == "sidecar" for t in tracks)
@@ -243,12 +253,43 @@ def test_match_sidecar_subtitles_parses_hearing_impaired_and_bare_names(tmp_path
     entries = [DirectoryEntry(p, None) for p in sorted(tmp_path.iterdir())]
     tracks = match_sidecar_subtitles(entries, stem="Movie (2020)", exclude=None)
 
-    sdh_track = next(t for t in tracks if t.language == "en")
+    sdh_track = next(t for t in tracks if t.language.code == "eng")
     assert sdh_track.hearing_impaired is True
 
-    bare_track = next(t for t in tracks if t.language is None)
+    bare_track = next(t for t in tracks if t.language == UNKNOWN_LANGUAGE)
     assert bare_track.forced is False
     assert bare_track.hearing_impaired is False
+
+
+def test_match_sidecar_subtitles_recognizes_common_sidecar_language_forms(
+    tmp_path: Path,
+):
+    (tmp_path / "Movie (2020).pt-BR.srt").touch()
+    (tmp_path / "Movie (2020).English.srt").touch()
+    (tmp_path / "Movie (2020).ger.forced.srt").touch()
+    (tmp_path / "Movie (2020).WEB-DL.srt").touch()
+
+    entries = [DirectoryEntry(p, None) for p in sorted(tmp_path.iterdir())]
+    tracks = match_sidecar_subtitles(entries, stem="Movie (2020)", exclude=None)
+
+    assert sorted(t.language.name for t in tracks) == [
+        "English",
+        "German",
+        "Portuguese (Brazil)",
+        "Unknown",
+    ]
+
+
+def test_match_sidecar_subtitles_reads_hi_as_hearing_impaired_not_hindi(
+    tmp_path: Path,
+):
+    (tmp_path / "Movie (2020).hi.srt").touch()
+
+    entries = [DirectoryEntry(p, None) for p in sorted(tmp_path.iterdir())]
+    [track] = match_sidecar_subtitles(entries, stem="Movie (2020)", exclude=None)
+
+    assert track.language == UNKNOWN_LANGUAGE
+    assert track.hearing_impaired is True
 
 
 def test_match_sidecar_subtitles_does_not_misread_marker_token_as_language(
@@ -261,7 +302,7 @@ def test_match_sidecar_subtitles_does_not_misread_marker_token_as_language(
     entries = [DirectoryEntry(p, None) for p in sorted(tmp_path.iterdir())]
     [track] = match_sidecar_subtitles(entries, stem="Movie (2020)", exclude=None)
 
-    assert track.language == "en"
+    assert track.language.code == "eng"
     assert track.hearing_impaired is True
 
 
@@ -299,7 +340,7 @@ def test_attach_media_file_details_reports_sidecar_subtitles_for_stored_relative
 
     assert file.details is not None
     assert file.details.subtitles == [
-        SubtitleTrack(language="en", source="sidecar", codec="srt")
+        SubtitleTrack(language=_ENGLISH, source="sidecar", codec="srt")
     ]
 
 
@@ -332,7 +373,7 @@ def test_attach_media_file_details_finds_sidecars_for_a_hand_renamed_file(
 
     assert file.details is not None
     assert file.details.subtitles == [
-        SubtitleTrack(language="en", source="sidecar", codec="srt")
+        SubtitleTrack(language=_ENGLISH, source="sidecar", codec="srt")
     ]
 
 
@@ -392,3 +433,39 @@ def test_attach_media_file_details_does_not_leak_subtitles_between_files(
         )
     )
     assert file_b_again.details.subtitles == []
+
+
+def _file_with_subtitles(*languages: SubtitleLanguage) -> PublicMediaFile:
+    file = _public_file()
+    file.exists_on_disk = True
+    file.details = MediaFileDetails(
+        subtitles=[
+            SubtitleTrack(language=language, source="embedded") for language in languages
+        ]
+    )
+    return file
+
+
+def test_distinct_subtitle_languages_dedupes_across_files_and_sorts_by_name():
+    german = SubtitleLanguage(code="deu", name="German")
+    brazilian = SubtitleLanguage(code="por", region="BR", name="Portuguese (Brazil)")
+    portuguese = SubtitleLanguage(code="por", name="Portuguese")
+
+    languages = distinct_subtitle_languages(
+        [
+            _file_with_subtitles(_ENGLISH, german, _ENGLISH),
+            _file_with_subtitles(brazilian, portuguese, UNKNOWN_LANGUAGE, german),
+        ]
+    )
+
+    # Regional variants stay distinct from the base language.
+    assert languages == [_ENGLISH, german, portuguese, brazilian, UNKNOWN_LANGUAGE]
+
+
+def test_distinct_subtitle_languages_separates_no_subtitles_from_no_file():
+    # Files on disk without subtitles: an empty list, which the "None"
+    # filter matches...
+    assert distinct_subtitle_languages([_file_with_subtitles()]) == []
+    # ...but nothing on disk at all is None, which no subtitle filter matches.
+    assert distinct_subtitle_languages([_public_file()]) is None
+    assert distinct_subtitle_languages([]) is None
