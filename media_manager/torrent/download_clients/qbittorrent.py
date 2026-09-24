@@ -15,6 +15,7 @@ from media_manager.torrent.schemas import (
     DownloadState,
     Torrent,
     TorrentStatus,
+    download_state_to_torrent_status,
 )
 from media_manager.torrent.utils import get_torrent_hash, sanitize_torrent_title
 
@@ -24,32 +25,6 @@ log = logging.getLogger(__name__)
 class QbittorrentDownloadClient(AbstractDownloadClient):
     name = "qbittorrent"
     display_name = "qBittorrent"
-
-    DOWNLOADING_STATE = (
-        "allocating",
-        "downloading",
-        "metaDL",
-        "pausedDL",
-        "queuedDL",
-        "stalledDL",
-        "checkingDL",
-        "forcedDL",
-        "moving",
-        "stoppedDL",
-        "forcedMetaDL",
-        "metaDL",
-    )
-    FINISHED_STATE = (
-        "uploading",
-        "pausedUP",
-        "queuedUP",
-        "stalledUP",
-        "checkingUP",
-        "forcedUP",
-        "stoppedUP",
-    )
-    ERROR_STATE = ("missingFiles", "error", "checkingResumeData")
-    UNKNOWN_STATE = ("unknown",)
 
     # Maps qBittorrent's raw `state` field to a client-neutral DownloadState.
     # See https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
@@ -238,17 +213,8 @@ class QbittorrentDownloadClient(AbstractDownloadClient):
         if not info:
             log.warning(f"No information found for torrent: {torrent.id}")
             return TorrentStatus.unknown
-        state: str = info[0]["state"]
-
-        if state in self.DOWNLOADING_STATE:
-            return TorrentStatus.downloading
-        if state in self.FINISHED_STATE:
-            return TorrentStatus.finished
-        if state in self.ERROR_STATE:
-            return TorrentStatus.error
-        if state in self.UNKNOWN_STATE:
-            return TorrentStatus.unknown
-        return TorrentStatus.error
+        state = self.DOWNLOAD_STATE_MAP.get(info[0]["state"], DownloadState.unknown)
+        return download_state_to_torrent_status(state)
 
     def get_download_progress_bulk(
         self, torrents: list[Torrent]
