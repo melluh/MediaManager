@@ -13,18 +13,11 @@ from media_manager.common.library_scan import (
     scan_media_targets,
 )
 from media_manager.common.media_files import (
-    MediaFileLocation,
-    attach_media_file_details,
+    best_quality,
     distinct_subtitle_languages,
-    movie_file_stem,
+    refresh_media_file_details,
 )
 from media_manager.common.service import BaseMediaService
-from media_manager.common.subtitle_language_cache import (
-    SubtitleMediaType,
-    get_cached_subtitle_languages,
-    set_cached_subtitle_languages,
-    update_cached_subtitle_languages,
-)
 from media_manager.config import get_config
 from media_manager.exceptions import MediaAlreadyExistsError
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
@@ -35,7 +28,6 @@ from media_manager.movies.metadata import MovieMetadataService
 from media_manager.movies.repository import MovieRepository
 from media_manager.movies.schemas import (
     Movie,
-    MovieFile,
     MovieId,
     MovieListItem,
     PublicMovie,
@@ -44,8 +36,6 @@ from media_manager.movies.schemas import (
 )
 from media_manager.notification.service import NotificationService
 from media_manager.torrent.schemas import (
-    Quality,
-    QualityStrings,
     Torrent,
     TorrentWithProgress,
 )
@@ -114,7 +104,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
                         await self.torrent_service.cancel_download(
                             torrent=torrent, delete_files=True
                         )
-                        log.info(f"Deleted torrent: {torrent.torrent_title}")
+                        log.info(f"Deleted torrent: {torrent.title}")
                     except Exception:
                         log.exception(f"Failed to delete torrent {torrent.hash}")
 
@@ -123,8 +113,9 @@ class MovieService(BaseMediaService[Movie, Movie]):
 
     async def get_public_movie_files(self, movie: Movie) -> list[PublicMovieFile]:
         """
-        Get all public movie files for a given movie, enriched with their
-        resolved path on disk and the details probed from the file itself.
+        Get all files of a given movie, enriched with their resolved path on
+        disk and the details probed from the file itself (re-probed only if
+        the file changed since it was last probed).
 
         :param movie: The movie object.
         :return: A list of public movie files.
@@ -132,102 +123,45 @@ class MovieService(BaseMediaService[Movie, Movie]):
         movie_files = await self.movie_repository.get_movie_files_by_movie_id(
             movie_id=movie.id
         )
-        public_movie_files = [PublicMovieFile.model_validate(x) for x in movie_files]
-        imported_by_key = {
-            (movie_id, file_path_suffix): imported
-            for movie_id, file_path_suffix, imported in (
-                await self.movie_repository.get_movie_file_import_status(
-                    movie_ids=[movie.id]
-                )
-            )
-        }
-        for movie_file in public_movie_files:
-            imported = imported_by_key.get((movie.id, movie_file.file_path_suffix), False)
-            movie_file.imported = imported
-            movie_file.downloaded = imported
-
-        await attach_media_file_details(
-            public_movie_files,
-            [
-                self.get_movie_file_location(movie=movie, movie_file=movie_file)
-                for movie_file in public_movie_files
-            ],
+        return await self.movie_import_service.refresh_movie_file_details(
+            movie=movie, movie_files=movie_files
         )
-        # The files were just probed anyway - keep the list filter's view of
-        # this movie current instead of waiting for the next scheduled scan.
-        update_cached_subtitle_languages(
-            SubtitleMediaType.movie,
-            movie.id,
-            distinct_subtitle_languages(public_movie_files),
-        )
-        return public_movie_files
 
-    async def rescan_movie_subtitle_languages(self) -> None:
+    async def refresh_all_movie_file_details(self) -> None:
         """
-        Probe every movie's files on disk and refresh the cache of subtitle
-        languages the movie list's filter reads. Probe results are cached per
-        file revision, so after the first run only new or changed files cost
-        an ffprobe.
+        Bring every movie file's stored probe details up to date, so the movie
+        list's quality and subtitle filters see new and changed files without
+        anyone opening their movie first. Unchanged files cost only a stat.
         """
         movies = await self.movie_repository.get_movies()
         files_by_movie = (
             await self.movie_repository.get_all_movie_files_grouped_by_movie()
         )
-        public_files_by_movie = {
-            movie.id: [
-                PublicMovieFile.model_validate(movie_file)
-                for movie_file in files_by_movie.get(movie.id, [])
-            ]
-            for movie in movies
-        }
-        # One batch for the whole library: a single directory-listing thread
-        # and a bounded pool of ffprobe subprocesses, instead of per movie.
+        # One batch for the whole library: a single stat/listing thread and a
+        # bounded pool of ffprobe subprocesses, instead of per movie.
         all_files = [
-            (movie, movie_file)
+            (movie, PublicMovieFile.model_validate(movie_file))
             for movie in movies
-            for movie_file in public_files_by_movie[movie.id]
+            for movie_file in files_by_movie.get(movie.id, [])
         ]
-        await attach_media_file_details(
+        changed = await refresh_media_file_details(
             [movie_file for _, movie_file in all_files],
             [
-                self.get_movie_file_location(movie=movie, movie_file=movie_file)
-                for movie, movie_file in all_files
+                self.movie_import_service.get_movie_file_location(movie=movie)
+                for movie, _ in all_files
             ],
         )
-        set_cached_subtitle_languages(
-            SubtitleMediaType.movie,
-            {
-                movie_id: distinct_subtitle_languages(movie_files)
-                for movie_id, movie_files in public_files_by_movie.items()
-            },
-        )
-
-    def get_movie_file_location(
-        self, movie: Movie, movie_file: MovieFile
-    ) -> MediaFileLocation:
-        """
-        Where a movie file is expected on disk: directly inside the movie's
-        own directory, named after the movie, reported relative to the parent
-        movies folder (the default movie directory, or the movie's library
-        root if it belongs to one).
-        """
-        movie_root_path = self.get_movie_root_path(movie=movie)
-        return MediaFileLocation(
-            directory=movie_root_path,
-            stem=movie_file_stem(
-                movie_name=movie.name,
-                year=movie.year,
-                file_path_suffix=movie_file.file_path_suffix,
-            ),
-            relative_to=movie_root_path.parent,
-            media_root=movie_root_path,
+        await self.movie_repository.update_movie_file_details(changed)
+        log.info(
+            f"Movie file probe refresh: {len(all_files)} files, "
+            f"{len(changed)} updated"
         )
 
     async def scan_library_files(self) -> LibraryScanCounts:
         """
         Reconcile every movie's file records with the files on disk: relink
-        records that lost track of their file, clear the path of records whose
-        file is gone, and adopt video files sitting anywhere under a movie's
+        records that lost track of their file, remove records whose file is
+        gone, and adopt video files sitting anywhere under a movie's
         directory without a record of their own.
 
         Movies whose root directory does not exist are skipped untouched - a
@@ -256,7 +190,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
             f"Movie library scan: {counts.items_scanned} scanned, "
             f"{counts.items_skipped} skipped (directory missing), "
             f"{counts.paths_relinked} paths relinked, "
-            f"{counts.paths_cleared} paths cleared, "
+            f"{counts.files_removed} missing files removed, "
             f"{counts.files_adopted} files adopted"
         )
         return counts
@@ -325,20 +259,15 @@ class MovieService(BaseMediaService[Movie, Movie]):
         self, movie_ids: Sequence[MovieId]
     ) -> dict[MovieId, bool]:
         """
-        Whether each movie has at least one imported file, computed from the
-        same query `get_public_movie_files` reads to build a movie's file
-        list - so a movie's aggregate status can never disagree with what
-        that list shows. See `BaseMediaService.fold_file_import_status`.
+        Whether each movie has at least one file in the library.
 
         :param movie_ids: The movies to check.
-        :return: A status for every given movie id, defaulting to False for
-            one with no file records at all.
+        :return: A status for every given movie id.
         """
-        movie_ids = list(movie_ids)
-        rows = await self.movie_repository.get_movie_file_import_status(
-            movie_ids=movie_ids
+        with_files = await self.movie_repository.get_movie_ids_with_files(
+            movie_ids=list(movie_ids)
         )
-        return self.fold_file_import_status(movie_ids, rows)
+        return {movie_id: movie_id in with_files for movie_id in movie_ids}
 
     async def get_movie_by_external_id(
         self, external_id: int, metadata_provider: str
@@ -359,22 +288,21 @@ class MovieService(BaseMediaService[Movie, Movie]):
 
     async def get_all_movies(self) -> list[MovieListItem]:
         """
-        Get all movies in the library, with the downloaded/quality fields the
-        library page's filters need.
+        Get all movies in the library, with the downloaded/quality/subtitle
+        fields the library page's filters need - read from the files' stored
+        probe details, so this never probes anything itself.
         """
         movies = await self.attach_media_images_many(await self.get_all_media())
-        download_info = await self.movie_repository.get_movie_download_info()
+        details_by_movie = await self.movie_repository.get_all_movie_file_details()
         list_items = []
         for movie in movies:
-            downloaded, quality = download_info.get(movie.id, (False, None))
+            file_details = details_by_movie.get(movie.id, [])
             list_items.append(
                 MovieListItem(
                     **movie.model_dump(),
-                    downloaded=downloaded,
-                    quality=quality,
-                    subtitle_languages=get_cached_subtitle_languages(
-                        SubtitleMediaType.movie, movie.id
-                    ),
+                    downloaded=bool(file_details),
+                    quality=best_quality(file_details),
+                    subtitle_languages=distinct_subtitle_languages(file_details),
                 )
             )
         return list_items
@@ -420,14 +348,23 @@ class MovieService(BaseMediaService[Movie, Movie]):
         movies = await self.movie_repository.get_all_movies_with_torrents()
         return [await self.get_torrents_for_movie(movie=movie) for movie in movies]
 
-    async def _check_movie_file_does_not_exist(
+    async def _check_file_path_suffix_is_free(
         self, movie: Movie, file_path_suffix: str
     ) -> None:
-        existing_files = await self.movie_repository.get_movie_files_by_movie_id(
+        """
+        Refuses a download whose file would land on a version of the movie
+        that's already in the library, or already being downloaded. Not
+        enforced by a DB constraint (it depends on the other download's
+        torrent state), so two concurrent requests could still both pass.
+        """
+        taken = await self.movie_repository.get_taken_movie_file_path_suffixes(
             movie_id=movie.id
         )
-        if any(mf.file_path_suffix == file_path_suffix for mf in existing_files):
-            msg = f"Movie file for movie {movie.name} already exists, refusing to start download."
+        if file_path_suffix in taken:
+            msg = (
+                f"A file or pending download for movie {movie.name} with this "
+                "file path suffix already exists, refusing to start download."
+            )
             log.warning(msg)
             raise MediaAlreadyExistsError(msg)
 
@@ -455,25 +392,23 @@ class MovieService(BaseMediaService[Movie, Movie]):
             indexer_result
         )
 
-        await self._check_movie_file_does_not_exist(
+        await self._check_file_path_suffix_is_free(
             movie=movie, file_path_suffix=file_path_suffix
         )
 
         movie_torrent = await self.torrent_service.download(
             indexer_result=indexer_result, user_id=user_id
         )
-        movie_file = MovieFile(
-            movie_id=movie.id,
-            quality=indexer_result.quality,
-            torrent_id=movie_torrent.id,
-            file_path_suffix=file_path_suffix,
-        )
         try:
             await self.torrent_service.pause_download(torrent=movie_torrent)
-            await self.movie_repository.add_movie_file(movie_file=movie_file)
+            await self.movie_repository.add_movie_download(
+                torrent_id=movie_torrent.id,
+                movie_id=movie.id,
+                file_path_suffix=file_path_suffix,
+            )
         except IntegrityError:
             log.warning(
-                f"Movie file for movie {movie.name} and torrent {movie_torrent.title} already exists"
+                f"Torrent {movie_torrent.title} is already linked to movie {movie.name}"
             )
             await self.torrent_service.cancel_download(
                 torrent=movie_torrent, delete_files=True
@@ -481,7 +416,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
             raise
         except Exception:
             log.exception(
-                f"Failed to link movie file for movie {movie.name} and torrent {movie_torrent.title}, cancelling download"
+                f"Failed to link torrent {movie_torrent.title} to movie {movie.name}, cancelling download"
             )
             await self.torrent_service.cancel_download(
                 torrent=movie_torrent, delete_files=True
@@ -489,7 +424,7 @@ class MovieService(BaseMediaService[Movie, Movie]):
             raise
         else:
             log.info(
-                f"Added movie file for movie {movie.name} and torrent {movie_torrent.title}"
+                f"Linked torrent {movie_torrent.title} to movie {movie.name}"
             )
             await self.torrent_service.resume_download(torrent=movie_torrent)
         return movie_torrent
@@ -499,13 +434,11 @@ class MovieService(BaseMediaService[Movie, Movie]):
         """
         Default file path suffix for a download that didn't get an explicit
         override: the label of the slot the release's stored attributes
-        match (e.g. "1080p Encode", "4K Remux"), falling back to a coarse
-        quality string if it didn't match a configured slot. Sanitized since
-        it ends up as part of a filename on disk.
+        match (e.g. "1080p Encode", "4K Remux"), or none if it didn't match a
+        configured slot. Sanitized since it ends up as part of a filename on
+        disk.
         """
         label = resolve_slot_label(indexer_result)
-        if not label and indexer_result.quality != Quality.unknown:
-            label = QualityStrings[indexer_result.quality.name].value
         return remove_special_characters(label) if label else ""
 
     def get_movie_root_path(self, movie: Movie) -> Path:

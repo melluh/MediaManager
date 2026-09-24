@@ -37,7 +37,6 @@
 		formatBytes,
 		formatLastUpdated,
 		formatTorrentSeasonEpisodeRange,
-		getTorrentQualityString,
 		getTorrentStatusString
 	} from '$lib/utils';
 
@@ -147,10 +146,12 @@
 	</Dialog.Header>
 
 	<div class="flex flex-wrap items-center gap-2">
-		<Badge variant="outline">
-			<Film class="mr-1 size-3" />
-			{getTorrentQualityString(torrent.quality)}
-		</Badge>
+		{#if torrent.slot}
+			<Badge variant="outline">
+				<Film class="mr-1 size-3" />
+				{torrent.slot}
+			</Badge>
+		{/if}
 		{#if totalLabel}
 			<Badge variant="outline">
 				<HardDrive class="mr-1 size-3" />

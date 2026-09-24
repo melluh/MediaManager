@@ -49,8 +49,8 @@ export function isSearchPage(pathname: string): boolean {
 	return withoutTrailingSlash(pathname) === withoutTrailingSlash(resolve('/dashboard/search', {}));
 }
 
-export function getTorrentQualityString(value: number): string {
-	return qualityMap[value] || 'unknown';
+export function getQualityString(value: number | null | undefined): string {
+	return (value != null && qualityMap[value]) || 'unknown';
 }
 
 export function getTorrentStatusString(value: number): string {

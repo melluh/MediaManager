@@ -1,10 +1,10 @@
 """
 Shared on-disk file handling for media (movies and TV episodes alike).
 
-The naming scheme used when importing a file is the same scheme used to find
-it again afterwards, so both live here: importers build target paths with the
-`*_file_stem` helpers, and the API resolves a stored file record back to a
-real path with `locate_media_file`.
+Importers build target paths with the `*_file_stem` helpers, and every file
+record stores the `relative_path` it was written to. What probing a file
+finds is stored on its record too, and only re-probed once the file changes
+(see `refresh_media_file_details`).
 """
 
 import asyncio
@@ -19,11 +19,12 @@ from media_manager.common.languages import language_or_unknown, parse_language
 from media_manager.common.schemas import (
     MediaFileDetails,
     PublicMediaFile,
+    Quality,
     SubtitleLanguage,
     SubtitleTrack,
 )
 from media_manager.torrent.utils import remove_special_characters
-from media_manager.torrent.video_probe import EMPTY_PROBE, probe_video_files
+from media_manager.torrent.video_probe import probe_video_files
 
 
 def movie_file_stem(
@@ -74,28 +75,12 @@ def _with_suffix(stem: str, file_path_suffix: str) -> str:
 
 @dataclass(frozen=True)
 class MediaFileLocation:
-    """Where a media file record is expected to live on disk."""
+    """Where the paths of a media item's file records are resolved from."""
 
-    directory: Path
-    """Directory holding the file: a movie's root directory, or a show's season directory."""
-    stem: str
-    """Expected filename without extension, as produced by the `*_file_stem` helpers."""
     relative_to: Path
     """Directory reported paths are made relative to - the media type's library root."""
     media_root: Path
     """The media's own root directory, which a record's stored `relative_path` is relative to."""
-
-
-def locate_media_file(location: MediaFileLocation) -> Path | None:
-    """
-    Finds the actual file for a location by scanning its directory for the
-    expected stem, recovering whichever extension it was imported with.
-    Prefers a video file when several extensions match (e.g. an accompanying
-    subtitle track). Returns None when nothing matches - typically because
-    the file hasn't been imported yet.
-    """
-    entry = match_stem(list_directory(location.directory), location.stem)
-    return entry[0] if entry else None
 
 
 @dataclass(frozen=True)
@@ -123,16 +108,6 @@ def list_directory(directory: Path) -> list[DirectoryEntry]:
     except OSError:
         return []
     return sorted(entries, key=lambda entry: entry.path.name)
-
-
-def match_stem(
-    entries: list[DirectoryEntry], stem: str
-) -> tuple[Path, int | None] | None:
-    prefix = f"{stem}."
-    candidates = [entry for entry in entries if entry.path.name.startswith(prefix)]
-    video_candidates = [entry for entry in candidates if is_video_file(entry.path)]
-    matched = next(iter(video_candidates or candidates), None)
-    return (matched.path, matched.size_bytes) if matched else None
 
 
 SUBTITLE_EXTENSIONS = {".srt", ".ass", ".ssa", ".vtt", ".sub"}
@@ -200,154 +175,174 @@ def _parse_sidecar_subtitle(entry: DirectoryEntry, stem: str) -> SubtitleTrack:
     )
 
 
-async def attach_media_file_details(
-    files: Sequence[PublicMediaFile], locations: Sequence[MediaFileLocation]
-) -> None:
+async def refresh_media_file_details[F: PublicMediaFile](
+    files: Sequence[F], locations: Sequence[MediaFileLocation]
+) -> list[F]:
     """
-    Fills in `file_path`, `exists_on_disk` and `details` for each public media
-    file from its location on disk, mutating them in place. A record that
-    recorded its own `relative_path` when it was imported is resolved from
-    that; the rest are found by matching their expected filename stem.
+    Fills in `file_path` and `exists_on_disk` for each file record from the
+    disk, and brings its stored `details` up to date, mutating the files in
+    place. Returns the files whose `details` changed, for the caller to store.
 
-    Directory scanning and stat()ing happen in one worker thread for the whole
-    batch, and the files that do exist are probed concurrently with a bounded
-    number of ffprobe subprocesses (results are cached per file revision), so
-    listing a full season stays a handful of syscalls rather than one blocking
-    round-trip per episode.
+    ffprobe only runs for a video file never probed before, or one whose
+    size or mtime changed since it was - every other file reuses its stored
+    probe, so this is a stat and a directory listing per file. Sidecar
+    subtitles are re-read every time (they can change without the video
+    changing, and cost no ffprobe). A file that's gone keeps its last stored
+    details; `exists_on_disk` says it's missing.
+
+    Stat()ing and directory listing happen in one worker thread for the
+    whole batch, and stale files are probed concurrently with a bounded
+    number of ffprobe subprocesses.
     """
     if not files:
-        return
+        return []
 
-    resolved_paths, sizes, expected_paths, sidecar_subtitles = await asyncio.to_thread(
-        _resolve_batch, [file.relative_path for file in files], locations
+    states = await asyncio.to_thread(
+        _stat_batch, [file.relative_path for file in files], locations
     )
 
     # Only video files are worth an ffprobe; a record resolving to a stray
-    # subtitle still reports its path and size.
-    probe_targets = [
-        (index, path)
-        for index, path in enumerate(resolved_paths)
-        if path is not None and is_video_file(path)
+    # subtitle still reports its path, size and sidecars.
+    probe_indices = [
+        index
+        for index, (file, state) in enumerate(zip(files, states, strict=True))
+        if state.exists and is_video_file(state.path) and _probe_is_stale(file, state)
     ]
-    probes = await probe_video_files(path for _, path in probe_targets)
-    probe_by_index = {
-        index: probe for (index, _), probe in zip(probe_targets, probes, strict=True)
-    }
+    probes = await probe_video_files(states[index].path for index in probe_indices)
+    probe_by_index = dict(zip(probe_indices, probes, strict=True))
 
-    for index, (file, location) in enumerate(zip(files, locations, strict=True)):
-        resolved = resolved_paths[index]
-        file.exists_on_disk = resolved is not None
-        file.file_path = _relative_path(expected_paths[index], location.relative_to)
-        if resolved is None:
+    changed: list[F] = []
+    for index, (file, location, state) in enumerate(
+        zip(files, locations, states, strict=True)
+    ):
+        file.file_path = _relative_path(state.path, location.relative_to)
+        file.exists_on_disk = state.exists
+        if not state.exists:
             continue
 
-        probe = probe_by_index.get(index, EMPTY_PROBE)
-        # A fresh list, never probe.subtitles directly: `probe` may be the
-        # shared EMPTY_PROBE singleton or a cached VideoProbe, and appending
-        # this file's sidecar subtitles to it in place would corrupt the
-        # ffprobe cache or leak them onto every other unprobed file.
-        file.details = MediaFileDetails(
-            size_bytes=sizes[index],
-            probed_quality=probe.quality,
-            duration_seconds=probe.duration_seconds,
-            width=probe.width,
-            height=probe.height,
-            video_codec=probe.video_codec,
-            audio_codec=probe.audio_codec,
-            audio_channels=probe.audio_channels,
-            container=probe.container,
-            subtitles=[*probe.subtitles, *sidecar_subtitles[index]],
+        probe = probe_by_index.get(index)
+        if probe is not None:
+            base = MediaFileDetails(
+                quality=probe.quality,
+                duration_seconds=probe.duration_seconds,
+                width=probe.width,
+                height=probe.height,
+                video_codec=probe.video_codec,
+                audio_codec=probe.audio_codec,
+                audio_channels=probe.audio_channels,
+                container=probe.container,
+                subtitles=probe.subtitles,
+            )
+        elif file.details is not None and not _probe_is_stale(file, state):
+            base = file.details
+        else:
+            base = MediaFileDetails()
+        embedded = [track for track in base.subtitles if track.source == "embedded"]
+        # A fresh list, never base.subtitles extended in place: `base` may be
+        # built from a cached VideoProbe, and appending this file's sidecars
+        # to it would corrupt the ffprobe cache.
+        details = base.model_copy(
+            update={
+                "size_bytes": state.size_bytes,
+                "subtitles": [*embedded, *state.sidecar_subtitles],
+            }
         )
+        if details != file.details or file.probed_mtime_ns != state.mtime_ns:
+            file.details = details
+            file.probed_mtime_ns = state.mtime_ns
+            changed.append(file)
+    return changed
 
 
 def distinct_subtitle_languages(
-    files: Sequence[PublicMediaFile],
+    details: Sequence[MediaFileDetails | None],
 ) -> list[SubtitleLanguage] | None:
     """
-    Every distinct subtitle language across a set of files already passed
-    through `attach_media_file_details`, sorted by name. None when none of
-    the files exist on disk, which is distinct from existing files that
-    simply have no subtitles (an empty list).
+    Every distinct subtitle language across a media item's files' probe
+    details, sorted by name. None when none of the files has been probed,
+    which is distinct from probed files that simply have no subtitles (an
+    empty list).
     """
-    on_disk = [
-        file.details
-        for file in files
-        if file.exists_on_disk and file.details is not None
-    ]
-    if not on_disk:
+    probed = [file_details for file_details in details if file_details is not None]
+    if not probed:
         return None
     languages = {
         (track.language.code, track.language.region): track.language
-        for details in on_disk
-        for track in details.subtitles
+        for file_details in probed
+        for track in file_details.subtitles
     }
     return sorted(languages.values(), key=lambda language: language.name)
+
+
+def best_quality(details: Sequence[MediaFileDetails | None]) -> Quality | None:
+    """The best probed quality across a media item's files, if any has one."""
+    return min(
+        (
+            file_details.quality
+            for file_details in details
+            if file_details is not None and file_details.quality is not None
+        ),
+        key=lambda quality: quality.value,
+        default=None,
+    )
 
 
 def is_video_file(path: Path) -> bool:
     return (mimetypes.guess_type(path.name)[0] or "").startswith("video")
 
 
-def _resolve_batch(
-    relative_paths: Sequence[str | None],
+@dataclass(frozen=True)
+class _FileState:
+    path: Path
+    size_bytes: int | None
+    """None when there is no file at `path`."""
+    mtime_ns: int | None
+    sidecar_subtitles: list[SubtitleTrack]
+
+    @property
+    def exists(self) -> bool:
+        return self.size_bytes is not None
+
+
+def _probe_is_stale(file: PublicMediaFile, state: _FileState) -> bool:
+    return (
+        file.details is None
+        or file.probed_mtime_ns != state.mtime_ns
+        or file.details.size_bytes != state.size_bytes
+    )
+
+
+def _stat_batch(
+    relative_paths: Sequence[str],
     locations: Sequence[MediaFileLocation],
-) -> tuple[list[Path | None], list[int | None], list[Path], list[list[SubtitleTrack]]]:
+) -> list[_FileState]:
     listings: dict[Path, list[DirectoryEntry]] = {}
-    resolved_paths: list[Path | None] = []
-    sizes: list[int | None] = []
-    expected_paths: list[Path] = []
-    sidecar_subtitles: list[list[SubtitleTrack]] = []
+    states: list[_FileState] = []
     for relative_path, location in zip(relative_paths, locations, strict=True):
-        if relative_path:
-            # A record that knows where its file was written needs no listing
-            # to find *itself* - but sidecar subtitles still need one, so
-            # this reuses the same per-directory `listings` cache the
-            # stem-matching branch below relies on.
-            path = location.media_root / relative_path
-            size = _file_size(path)
-            expected_paths.append(path)
-            resolved_paths.append(path if size is not None else None)
-            sizes.append(size)
-            if size is None:
-                sidecar_subtitles.append([])
-                continue
-            directory = path.parent
-            if directory not in listings:
-                listings[directory] = list_directory(directory)
-            # Matched against the resolved file's own stem, not
-            # `location.stem`: a `relative_path` can point at a hand-renamed
-            # file (or one written by another tool) that doesn't follow this
-            # app's naming scheme at all, and sidecars sitting next to it
-            # follow *its* name, not the canonical one.
-            sidecar_subtitles.append(
-                match_sidecar_subtitles(listings[directory], path.stem, exclude=path)
-            )
+        path = location.media_root / relative_path
+        try:
+            stat = path.stat()
+        except OSError:
+            stat = None
+        if stat is None or not S_ISREG(stat.st_mode):
+            states.append(_FileState(path, None, None, []))
             continue
-        if location.directory not in listings:
-            listings[location.directory] = list_directory(location.directory)
-        matched = match_stem(listings[location.directory], location.stem)
-        expected_paths.append(
-            matched[0] if matched else location.directory / location.stem
-        )
-        resolved_paths.append(matched[0] if matched else None)
-        sizes.append(matched[1] if matched else None)
-        sidecar_subtitles.append(
-            match_sidecar_subtitles(
-                listings[location.directory],
-                location.stem,
-                exclude=matched[0] if matched else None,
+        directory = path.parent
+        if directory not in listings:
+            listings[directory] = list_directory(directory)
+        # Matched against the file's own stem, not the canonical one: a
+        # `relative_path` can point at a hand-renamed file (or one written by
+        # another tool) that doesn't follow this app's naming scheme at all,
+        # and sidecars sitting next to it follow *its* name.
+        states.append(
+            _FileState(
+                path,
+                stat.st_size,
+                stat.st_mtime_ns,
+                match_sidecar_subtitles(listings[directory], path.stem, exclude=path),
             )
         )
-    return resolved_paths, sizes, expected_paths, sidecar_subtitles
-
-
-def _file_size(path: Path) -> int | None:
-    """Size of an existing regular file, or None when there is no file there."""
-    try:
-        stat = path.stat()
-    except OSError:
-        return None
-    return stat.st_size if S_ISREG(stat.st_mode) else None
+    return states
 
 
 def _relative_path(path: Path, relative_to: Path) -> str:

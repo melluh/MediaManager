@@ -1,18 +1,7 @@
 from media_manager.indexer.title_parsing import (
     derive_episode,
-    derive_quality,
     derive_season,
 )
-from media_manager.torrent.models import Quality
-
-
-def test_derive_quality_tiers():
-    assert derive_quality("Movie.2024.2160p.WEB-DL.x265-GRP") == Quality.uhd
-    assert derive_quality("Movie.2024.4K.WEB-DL.x265-GRP") == Quality.uhd
-    assert derive_quality("Movie.2024.1080p.WEB-DL.x264-GRP") == Quality.fullhd
-    assert derive_quality("Movie.2024.720p.WEB-DL.x264-GRP") == Quality.hd
-    assert derive_quality("Movie.2024.480p.WEB-DL.x264-GRP") == Quality.sd
-    assert derive_quality("Movie.2024.WEB-DL.x264-GRP") == Quality.unknown
 
 
 def test_derive_season_single_episode():

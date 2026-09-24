@@ -62,6 +62,9 @@ class Episode(Base):
     episode_files = relationship(
         "EpisodeFile", back_populates="episode", cascade="all, delete"
     )
+    downloads = relationship(
+        "EpisodeDownload", cascade="all, delete", passive_deletes=True
+    )
 
 
 class EpisodeFile(Base, MediaFileMixin):
@@ -72,5 +75,24 @@ class EpisodeFile(Base, MediaFileMixin):
         index=True,
     )
 
-    torrent = relationship("Torrent", back_populates="episode_files", uselist=False)
     episode = relationship("Episode", back_populates="episode_files", uselist=False)
+
+
+class EpisodeDownload(Base):
+    """
+    Links a torrent to an episode it was downloaded for, and the file path
+    suffix (version) that episode's file is to be imported as. Created when
+    the download starts; the EpisodeFile row only appears once imported.
+    """
+
+    __tablename__ = "episode_download"
+    __table_args__ = (PrimaryKeyConstraint("torrent_id", "episode_id"),)
+
+    torrent_id: Mapped[UUID] = mapped_column(
+        ForeignKey(column="torrent.id", ondelete="CASCADE"),
+    )
+    episode_id: Mapped[UUID] = mapped_column(
+        ForeignKey(column="episode.id", ondelete="CASCADE"),
+        index=True,
+    )
+    file_path_suffix: Mapped[str]

@@ -39,11 +39,12 @@ export function movieAvailability(
 }
 
 function availableLabel(movieFiles: PublicMovieFile[]): string {
+	// Probed from the files themselves; a file not probed yet has none.
 	const bestQuality = movieFiles
-		.filter((file) => file.downloaded)
+		.map((file) => file.details?.quality)
 		.reduce<
 			number | null
-		>((best, file) => (best === null || file.quality < best ? file.quality : best), null);
+		>((best, quality) => (quality != null && (best === null || quality < best) ? quality : best), null);
 	const qualityLabel = bestQuality != null ? qualityShortMap[bestQuality] : undefined;
 	return qualityLabel ? `Available (${qualityLabel})` : 'Available';
 }

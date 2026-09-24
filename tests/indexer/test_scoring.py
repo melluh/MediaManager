@@ -14,7 +14,6 @@ from media_manager.indexer.config import (
 )
 from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.indexer.scoring import slot_and_score_results
-from media_manager.indexer.title_parsing import derive_quality
 from media_manager.movies.schemas import Movie
 from media_manager.tv.schemas import Episode, Season, Show
 
@@ -33,7 +32,6 @@ def make_result(title: str, size_gb: float | None = None, *, size: int | None = 
         usenet=usenet,
         age=0,
         indexer="test",
-        quality=derive_quality(title),
         attributes=classify_release(title),
     )
 

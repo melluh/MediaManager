@@ -6,7 +6,6 @@
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import TorrentScoreValue from '$lib/components/download-dialogs/torrent-score-value.svelte';
 	import { formatSize } from '$lib/components/download-dialogs/torrent-format';
-	import { getTorrentQualityString } from '$lib/utils';
 	import type { IndexerQueryResult } from '$lib/api/api';
 
 	// The cells of one row in the full "all torrents" list; TorrentTable renders the row itself.
@@ -35,7 +34,7 @@
 		{torrent.title}
 	{/if}
 </Table.Cell>
-<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
+<Table.Cell>{torrent.slot_label ?? '—'}</Table.Cell>
 <Table.Cell>{formatSize(torrent.size)}</Table.Cell>
 <Table.Cell>{torrent.seeders}</Table.Cell>
 <Table.Cell>

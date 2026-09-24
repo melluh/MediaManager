@@ -5,7 +5,6 @@ import pydantic
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from media_manager.indexer.classification import TorrentAttributes
-from media_manager.torrent.models import Quality
 
 IndexerQueryResultId = typing.NewType("IndexerQueryResultId", UUID)
 
@@ -48,7 +47,6 @@ class IndexerQueryResult(BaseModel):
     # call, which meant the persisted DB columns were never actually used on
     # read (see IndexerRepository.get_result). They're now plain fields so
     # the stored values are the ones that come back.
-    quality: Quality = Quality.unknown
     season: list[int] = pydantic.Field(default_factory=list)
     episode: list[int] = pydantic.Field(default_factory=list)
     attributes: TorrentAttributes | None = None
@@ -72,8 +70,6 @@ class IndexerQueryResult(BaseModel):
     # computed by media_manager.indexer.scoring.slot_and_score_results;
     # `score` here is only ever comparable within a single slot.
     def __gt__(self, other: "IndexerQueryResult") -> bool:
-        if self.quality.value != other.quality.value:
-            return self.quality.value < other.quality.value
         if self.score != other.score:
             return self.score > other.score
         if self.usenet != other.usenet:
@@ -86,8 +82,6 @@ class IndexerQueryResult(BaseModel):
         return self.size < other.size
 
     def __lt__(self, other: "IndexerQueryResult") -> bool:
-        if self.quality.value != other.quality.value:
-            return self.quality.value > other.quality.value
         if self.score != other.score:
             return self.score < other.score
         if self.usenet != other.usenet:

@@ -8,9 +8,9 @@ from media_manager.common.schemas import (
     BaseMedia,
     BaseMediaFile,
     PublicMediaFile,
+    Quality,
     SubtitleLanguage,
 )
-from media_manager.torrent.models import Quality
 from media_manager.torrent.schemas import TorrentId, TorrentStatus
 
 MovieId = typing.NewType("MovieId", UUID)
@@ -22,15 +22,16 @@ class Movie(BaseMedia):
 
 class MovieListItem(Movie):
     """Movie plus the file-derived fields needed to filter the library list
-    (downloaded status, download quality, subtitle languages) without a
+    (downloaded status, probed quality, subtitle languages) without a
     per-movie query."""
 
     downloaded: bool = False
     quality: Quality | None = None
+    """Best quality probed across the movie's files; None when it has no
+    probed file."""
     subtitle_languages: list[SubtitleLanguage] | None = None
-    """Distinct subtitle languages across the movie's files on disk, from the
-    last subtitle scan. Empty when its files have no subtitles; None when it
-    has no file on disk, or the first scan hasn't finished yet."""
+    """Distinct subtitle languages across the movie's probed files. Empty when
+    its files have no subtitles; None when it has no probed file."""
 
 
 class MovieFile(BaseMediaFile):
@@ -41,13 +42,23 @@ class PublicMovieFile(MovieFile, PublicMediaFile):
     pass
 
 
+class MovieDownload(BaseModel):
+    """A torrent's link to the movie it was downloaded for."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    torrent_id: TorrentId
+    movie_id: MovieId
+    file_path_suffix: str
+
+
 class MovieTorrent(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     torrent_id: TorrentId
     torrent_title: str
     status: TorrentStatus
-    quality: Quality
+    slot: str | None = None
     imported: bool
     cancelled: bool = False
     file_path_suffix: str

@@ -910,8 +910,9 @@ export interface paths {
 		/**
 		 * Cancel Torrent
 		 * @description Cancels a torrent the current user initiated: hides it from their
-		 *     homepage without deleting it, and optionally removes it from the
-		 *     download client (without deleting its downloaded data).
+		 *     homepage and stops it from being imported, without deleting it, and
+		 *     optionally removes it from the download client (without deleting its
+		 *     downloaded data).
 		 */
 		post: operations['cancel_torrent_api_v1_torrent__torrent_id__cancel_post'];
 		delete?: never;
@@ -2067,8 +2068,6 @@ export interface components {
 			 * @description Link to the indexer's detail page for this release
 			 */
 			comments?: string | null;
-			/** @default 5 */
-			quality: components['schemas']['Quality'];
 			/** Season */
 			season?: number[];
 			/** Episode */
@@ -2111,10 +2110,10 @@ export interface components {
 			 */
 			paths_relinked: number;
 			/**
-			 * Paths Cleared
+			 * Files Removed
 			 * @default 0
 			 */
-			paths_cleared: number;
+			files_removed: number;
 			/**
 			 * Files Adopted
 			 * @default 0
@@ -2147,14 +2146,13 @@ export interface components {
 		};
 		/**
 		 * MediaFileDetails
-		 * @description What the file on disk itself says about the media, as opposed to what the
-		 *     database row claims. Populated by probing the file; every field is
-		 *     optional because probing is best-effort.
+		 * @description What the file on disk itself says about the media. Populated by probing
+		 *     the file; every field is optional because probing is best-effort.
 		 */
 		MediaFileDetails: {
 			/** Size Bytes */
 			size_bytes?: number | null;
-			probed_quality?: components['schemas']['Quality'] | null;
+			quality?: components['schemas']['Quality'] | null;
 			/** Duration Seconds */
 			duration_seconds?: number | null;
 			/** Width */
@@ -2264,7 +2262,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 3
+			 * @default 5
 			 */
 			metadata_version: number;
 			/**
@@ -2279,11 +2277,15 @@ export interface components {
 			images?: {
 				[key: string]: string;
 			};
+			/** Image Source Paths */
+			image_source_paths?: {
+				[key: string]: string;
+			};
 		};
 		/**
 		 * MovieListItem
 		 * @description Movie plus the file-derived fields needed to filter the library list
-		 *     (downloaded status, download quality, subtitle languages) without a
+		 *     (downloaded status, probed quality, subtitle languages) without a
 		 *     per-movie query.
 		 */
 		MovieListItem: {
@@ -2329,7 +2331,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 3
+			 * @default 5
 			 */
 			metadata_version: number;
 			/**
@@ -2342,6 +2344,10 @@ export interface components {
 			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
+				[key: string]: string;
+			};
+			/** Image Source Paths */
+			image_source_paths?: {
 				[key: string]: string;
 			};
 			/**
@@ -2363,7 +2369,8 @@ export interface components {
 			/** Torrent Title */
 			torrent_title: string;
 			status: components['schemas']['TorrentStatus'];
-			quality: components['schemas']['Quality'];
+			/** Slot */
+			slot?: string | null;
 			/** Imported */
 			imported: boolean;
 			/**
@@ -2442,23 +2449,13 @@ export interface components {
 		};
 		/** PublicEpisodeFile */
 		PublicEpisodeFile: {
-			quality: components['schemas']['Quality'];
 			/** Torrent Id */
 			torrent_id?: string | null;
 			/** File Path Suffix */
 			file_path_suffix: string;
 			/** Relative Path */
-			relative_path?: string | null;
-			/**
-			 * Downloaded
-			 * @default false
-			 */
-			downloaded: boolean;
-			/**
-			 * Imported
-			 * @default false
-			 */
-			imported: boolean;
+			relative_path: string;
+			details?: components['schemas']['MediaFileDetails'] | null;
 			/**
 			 * File Path
 			 * @default
@@ -2469,7 +2466,6 @@ export interface components {
 			 * @default false
 			 */
 			exists_on_disk: boolean;
-			details?: components['schemas']['MediaFileDetails'] | null;
 			/**
 			 * Episode Id
 			 * Format: uuid
@@ -2520,7 +2516,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 3
+			 * @default 5
 			 */
 			metadata_version: number;
 			/**
@@ -2535,6 +2531,10 @@ export interface components {
 			images?: {
 				[key: string]: string;
 			};
+			/** Image Source Paths */
+			image_source_paths?: {
+				[key: string]: string;
+			};
 			/**
 			 * Downloaded
 			 * @default false
@@ -2545,23 +2545,13 @@ export interface components {
 		};
 		/** PublicMovieFile */
 		PublicMovieFile: {
-			quality: components['schemas']['Quality'];
 			/** Torrent Id */
 			torrent_id?: string | null;
 			/** File Path Suffix */
 			file_path_suffix: string;
 			/** Relative Path */
-			relative_path?: string | null;
-			/**
-			 * Downloaded
-			 * @default false
-			 */
-			downloaded: boolean;
-			/**
-			 * Imported
-			 * @default false
-			 */
-			imported: boolean;
+			relative_path: string;
+			details?: components['schemas']['MediaFileDetails'] | null;
 			/**
 			 * File Path
 			 * @default
@@ -2572,7 +2562,6 @@ export interface components {
 			 * @default false
 			 */
 			exists_on_disk: boolean;
-			details?: components['schemas']['MediaFileDetails'] | null;
 			/**
 			 * Movie Id
 			 * Format: uuid
@@ -2605,6 +2594,10 @@ export interface components {
 			episodes: components['schemas']['PublicEpisode'][];
 			/** Images */
 			images?: {
+				[key: string]: string;
+			};
+			/** Image Source Paths */
+			image_source_paths?: {
 				[key: string]: string;
 			};
 		};
@@ -2659,7 +2652,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 3
+			 * @default 5
 			 */
 			metadata_version: number;
 			/**
@@ -2672,11 +2665,16 @@ export interface components {
 			images?: {
 				[key: string]: string;
 			};
+			/** Image Source Paths */
+			image_source_paths?: {
+				[key: string]: string;
+			};
 			/** Seasons */
 			seasons: components['schemas']['PublicSeason'][];
 		};
 		/**
 		 * Quality
+		 * @description Resolution tier of a video file, measured by probing it. Lower is better.
 		 * @enum {integer}
 		 */
 		Quality: 1 | 2 | 3 | 4 | 5;
@@ -2708,7 +2706,8 @@ export interface components {
 			/** Torrent Title */
 			torrent_title: string;
 			status: components['schemas']['TorrentStatus'];
-			quality: components['schemas']['Quality'];
+			/** Slot */
+			slot?: string | null;
 			/** Imported */
 			imported: boolean;
 			/**
@@ -2794,7 +2793,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 3
+			 * @default 5
 			 */
 			metadata_version: number;
 			/**
@@ -2807,6 +2806,10 @@ export interface components {
 			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
+				[key: string]: string;
+			};
+			/** Image Source Paths */
+			image_source_paths?: {
 				[key: string]: string;
 			};
 			media_type: components['schemas']['MediaType'];
@@ -2832,6 +2835,10 @@ export interface components {
 			episodes: components['schemas']['Episode'][];
 			/** Images */
 			images?: {
+				[key: string]: string;
+			};
+			/** Image Source Paths */
+			image_source_paths?: {
 				[key: string]: string;
 			};
 		};
@@ -2905,7 +2912,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 3
+			 * @default 5
 			 */
 			metadata_version: number;
 			/**
@@ -2918,6 +2925,10 @@ export interface components {
 			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
+				[key: string]: string;
+			};
+			/** Image Source Paths */
+			image_source_paths?: {
 				[key: string]: string;
 			};
 			/**
@@ -2977,7 +2988,7 @@ export interface components {
 			metadata_updated_at?: string | null;
 			/**
 			 * Metadata Version
-			 * @default 3
+			 * @default 5
 			 */
 			metadata_version: number;
 			/**
@@ -2990,6 +3001,10 @@ export interface components {
 			added_by?: components['schemas']['MediaAddedByUser'] | null;
 			/** Images */
 			images?: {
+				[key: string]: string;
+			};
+			/** Image Source Paths */
+			image_source_paths?: {
 				[key: string]: string;
 			};
 			/**
@@ -3119,8 +3134,10 @@ export interface components {
 			status: components['schemas']['TorrentStatus'];
 			/** Title */
 			title: string;
-			quality: components['schemas']['Quality'];
-			/** Imported */
+			/**
+			 * Imported
+			 * @default false
+			 */
 			imported: boolean;
 			/** Import Error */
 			import_error?: string | null;
@@ -3145,6 +3162,8 @@ export interface components {
 			 * @default false
 			 */
 			cancelled: boolean;
+			/** Slot */
+			slot?: string | null;
 		};
 		/** TorrentAttributes */
 		TorrentAttributes: {
@@ -3194,7 +3213,7 @@ export interface components {
 			file_name: string;
 			/** Size Bytes */
 			size_bytes: number;
-			quality: components['schemas']['Quality'];
+			probed_quality?: components['schemas']['Quality'] | null;
 			/** Duration Seconds */
 			duration_seconds?: number | null;
 		};
@@ -3241,8 +3260,10 @@ export interface components {
 			status: components['schemas']['TorrentStatus'];
 			/** Title */
 			title: string;
-			quality: components['schemas']['Quality'];
-			/** Imported */
+			/**
+			 * Imported
+			 * @default false
+			 */
 			imported: boolean;
 			/** Import Error */
 			import_error?: string | null;
@@ -3267,6 +3288,8 @@ export interface components {
 			 * @default false
 			 */
 			cancelled: boolean;
+			/** Slot */
+			slot?: string | null;
 			download_progress?: components['schemas']['DownloadProgress'] | null;
 			media?: components['schemas']['TorrentMedia'] | null;
 			/** Seasons */

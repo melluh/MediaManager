@@ -2,12 +2,18 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, PrimaryKeyConstraint, String, func
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    PrimaryKeyConstraint,
+    String,
+    func,
+)
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
 from media_manager.database import Base
-from media_manager.torrent.models import Quality
 
 if TYPE_CHECKING:
     from media_manager.auth.db import User
@@ -60,17 +66,23 @@ class MediaMixin:
 
 class MediaFileMixin:
     """
-    Mixin for common media file fields used by both Movie files and Episode files.
+    Mixin for common media file fields used by both Movie files and Episode
+    files. A row exists only for a file that has actually been imported to (or
+    found in) the library - a download in progress is a MovieDownload /
+    EpisodeDownload, not a file.
     """
 
     file_path_suffix: Mapped[str]
-    quality: Mapped[Quality]
-    relative_path: Mapped[str | None] = mapped_column(default=None)
-    """Path of the file relative to the media's root directory, or NULL when no
-    file is known to have been written yet."""
+    relative_path: Mapped[str]
+    """Path of the file relative to the media's root directory."""
     torrent_id: Mapped[UUID | None] = mapped_column(
         ForeignKey(column="torrent.id", ondelete="SET NULL"),
     )
+    """The torrent the file was imported from, if any."""
+    details = mapped_column(JSONB, nullable=True)
+    """`MediaFileDetails` from the last probe of the file, NULL until probed."""
+    probed_mtime_ns: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    """The file's mtime when `details` was probed, to tell when it's stale."""
 
 
 class MediaImage(Base):

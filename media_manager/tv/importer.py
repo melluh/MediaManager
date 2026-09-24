@@ -18,7 +18,9 @@ from media_manager.common.library_scan import (
     scan_media_targets,
 )
 from media_manager.common.media_files import (
+    MediaFileLocation,
     episode_file_stem,
+    refresh_media_file_details,
     season_directory_name,
 )
 from media_manager.common.service import BaseMediaService
@@ -34,7 +36,7 @@ from media_manager.metadataProvider.schemas import (
 )
 from media_manager.notification.service import NotificationService
 from media_manager.schemas import MediaImportSuggestion
-from media_manager.torrent.schemas import Quality, Torrent
+from media_manager.torrent.schemas import Torrent
 from media_manager.torrent.service import TorrentService
 from media_manager.torrent.utils import (
     get_files_for_import,
@@ -43,7 +45,13 @@ from media_manager.torrent.utils import (
 )
 from media_manager.tv.metadata import TvMetadataService
 from media_manager.tv.repository import TvRepository
-from media_manager.tv.schemas import EpisodeFile, EpisodeId, Show
+from media_manager.tv.schemas import (
+    EpisodeFile,
+    EpisodeId,
+    PublicEpisodeFile,
+    Show,
+    ShowSummary,
+)
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +92,6 @@ class TvImportService(BaseMediaService[Show, Show]):
         self,
         show: Show,
         source_directory: Path,
-        quality: Quality = Quality.unknown,
         torrent_id: str | None = None,
         file_path_suffix: str = "",
     ) -> tuple[bool, str | None]:
@@ -114,6 +121,7 @@ class TvImportService(BaseMediaService[Show, Show]):
 
         any_imported = False
         failures: list[str] = []
+        imported_files: list[EpisodeFile] = []
         for video_file in video_files:
             file_start = time.monotonic()
             # Simple heuristic for season/episode from filename
@@ -147,31 +155,20 @@ class TvImportService(BaseMediaService[Show, Show]):
                         (e for e in season.episodes if e.number == e_num), None
                     )
                     if episode:
-                        relative_path = str(Path(season_dir_name) / target_file.name)
-                        # download_torrent already created this episode's row
-                        # (with no relative_path yet) before the download even
-                        # started - update it in place rather than inserting a
-                        # second row, which would collide on the
-                        # (episode_id, file_path_suffix) primary key. Insert
-                        # only as a fallback, for a file that was never
-                        # tracked by a download (e.g. adopted by hand).
-                        updated = (
-                            await self.tv_repository.set_episode_file_relative_path(
-                                episode_id=episode.id,
-                                file_path_suffix=file_path_suffix,
-                                relative_path=relative_path,
-                            )
+                        # The file only becomes part of the library - gets a
+                        # record - now that it's actually on disk. Replaces
+                        # any file already recorded for this episode and
+                        # suffix, which the copy above just overwrote.
+                        episode_file = EpisodeFile(
+                            episode_id=episode.id,
+                            torrent_id=torrent_id,
+                            file_path_suffix=file_path_suffix,
+                            relative_path=str(Path(season_dir_name) / target_file.name),
                         )
-                        if not updated:
-                            await self.tv_repository.add_episode_file(
-                                EpisodeFile(
-                                    episode_id=episode.id,
-                                    quality=quality,
-                                    torrent_id=torrent_id,
-                                    file_path_suffix=file_path_suffix,
-                                    relative_path=relative_path,
-                                )
-                            )
+                        await self.tv_repository.upsert_episode_file(
+                            episode_file=episode_file
+                        )
+                        imported_files.append(episode_file)
                     else:
                         msg = (
                             f"S{s_num:02d}E{e_num:02d} of {show.name} has no "
@@ -200,6 +197,7 @@ class TvImportService(BaseMediaService[Show, Show]):
                 log.warning(
                     f"Could not parse season/episode from {video_file.name}, skipping"
                 )
+        await self.refresh_episode_file_details(show=show, episode_files=imported_files)
         log.info(
             f"Finished importing {len(video_files)} video file(s) for {show.name} "
             f"in {time.monotonic() - import_start:.3f}s"
@@ -209,11 +207,16 @@ class TvImportService(BaseMediaService[Show, Show]):
         return any_imported, None
 
     async def import_torrent_files(self, torrent: Torrent, show: Show) -> None:
+        # Every episode a torrent was downloaded for shares the file path
+        # suffix the download was started with.
+        downloads = await self.torrent_service.get_episode_downloads_of_torrent(
+            torrent=torrent
+        )
         success, error_msg = await self.import_tv_show(
             show=show,
             source_directory=get_torrent_filepath(torrent),
-            quality=torrent.quality,
             torrent_id=torrent.id,
+            file_path_suffix=downloads[0].file_path_suffix if downloads else "",
         )
         if success:
             torrent.imported = True
@@ -310,6 +313,34 @@ class TvImportService(BaseMediaService[Show, Show]):
             adopt=adopt,
         )
 
+    def get_episode_file_location(self, show: ShowSummary) -> MediaFileLocation:
+        """
+        Where a show's episode file records are resolved from: their stored
+        `relative_path`s are relative to the show's own directory, and are
+        reported relative to the parent TV folder (the default TV directory,
+        or the show's library root if it belongs to one).
+        """
+        show_root_path = self.get_media_root_path(media=show)
+        return MediaFileLocation(
+            relative_to=show_root_path.parent, media_root=show_root_path
+        )
+
+    async def refresh_episode_file_details(
+        self, show: ShowSummary, episode_files: Sequence[EpisodeFile]
+    ) -> list[PublicEpisodeFile]:
+        """
+        Resolves a show's episode files on disk and brings their stored probe
+        details up to date, storing whatever changed. See
+        `refresh_media_file_details`.
+        """
+        public_files = [PublicEpisodeFile.model_validate(f) for f in episode_files]
+        location = self.get_episode_file_location(show=show)
+        changed = await refresh_media_file_details(
+            public_files, [location] * len(public_files)
+        )
+        await self.tv_repository.update_episode_file_details(changed)
+        return public_files
+
     async def apply_scan_plan(self, plan: MediaScanPlan) -> None:
         """
         Writes what a scan decided for one show. The episode each change
@@ -324,14 +355,19 @@ class TvImportService(BaseMediaService[Show, Show]):
                     path_update.record.file_path_suffix,
                     path_update.relative_path,
                 )
-                for path_update in [*plan.relinked, *plan.cleared]
+                for path_update in plan.relinked
+            ]
+        )
+        await self.tv_repository.delete_episode_files(
+            [
+                (EpisodeId(record.owner_key), record.file_path_suffix)
+                for record in plan.removed
             ]
         )
         await self.tv_repository.add_episode_files_bulk(
             [
                 EpisodeFile(
                     episode_id=EpisodeId(adoption.owner_key),
-                    quality=adoption.quality,
                     torrent_id=None,
                     file_path_suffix=adoption.file_path_suffix,
                     relative_path=adoption.relative_path,

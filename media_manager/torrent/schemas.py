@@ -5,23 +5,9 @@ from enum import Enum, StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from media_manager.common.schemas import Quality
+
 TorrentId = typing.NewType("TorrentId", uuid.UUID)
-
-
-class Quality(Enum):
-    uhd = 1
-    fullhd = 2
-    hd = 3
-    sd = 4
-    unknown = 5
-
-
-class QualityStrings(Enum):
-    uhd = "4K"
-    fullhd = "1080p"
-    hd = "720p"
-    sd = "400p"
-    unknown = "unknown"
 
 
 class TorrentStatus(Enum):
@@ -47,8 +33,7 @@ class Torrent(BaseModel):
     id: TorrentId = Field(default_factory=lambda: TorrentId(uuid.uuid4()))
     status: TorrentStatus
     title: str
-    quality: Quality
-    imported: bool
+    imported: bool = False
     import_error: str | None = None
     """Set when the last automatic import attempt failed; cleared on success or manual resolution."""
     import_error_kind: ImportErrorKind | None = None
@@ -62,6 +47,8 @@ class Torrent(BaseModel):
     """Link to the indexer's detail page for this release, if any."""
     cancelled: bool = False
     """Set when the user cancelled the download; hides it from their homepage and stops it from being imported, without deleting it."""
+    slot: str | None = None
+    """Label of the quality slot the release was downloaded for (e.g. "1080p Encode"), if it matched one."""
 
 
 class DownloadState(StrEnum):
@@ -131,7 +118,8 @@ class TorrentImportCandidate(BaseModel):
     """Path relative to the torrent's download directory; the identifier passed back to resolve the import."""
     file_name: str
     size_bytes: int
-    quality: Quality
+    probed_quality: Quality | None = None
+    """Quality measured from the video stream, if it could be probed."""
     duration_seconds: int | None = None
     """Playback duration, if it could be determined by probing the file."""
 

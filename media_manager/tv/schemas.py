@@ -13,7 +13,6 @@ from media_manager.common.schemas import (
     PublicMediaFile,
 )
 from media_manager.indexer.schemas import IndexerQueryResult
-from media_manager.torrent.models import Quality
 from media_manager.torrent.schemas import TorrentId, TorrentStatus
 
 ShowId = typing.NewType("ShowId", UUID)
@@ -73,13 +72,23 @@ class PublicEpisodeFile(EpisodeFile, PublicMediaFile):
     pass
 
 
+class EpisodeDownload(BaseModel):
+    """A torrent's link to one episode it was downloaded for."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    torrent_id: TorrentId
+    episode_id: EpisodeId
+    file_path_suffix: str
+
+
 class RichSeasonTorrent(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     torrent_id: TorrentId
     torrent_title: str
     status: TorrentStatus
-    quality: Quality
+    slot: str | None = None
     imported: bool
     cancelled: bool = False
     usenet: bool

@@ -3,33 +3,21 @@ from collections.abc import Collection, Sequence
 from typing import Any, TypeVar
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, delete, inspect, select
+from sqlalchemy import delete, inspect, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
 from media_manager.common.models import MediaImage
+from media_manager.common.schemas import BaseMediaFile
 from media_manager.exceptions import ConflictError, NotFoundError
-from media_manager.torrent.models import Torrent
 
 log = logging.getLogger(__name__)
 
 T = TypeVar("T")
 S = TypeVar("S")
 EntityId = UUID | int | str
-
-
-def file_imported_expr[FileModel](model_class: type[FileModel]) -> ColumnElement[bool]:
-    """
-    Whether a media file model's row counts as imported: no torrent at all
-    (manually imported, or adopted by a library scan) or its torrent's
-    `imported` flag is set. The one expression every "is this file/episode/
-    movie downloaded" query should be built from - shared as a SQL
-    expression, not just a rule restated in each caller, so a bulk query and
-    a quality-aware query can both use it verbatim instead of redefining it.
-    """
-    return model_class.torrent_id.is_(None) | Torrent.imported.is_(True)
 
 
 class BaseRepository[T, S]:
@@ -300,7 +288,7 @@ class BaseRepository[T, S]:
         """
         Generic method to add a media file record.
         """
-        db_model = model_class(**file_schema.model_dump())
+        db_model = model_class(**file_schema.to_row())
         try:
             self.db.add(db_model)
             await self.db.commit()
@@ -328,7 +316,7 @@ class BaseRepository[T, S]:
             return
         try:
             self.db.add_all(
-                [model_class(**file_schema.model_dump()) for file_schema in file_schemas]
+                [model_class(**file_schema.to_row()) for file_schema in file_schemas]
             )
             await self.db.commit()
         except IntegrityError:
@@ -338,53 +326,138 @@ class BaseRepository[T, S]:
             await self.db.rollback()
             raise
 
-    async def remove_files_by_torrent_id_base(
-        self, torrent_id: EntityId, model_class: type[T]
-    ) -> int:
+    async def upsert_media_file_base(
+        self,
+        file_schema: BaseMediaFile,
+        model_class: type[T],
+        owner_column: InstrumentedAttribute[Any],
+    ) -> None:
         """
-        Generic method to remove media files by torrent ID.
+        Records an imported file, replacing whatever file was recorded for the
+        same owner (movie/episode) and file path suffix - a re-import of the
+        same version overwrites the file on disk, so it overwrites its record
+        (and its stale probe details) too.
         """
+        row = file_schema.to_row()
+        stmt = pg_insert(model_class).values(**row)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[owner_column.key, "file_path_suffix"],
+            set_={
+                "relative_path": stmt.excluded.relative_path,
+                "torrent_id": stmt.excluded.torrent_id,
+                "details": stmt.excluded.details,
+                "probed_mtime_ns": stmt.excluded.probed_mtime_ns,
+            },
+        )
         try:
-            stmt = delete(model_class).where(model_class.torrent_id == torrent_id)
-            result = await self.db.execute(stmt)
+            await self.db.execute(stmt)
             await self.db.commit()
         except SQLAlchemyError:
             await self.db.rollback()
             raise
-        else:
-            return result.rowcount
 
-    async def get_file_import_status_base(
+    async def set_media_file_relative_paths_base(
         self,
-        entity_ids: Sequence[EntityId],
         model_class: type[T],
-        entity_id_column: InstrumentedAttribute[EntityId],
-    ) -> Sequence[tuple[EntityId, str, bool]]:
+        owner_column: InstrumentedAttribute[Any],
+        updates: Sequence[tuple[EntityId, str, str]],
+    ) -> None:
         """
-        Generic bulk (entity_id, file_path_suffix, imported) query for a
-        media file model, keyed by whatever column owns the file (an
-        episode or a movie) - the single query every "is this file/episode/
-        movie downloaded" computation is built from, so a per-file view and
-        an aggregate status can never disagree.
+        Points existing file records at where their file actually is now
+        ((owner_id, file_path_suffix, relative_path) triples), in a single
+        transaction. The stored probe belongs to the old path, so it is
+        cleared for the next probe refresh to fill in.
+        """
+        if not updates:
+            return
+        try:
+            for owner_id, file_path_suffix, relative_path in updates:
+                await self.db.execute(
+                    update(model_class)
+                    .where(
+                        owner_column == owner_id,
+                        model_class.file_path_suffix == file_path_suffix,
+                    )
+                    .values(
+                        relative_path=relative_path,
+                        details=None,
+                        probed_mtime_ns=None,
+                    )
+                )
+            await self.db.commit()
+        except SQLAlchemyError:
+            await self.db.rollback()
+            raise
 
-        :param entity_ids: The owning entities (episodes or movies) to check.
-        :param model_class: The file model (e.g. EpisodeFile, MovieFile).
-        :param entity_id_column: That model's FK column to the owning entity
-            (e.g. EpisodeFile.episode_id, MovieFile.movie_id).
-        """
-        if not entity_ids:
-            return []
-        stmt = (
-            select(
-                entity_id_column,
-                model_class.file_path_suffix,
-                file_imported_expr(model_class),
+    async def delete_media_files_base(
+        self,
+        model_class: type[T],
+        owner_column: InstrumentedAttribute[Any],
+        keys: Sequence[tuple[EntityId, str]],
+    ) -> None:
+        """Deletes the file records with the given (owner_id, file_path_suffix) keys."""
+        if not keys:
+            return
+        try:
+            await self.db.execute(
+                delete(model_class).where(
+                    tuple_(owner_column, model_class.file_path_suffix).in_(keys)
+                )
             )
-            .select_from(model_class)
-            .outerjoin(Torrent, model_class.torrent_id == Torrent.id)
-            .where(entity_id_column.in_(entity_ids))
-        )
-        return (await self.db.execute(stmt)).all()
+            await self.db.commit()
+        except SQLAlchemyError:
+            await self.db.rollback()
+            raise
+
+    async def update_media_file_details_base(
+        self,
+        model_class: type[T],
+        owner_column: InstrumentedAttribute[Any],
+        files: Sequence[BaseMediaFile],
+        owner_field: str,
+    ) -> None:
+        """
+        Stores freshly probed `details`/`probed_mtime_ns` for the given files,
+        in a single transaction. A file deleted meanwhile is simply skipped.
+        """
+        if not files:
+            return
+        try:
+            for file in files:
+                await self.db.execute(
+                    update(model_class)
+                    .where(
+                        owner_column == getattr(file, owner_field),
+                        model_class.file_path_suffix == file.file_path_suffix,
+                    )
+                    .values(
+                        details=(
+                            file.details.model_dump(mode="json")
+                            if file.details
+                            else None
+                        ),
+                        probed_mtime_ns=file.probed_mtime_ns,
+                    )
+                )
+            await self.db.commit()
+        except SQLAlchemyError:
+            await self.db.rollback()
+            raise
+
+    async def get_owners_with_files_base(
+        self,
+        owner_ids: Sequence[EntityId],
+        owner_column: InstrumentedAttribute[EntityId],
+    ) -> set[EntityId]:
+        """
+        Which of the given owners (movies/episodes) have at least one file -
+        the single rule every "is this downloaded" computation is built from,
+        since a file record only exists once its file is in the library.
+        """
+        if not owner_ids:
+            return set()
+        stmt = select(owner_column).distinct().where(owner_column.in_(owner_ids))
+        return set((await self.db.execute(stmt)).scalars().all())
 
     async def get_media_image_sources(self, media_id: UUID) -> dict[str, str]:
         """

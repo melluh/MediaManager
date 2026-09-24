@@ -2,16 +2,16 @@
 Reconciling the media file records in the database with what is actually on
 disk.
 
-Two things drift apart over time: records written before their path was
-persisted still have `relative_path = NULL` and can only be found by their
-expected filename, and files dropped into a media directory by hand have no
-record at all. The scan heals both - it relinks records to the file they
-match, clears the path of records whose file is gone, and adopts unclaimed
-video files as new records.
+Two things drift apart over time: files get moved or renamed by hand, so a
+record's `relative_path` stops pointing at them, and files dropped into a
+media directory by hand have no record at all. The scan heals both - it
+relinks records to the file matching their expected filename, removes
+records whose file is gone entirely (a file record only exists for a file
+that's actually in the library), and adopts unclaimed video files as new
+records.
 
-The scan never deletes a file record and never touches a media item whose
-root directory is missing: an unmounted volume must not be read as "every
-file vanished".
+The scan never touches a media item whose root directory is missing: an
+unmounted volume must not be read as "every file vanished".
 
 Discovery is a recursive walk of the media item's root directory, so a
 library laid out by hand ("Season 01", "S01", everything in one folder) is
@@ -37,9 +37,7 @@ from media_manager.common.media_files import (
     is_video_file,
     list_directory,
 )
-from media_manager.torrent.schemas import Quality
 from media_manager.torrent.utils import remove_special_characters
-from media_manager.torrent.video_probe import probe_video_files, resolve_file_quality
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +51,7 @@ class LibraryScanCounts(BaseModel):
     items_skipped: int = 0
     """Media items whose root directory was missing, and were left untouched."""
     paths_relinked: int = 0
-    paths_cleared: int = 0
+    files_removed: int = 0
     files_adopted: int = 0
 
 
@@ -83,7 +81,7 @@ class ScanRecord:
     stem: str
     """Expected filename without extension, including the record's `file_path_suffix`."""
     file_path_suffix: str
-    relative_path: str | None
+    relative_path: str
 
 
 @dataclass(frozen=True)
@@ -116,7 +114,7 @@ class PathUpdate:
     """A record whose stored `relative_path` no longer matches reality."""
 
     record: ScanRecord
-    relative_path: str | None
+    relative_path: str
 
 
 @dataclass
@@ -127,8 +125,6 @@ class Adoption:
     file_path_suffix: str
     relative_path: str
     path: Path
-    quality: Quality = Quality.unknown
-    """Filled in from the file's probe once the whole scan's files are probed together."""
 
 
 @dataclass
@@ -138,7 +134,8 @@ class MediaScanPlan:
     skipped: bool = False
     """The media root was missing, so nothing was inspected and nothing changes."""
     relinked: list[PathUpdate] = field(default_factory=list)
-    cleared: list[PathUpdate] = field(default_factory=list)
+    removed: list[ScanRecord] = field(default_factory=list)
+    """Records whose file is nowhere to be found, to be deleted."""
     adoptions: list[Adoption] = field(default_factory=list)
 
 
@@ -165,11 +162,9 @@ def collect_listings(target: ScanTarget) -> ScanListing | None:
 
     # A record can point outside the media root (a hand-edited path, a
     # leftover from an older layout). Listing those directories too keeps such
-    # a record linked to its file instead of having its path cleared for being
+    # a record linked to its file instead of having it removed for being
     # unlistable.
     for record in target.records:
-        if not record.relative_path:
-            continue
         directory = (target.media_root / record.relative_path).parent
         if directory not in listings:
             listings[directory] = list_directory(directory)
@@ -203,10 +198,8 @@ def plan_media_scan(
     # Records that already know where their file is claim it first, so a
     # record still looking for one cannot steal it by stem match.
     for record in target.records:
-        path = (
-            target.media_root / record.relative_path if record.relative_path else None
-        )
-        if path is not None and path in present:
+        path = target.media_root / record.relative_path
+        if path in present:
             claimed.add(path)
         else:
             unresolved.append(record)
@@ -214,10 +207,7 @@ def plan_media_scan(
     for record in unresolved:
         path = _match_stem_anywhere(listing, record.stem, claimed)
         if path is None:
-            # Writing NULL over NULL is not a change, and would make a second
-            # scan report work it did not do.
-            if record.relative_path is not None:
-                plan.cleared.append(PathUpdate(record=record, relative_path=None))
+            plan.removed.append(record)
             continue
         claimed.add(path)
         plan.relinked.append(
@@ -232,21 +222,14 @@ def plan_media_scan(
 
 async def scan_media_targets(targets: Sequence[ScanTarget]) -> list[MediaScanPlan]:
     """
-    Plans the scan of every given media item: all filesystem work in one
-    worker thread, then a single batched probe of everything being adopted.
+    Plans the scan of every given media item, with all filesystem work in
+    one worker thread. Nothing is probed here: adopted and relinked records
+    are left for the next probe refresh to fill in.
 
     :param targets: The media items to scan.
     :return: One plan per target, in the same order.
     """
-    plans = await asyncio.to_thread(_plan_all, targets)
-
-    adoptions = [adoption for plan in plans for adoption in plan.adoptions]
-    probes = await probe_video_files(adoption.path for adoption in adoptions)
-    for adoption, probe in zip(adoptions, probes, strict=True):
-        adoption.quality = resolve_file_quality(
-            probe.quality, adoption.path.name, Quality.unknown
-        )
-    return plans
+    return await asyncio.to_thread(_plan_all, targets)
 
 
 def count_plans(plans: Sequence[MediaScanPlan]) -> LibraryScanCounts:
@@ -260,7 +243,7 @@ def count_plans(plans: Sequence[MediaScanPlan]) -> LibraryScanCounts:
         items_scanned=sum(1 for plan in plans if not plan.skipped),
         items_skipped=sum(1 for plan in plans if plan.skipped),
         paths_relinked=sum(len(plan.relinked) for plan in plans),
-        paths_cleared=sum(len(plan.cleared) for plan in plans),
+        files_removed=sum(len(plan.removed) for plan in plans),
         files_adopted=sum(len(plan.adoptions) for plan in plans),
     )
 
@@ -285,8 +268,8 @@ def _match_stem_anywhere(
     """
     The unclaimed file matching a record's expected filename, from anywhere
     under the media root rather than only where the record was written. That
-    width is what lets a record in a hand-made layout relink instead of having
-    its path cleared.
+    width is what lets a record in a hand-made layout relink instead of being
+    removed.
 
     Several files can match one record; a video file wins over a sidecar, and
     ties break on the path, so repeat scans keep choosing the same one.

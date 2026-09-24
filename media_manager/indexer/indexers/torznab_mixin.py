@@ -7,7 +7,6 @@ from media_manager.indexer.classification import classify_release
 from media_manager.indexer.schemas import IndexerQueryResult
 from media_manager.indexer.title_parsing import (
     derive_episode,
-    derive_quality,
     derive_season,
 )
 
@@ -91,7 +90,6 @@ class TorznabMixin:
                     age=age,
                     indexer=indexer_name,
                     comments=comments,
-                    quality=derive_quality(result_title),
                     season=derive_season(result_title),
                     episode=derive_episode(result_title),
                     attributes=classify_release(result_title),

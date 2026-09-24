@@ -7,7 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql.sqltypes import BigInteger
 
 from media_manager.database import Base
-from media_manager.torrent.schemas import Quality
 
 
 class IndexerQueryResult(Base):
@@ -20,7 +19,6 @@ class IndexerQueryResult(Base):
     download_url: Mapped[str]
     seeders: Mapped[int]
     flags = mapped_column(ARRAY(String))
-    quality: Mapped[Quality]
     season = mapped_column(ARRAY(Integer))
     episode = mapped_column(ARRAY(Integer))
     size = mapped_column(BigInteger)

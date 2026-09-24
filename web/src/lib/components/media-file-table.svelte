@@ -39,7 +39,6 @@
 			<Table.Row>
 				<Table.Head>{leadingLabel}</Table.Head>
 				<Table.Head>Quality</Table.Head>
-				<Table.Head>Imported</Table.Head>
 				<Table.Head class="sr-only">Actions</Table.Head>
 			</Table.Row>
 		</Table.Header>

@@ -23,12 +23,18 @@ def _touch(path: Path) -> Path:
     return path
 
 
+def _stale_path(stem: str) -> str:
+    """A stored path the record's file no longer sits at (moved by hand)."""
+    return f"moved away/{stem}.mkv"
+
+
 def _movie_record(suffix: str = "", relative_path: str | None = None):
+    stem = movie_file_stem(MOVIE_NAME, MOVIE_YEAR, suffix)
     return ScanRecord(
         owner_key="movie",
-        stem=movie_file_stem(MOVIE_NAME, MOVIE_YEAR, suffix),
+        stem=stem,
         file_path_suffix=suffix,
-        relative_path=relative_path,
+        relative_path=relative_path or _stale_path(stem),
     )
 
 
@@ -47,11 +53,12 @@ def _episode_record(
     suffix: str = "",
     relative_path: str | None = None,
 ):
+    stem = episode_file_stem(SHOW_NAME, season_number, episode_number, suffix)
     return ScanRecord(
         owner_key=f"s{season_number}e{episode_number}",
-        stem=episode_file_stem(SHOW_NAME, season_number, episode_number, suffix),
+        stem=stem,
         file_path_suffix=suffix,
-        relative_path=relative_path,
+        relative_path=relative_path or _stale_path(stem),
     )
 
 
@@ -103,9 +110,9 @@ def _apply(target: ScanTarget, plan: MediaScanPlan, stem_for) -> list[ScanRecord
     scanned again the way it really would be.
     """
     updated_by_record = {
-        id(update.record): update.relative_path
-        for update in [*plan.relinked, *plan.cleared]
+        id(update.record): update.relative_path for update in plan.relinked
     }
+    removed = {id(record) for record in plan.removed}
     records = [
         ScanRecord(
             owner_key=record.owner_key,
@@ -114,6 +121,7 @@ def _apply(target: ScanTarget, plan: MediaScanPlan, stem_for) -> list[ScanRecord
             relative_path=updated_by_record.get(id(record), record.relative_path),
         )
         for record in target.records
+        if id(record) not in removed
     ]
     records.extend(
         ScanRecord(
@@ -127,7 +135,7 @@ def _apply(target: ScanTarget, plan: MediaScanPlan, stem_for) -> list[ScanRecord
     return records
 
 
-def test_legacy_record_without_a_path_is_relinked_to_its_file(tmp_path):
+def test_record_with_a_stale_path_is_relinked_to_its_file(tmp_path):
     root = tmp_path / "The Movie (2024) [tmdbid-1]"
     _touch(root / "The Movie (2024).mkv")
     target = _movie_target(root, [_movie_record()])
@@ -137,11 +145,11 @@ def test_legacy_record_without_a_path_is_relinked_to_its_file(tmp_path):
     assert [update.relative_path for update in plan.relinked] == [
         "The Movie (2024).mkv"
     ]
-    assert plan.cleared == []
+    assert plan.removed == []
     assert plan.adoptions == []
 
 
-def test_record_whose_file_is_gone_has_its_path_cleared(tmp_path):
+def test_record_whose_file_is_gone_is_removed(tmp_path):
     root = tmp_path / "The Movie (2024) [tmdbid-1]"
     root.mkdir()
     target = _movie_target(
@@ -150,8 +158,9 @@ def test_record_whose_file_is_gone_has_its_path_cleared(tmp_path):
 
     plan = _scan(target)
 
-    assert [update.relative_path for update in plan.cleared] == [None]
+    assert plan.removed == target.records
     assert plan.relinked == []
+    assert count_plans([plan]).files_removed == 1
 
 
 def test_missing_root_directory_leaves_records_untouched(tmp_path):
@@ -168,7 +177,7 @@ def test_missing_root_directory_leaves_records_untouched(tmp_path):
 
     assert plan.skipped
     assert plan.relinked == []
-    assert plan.cleared == []
+    assert plan.removed == []
     assert plan.adoptions == []
     assert count_plans([plan]).items_skipped == 1
     assert count_plans([plan]).items_scanned == 0
@@ -286,7 +295,7 @@ def test_second_scan_of_a_movie_directory_is_a_no_op(tmp_path):
     second_plan = _scan(_movie_target(root, _apply(first, first_plan, _movie_stem)))
 
     assert second_plan.relinked == []
-    assert second_plan.cleared == []
+    assert second_plan.removed == []
     assert second_plan.adoptions == []
 
 
@@ -304,7 +313,7 @@ def test_second_scan_of_a_show_directory_is_a_no_op(tmp_path):
     second_plan = _scan(_show_target(root, _apply(first, first_plan, _episode_stem), episodes))
 
     assert second_plan.relinked == []
-    assert second_plan.cleared == []
+    assert second_plan.removed == []
     assert second_plan.adoptions == []
 
 
@@ -318,7 +327,7 @@ def test_record_pointing_at_an_existing_file_is_left_alone(tmp_path):
     plan = _scan(target)
 
     assert plan.relinked == []
-    assert plan.cleared == []
+    assert plan.removed == []
     assert plan.adoptions == []
 
 
@@ -416,15 +425,13 @@ def test_second_scan_of_a_legacy_layout_is_a_no_op(tmp_path):
     second_plan = _scan(_show_target(root, _apply(first, first_plan, _episode_stem), episodes))
 
     assert second_plan.relinked == []
-    assert second_plan.cleared == []
+    assert second_plan.removed == []
     assert second_plan.adoptions == []
 
 
-def test_no_plan_ever_deletes_a_record(tmp_path):
+def test_only_unfindable_records_are_removed(tmp_path):
     root = tmp_path / "The Show"
-    root.mkdir()
-    # Every record here is unfindable, which is the worst case for a record's
-    # survival: the scan may only blank their paths, never drop them.
+    _touch(root / "Season 1" / "The Show - S01E02.mkv")
     records = [
         _episode_record(1, 1, relative_path="Season 1/The Show - S01E01.mkv"),
         _episode_record(1, 2),
@@ -433,13 +440,13 @@ def test_no_plan_ever_deletes_a_record(tmp_path):
 
     plan = _scan(target)
 
-    assert [update.record for update in plan.cleared] == [records[0]]
+    assert plan.removed == [records[0]]
+    assert [update.record for update in plan.relinked] == [records[1]]
     assert _apply(target, plan, _episode_stem) == [
         ScanRecord(
-            owner_key="s1e1",
-            stem=records[0].stem,
+            owner_key="s1e2",
+            stem=records[1].stem,
             file_path_suffix="",
-            relative_path=None,
-        ),
-        records[1],
+            relative_path="Season 1/The Show - S01E02.mkv",
+        )
     ]

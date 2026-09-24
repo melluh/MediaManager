@@ -13,9 +13,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from media_manager.common.languages import language_or_unknown
-from media_manager.common.schemas import SubtitleTrack
-from media_manager.indexer.title_parsing import derive_quality
-from media_manager.torrent.schemas import Quality
+from media_manager.common.schemas import Quality, SubtitleTrack
 
 log = logging.getLogger(__name__)
 
@@ -268,19 +266,3 @@ def _height_to_quality(height: int) -> Quality:
     if height >= 700:
         return Quality.hd
     return Quality.sd
-
-
-def resolve_file_quality(
-    probed_quality: Quality | None, file_name: str, fallback_quality: Quality
-) -> Quality:
-    """
-    Best available quality for a video file: ffprobe's measured resolution,
-    falling back to guessing from the filename, falling back to the
-    torrent's own recorded quality.
-    """
-    if probed_quality is not None:
-        return probed_quality
-    quality_from_filename = derive_quality(file_name)
-    if quality_from_filename != Quality.unknown:
-        return quality_from_filename
-    return fallback_quality

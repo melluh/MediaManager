@@ -6,7 +6,7 @@
 	import { toast } from 'svelte-sonner';
 	import client from '$lib/api';
 	import type { TorrentImportCandidate } from '$lib/api/api';
-	import { cn, formatBytes, getTorrentQualityString } from '$lib/utils';
+	import { cn, formatBytes, getQualityString } from '$lib/utils';
 
 	// Resolves a movie download whose import failed because it contained more
 	// than one video file, by letting the user pick the one to import.
@@ -122,7 +122,7 @@
 						<span class="flex flex-wrap items-center gap-x-1.5 text-muted-foreground">
 							<span>{formatBytes(candidate.size_bytes) ?? 'unknown size'}</span>
 							<span>&middot;</span>
-							<span>{getTorrentQualityString(candidate.quality)}</span>
+							<span>{getQualityString(candidate.probed_quality)}</span>
 							<span>&middot;</span>
 							<span>{formatDuration(candidate.duration_seconds)}</span>
 						</span>

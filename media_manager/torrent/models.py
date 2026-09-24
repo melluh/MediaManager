@@ -2,10 +2,10 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from media_manager.database import Base
-from media_manager.torrent.schemas import Quality, TorrentStatus
+from media_manager.torrent.schemas import TorrentStatus
 
 
 class Torrent(Base):
@@ -13,7 +13,6 @@ class Torrent(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     status: Mapped[TorrentStatus]
     title: Mapped[str]
-    quality: Mapped[Quality]
     imported: Mapped[bool]
     import_error: Mapped[str | None] = mapped_column(default=None)
     import_error_kind: Mapped[str | None] = mapped_column(default=None)
@@ -29,6 +28,6 @@ class Torrent(Base):
     indexer: Mapped[str | None] = mapped_column(default=None)
     comments: Mapped[str | None] = mapped_column(default=None)
     cancelled: Mapped[bool] = mapped_column(default=False)
-
-    episode_files = relationship("EpisodeFile", back_populates="torrent")
-    movie_files = relationship("MovieFile", back_populates="torrent")
+    slot: Mapped[str | None] = mapped_column(default=None)
+    """Label of the quality slot the release was downloaded for (e.g. "1080p
+    Encode"), as configured at download time."""

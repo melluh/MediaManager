@@ -2,16 +2,15 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
-	import CheckmarkX from '$lib/components/checkmark-x.svelte';
 	import MediaFileDetailsDialog, {
 		type MediaFile
 	} from '$lib/components/media-file-details-dialog.svelte';
 	import Info from '@lucide/svelte/icons/info';
 	import FileQuestionMark from '@lucide/svelte/icons/file-question-mark';
-	import { getTorrentQualityString } from '$lib/utils';
+	import { getQualityString } from '$lib/utils';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 
-	// The quality, imported and details cells every media file table row ends with.
+	// The quality and details cells every media file table row ends with.
 	let {
 		file,
 		dialogKey
@@ -25,13 +24,10 @@
 </script>
 
 <Table.Cell class="w-[120px]">
-	{getTorrentQualityString(file.quality)}
-</Table.Cell>
-<Table.Cell class="w-[10px] font-medium">
-	<CheckmarkX state={file.imported} />
+	{getQualityString(file.details?.quality)}
 </Table.Cell>
 <Table.Cell class="w-[160px] text-right">
-	{#if file.downloaded && !file.exists_on_disk}
+	{#if !file.exists_on_disk}
 		<span class="inline-flex items-center gap-1 text-sm whitespace-nowrap text-muted-foreground">
 			<FileQuestionMark class="size-4" />
 			Not found on disk

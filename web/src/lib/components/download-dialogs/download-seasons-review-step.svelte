@@ -143,7 +143,7 @@
 				pickStatus[id] = 'failed';
 				pickErrorMessage[id] =
 					response.status === 409
-						? 'A file for this quality/version already exists. Pick a different release.'
+						? 'A file or pending download for this version already exists. Pick a different release.'
 						: ((error as { detail?: string } | undefined)?.detail ?? 'Failed to start download.');
 			}
 		}

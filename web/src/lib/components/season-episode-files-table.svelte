@@ -46,7 +46,6 @@
 			<Table.Head class="w-[200px]">Title</Table.Head>
 			<Table.Head>File</Table.Head>
 			<Table.Head class="w-[120px]">Quality</Table.Head>
-			<Table.Head class="w-[10px]">Imported</Table.Head>
 			<Table.Head class="sr-only w-[160px]">Actions</Table.Head>
 		</Table.Row>
 	</Table.Header>
@@ -63,17 +62,14 @@
 				{/if}
 				{#if row.file}
 					<Table.Cell class="font-mono text-xs">
-						<TruncatedText
-							text={row.file.relative_path ?? row.file.file_path}
-							tooltip={row.file.file_path}
-						/>
+						<TruncatedText text={row.file.relative_path} tooltip={row.file.file_path} />
 					</Table.Cell>
 					<MediaFileCells
 						file={row.file}
 						dialogKey={`seasonFiles:${season.id}:episodeFileDetails:${row.episode.id}:${row.fileIndex}`}
 					/>
 				{:else}
-					<Table.Cell colspan={4} class="text-center text-sm text-muted-foreground">
+					<Table.Cell colspan={3} class="text-center text-sm text-muted-foreground">
 						Not downloaded yet
 					</Table.Cell>
 				{/if}

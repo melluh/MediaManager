@@ -17,7 +17,11 @@ from media_manager.common.library_scan import (
     ScanTarget,
     scan_media_targets,
 )
-from media_manager.common.media_files import movie_file_stem
+from media_manager.common.media_files import (
+    MediaFileLocation,
+    movie_file_stem,
+    refresh_media_file_details,
+)
 from media_manager.common.service import BaseMediaService
 from media_manager.config import MediaManagerConfig, get_config
 from media_manager.exceptions import BadRequestError, ConflictError
@@ -31,7 +35,7 @@ from media_manager.metadataProvider.schemas import (
 )
 from media_manager.movies.metadata import MovieMetadataService
 from media_manager.movies.repository import MovieRepository
-from media_manager.movies.schemas import Movie, MovieFile
+from media_manager.movies.schemas import Movie, MovieFile, PublicMovieFile
 from media_manager.notification.service import NotificationService
 from media_manager.schemas import MediaImportSuggestion
 from media_manager.torrent.schemas import ImportErrorKind, Torrent
@@ -219,29 +223,34 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         # torrent out of the resolution flow that gated this call.
         kind_on_failure = torrent.import_error_kind
 
-        movie_files = await self.torrent_service.get_movie_files_of_torrent(
+        downloads = await self.torrent_service.get_movie_downloads_of_torrent(
             torrent=torrent
         )
-        if not movie_files:
+        if not downloads:
             await self.notify_import_failure(
                 torrent, movie.name, "movie", import_error_kind=kind_on_failure
             )
             return False
 
         imported_all = True
-        for movie_file in movie_files:
+        imported_files: list[MovieFile] = []
+        for download in downloads:
             imported, relative_path = await self.import_movie(
-                movie, video_files, subtitle_files, movie_file.file_path_suffix
+                movie, video_files, subtitle_files, download.file_path_suffix
             )
             imported_all = imported_all and imported
-            # The file record was created when the download started, so where
-            # the file ended up is only known now.
+            # The file only becomes part of the library - gets a record - now
+            # that it's actually on disk.
             if relative_path:
-                await self.movie_repository.set_movie_file_relative_path(
+                movie_file = MovieFile(
                     movie_id=movie.id,
-                    file_path_suffix=movie_file.file_path_suffix,
+                    torrent_id=torrent.id,
+                    file_path_suffix=download.file_path_suffix,
                     relative_path=relative_path,
                 )
+                await self.movie_repository.upsert_movie_file(movie_file=movie_file)
+                imported_files.append(movie_file)
+        await self.refresh_movie_file_details(movie=movie, movie_files=imported_files)
 
         if imported_all:
             torrent.imported = True
@@ -314,6 +323,33 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             adopt=adopt,
         )
 
+    def get_movie_file_location(self, movie: Movie) -> MediaFileLocation:
+        """
+        Where a movie's file records are resolved from: its stored
+        `relative_path`s are relative to the movie's own directory, and are
+        reported relative to the parent movies folder (the default movie
+        directory, or the movie's library root if it belongs to one).
+        """
+        movie_root_path = self.get_media_root_path(media=movie)
+        return MediaFileLocation(
+            relative_to=movie_root_path.parent, media_root=movie_root_path
+        )
+
+    async def refresh_movie_file_details(
+        self, movie: Movie, movie_files: Sequence[MovieFile]
+    ) -> list[PublicMovieFile]:
+        """
+        Resolves a movie's files on disk and brings their stored probe details
+        up to date, storing whatever changed. See `refresh_media_file_details`.
+        """
+        public_files = [PublicMovieFile.model_validate(f) for f in movie_files]
+        location = self.get_movie_file_location(movie=movie)
+        changed = await refresh_media_file_details(
+            public_files, [location] * len(public_files)
+        )
+        await self.movie_repository.update_movie_file_details(changed)
+        return public_files
+
     async def apply_scan_plan(self, movie: Movie, plan: MediaScanPlan) -> None:
         """
         Writes what a scan decided for one movie.
@@ -328,14 +364,16 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
                     path_update.record.file_path_suffix,
                     path_update.relative_path,
                 )
-                for path_update in [*plan.relinked, *plan.cleared]
+                for path_update in plan.relinked
             ]
+        )
+        await self.movie_repository.delete_movie_files(
+            [(movie.id, record.file_path_suffix) for record in plan.removed]
         )
         await self.movie_repository.add_movie_files_bulk(
             [
                 MovieFile(
                     movie_id=movie.id,
-                    quality=adoption.quality,
                     torrent_id=None,
                     file_path_suffix=adoption.file_path_suffix,
                     relative_path=adoption.relative_path,

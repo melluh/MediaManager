@@ -2,7 +2,7 @@ import asyncio
 import logging
 import re
 import time
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeVar
@@ -20,10 +20,9 @@ from media_manager.common.import_sidecar import (
     write_import_sidecar,
 )
 from media_manager.common.media_files import media_directory_name
-from media_manager.common.repository import BaseRepository, EntityId
+from media_manager.common.repository import BaseRepository
 from media_manager.common.schemas import (
     CURRENT_METADATA_VERSION,
-    BaseMediaFile,
     WatchUrl,
 )
 from media_manager.common.slug import generate_slug
@@ -43,7 +42,7 @@ from media_manager.metadataProvider.schemas import (
 )
 from media_manager.notification.service import NotificationService
 from media_manager.schemas import MediaImportSuggestion
-from media_manager.torrent.schemas import ImportErrorKind, Torrent, TorrentId
+from media_manager.torrent.schemas import ImportErrorKind, Torrent
 from media_manager.torrent.service import TorrentService
 from media_manager.torrent.utils import (
     extract_external_id_from_string,
@@ -179,48 +178,6 @@ class BaseMediaService[T, S]:
                 if library.name == media.library:
                     return Path(library.path) / directory_name
         return default_dir / directory_name
-
-    async def media_file_is_imported(self, media_file: BaseMediaFile) -> bool:
-        """
-        Whether a media file is expected to be present on disk, i.e. whether
-        the torrent it came from has been imported. Files with no torrent
-        (manually imported ones) always count as present.
-        """
-        if media_file.torrent_id is None:
-            return True
-        try:
-            torrent = await self.torrent_service.get_torrent_by_id(
-                torrent_id=TorrentId(media_file.torrent_id)
-            )
-        # A torrent lookup failure only means we can't confirm the file, not
-        # that the media module should fail the whole request.
-        except Exception:
-            log.warning(
-                f"Could not resolve torrent {media_file.torrent_id} for media file",
-                exc_info=True,
-            )
-            return False
-        return bool(torrent.imported)
-
-    @staticmethod
-    def fold_file_import_status(
-        entity_ids: Sequence[EntityId],
-        rows: Sequence[tuple[EntityId, str, bool]],
-    ) -> dict[EntityId, bool]:
-        """
-        Whether each owning entity (an episode or a movie) has at least one
-        imported file, folded from `BaseRepository.get_file_import_status_base`
-        rows. Shared so TV and movies compute "is this downloaded" the same
-        way from the same query shape.
-
-        :param entity_ids: Every entity to report a status for, so one with
-            no file records at all still gets a (False) entry.
-        :param rows: (entity_id, file_path_suffix, imported) rows.
-        """
-        statuses: dict[EntityId, bool] = dict.fromkeys(entity_ids, False)
-        for entity_id, _file_path_suffix, imported in rows:
-            statuses[entity_id] = statuses[entity_id] or imported
-        return statuses
 
     def get_media_root_path(self, media: S) -> Path:
         """

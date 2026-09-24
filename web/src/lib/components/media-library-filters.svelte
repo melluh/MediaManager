@@ -10,7 +10,7 @@
 	import Gauge from '@lucide/svelte/icons/gauge';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import Captions from '@lucide/svelte/icons/captions';
-	import { NO_SUBTITLES_KEY, getTorrentQualityString, subtitleLanguageKey } from '$lib/utils';
+	import { NO_SUBTITLES_KEY, getQualityString, subtitleLanguageKey } from '$lib/utils';
 	import type { MovieListItem, Quality, ShowSummary, SubtitleLanguage } from '$lib/api/api';
 	import type { DownloadedFilter, MediaSortOption } from '$lib/utils';
 
@@ -145,7 +145,7 @@
 				label="Quality"
 				options={availableQualities.map((quality) => ({
 					value: quality,
-					label: getTorrentQualityString(quality)
+					label: getQualityString(quality)
 				}))}
 				bind:selected={selectedQualities}
 			/>

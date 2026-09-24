@@ -1,18 +1,18 @@
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from media_manager.database import DbSessionDependency
 from media_manager.exceptions import NotFoundError
-from media_manager.movies.models import Movie, MovieFile
+from media_manager.movies.models import Movie, MovieDownload
 from media_manager.movies.schemas import Movie as MovieSchema
-from media_manager.movies.schemas import MovieFile as MovieFileSchema
+from media_manager.movies.schemas import MovieDownload as MovieDownloadSchema
 from media_manager.torrent.models import Torrent
 from media_manager.torrent.schemas import Torrent as TorrentSchema
 from media_manager.torrent.schemas import TorrentId
-from media_manager.tv.models import Episode, EpisodeFile, Season, Show
-from media_manager.tv.schemas import EpisodeFile as EpisodeFileSchema
+from media_manager.tv.models import Episode, EpisodeDownload, Season, Show
+from media_manager.tv.schemas import EpisodeDownload as EpisodeDownloadSchema
 from media_manager.tv.schemas import Show as ShowSchema
 from media_manager.tv.schemas import ShowSummary as ShowSummarySchema
 
@@ -21,14 +21,12 @@ class TorrentRepository:
     def __init__(self, db: DbSessionDependency) -> None:
         self.db = db
 
-    async def get_episode_files_of_torrent(
+    async def get_episode_downloads_of_torrent(
         self, torrent_id: TorrentId
-    ) -> list[EpisodeFileSchema]:
-        stmt = select(EpisodeFile).where(EpisodeFile.torrent_id == torrent_id)
+    ) -> list[EpisodeDownloadSchema]:
+        stmt = select(EpisodeDownload).where(EpisodeDownload.torrent_id == torrent_id)
         result = (await self.db.execute(stmt)).scalars().all()
-        return [
-            EpisodeFileSchema.model_validate(episode_file) for episode_file in result
-        ]
+        return [EpisodeDownloadSchema.model_validate(download) for download in result]
 
     async def get_show_of_torrent(self, torrent_id: TorrentId) -> ShowSchema | None:
         # Eager-load the show tree; ShowSchema requires seasons -> episodes and
@@ -37,8 +35,8 @@ class TorrentRepository:
             select(Show)
             .join(Show.seasons)
             .join(Season.episodes)
-            .join(Episode.episode_files)
-            .where(EpisodeFile.torrent_id == torrent_id)
+            .join(Episode.downloads)
+            .where(EpisodeDownload.torrent_id == torrent_id)
             .options(selectinload(Show.seasons).selectinload(Season.episodes))
         )
         result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
@@ -66,20 +64,11 @@ class TorrentRepository:
             raise NotFoundError(msg)
         return TorrentSchema.model_validate(result)
 
-    async def delete_torrent(
-        self, torrent_id: TorrentId, delete_associated_media_files: bool = False
-    ) -> None:
-        if delete_associated_media_files:
-            movie_files_stmt = delete(MovieFile).where(
-                MovieFile.torrent_id == torrent_id
-            )
-            await self.db.execute(movie_files_stmt)
-
-            episode_files_stmt = delete(EpisodeFile).where(
-                EpisodeFile.torrent_id == torrent_id
-            )
-            await self.db.execute(episode_files_stmt)
-
+    async def delete_torrent(self, torrent_id: TorrentId) -> None:
+        """
+        Deletes a torrent. Its download links go with it (FK cascade); files
+        already imported from it stay, just no longer tied to a torrent.
+        """
         obj = await self.db.get(Torrent, torrent_id)
         if obj is not None:
             await self.db.delete(obj)
@@ -87,20 +76,20 @@ class TorrentRepository:
     async def get_movie_of_torrent(self, torrent_id: TorrentId) -> MovieSchema | None:
         stmt = (
             select(Movie)
-            .join(MovieFile, Movie.id == MovieFile.movie_id)
-            .where(MovieFile.torrent_id == torrent_id)
+            .join(MovieDownload, Movie.id == MovieDownload.movie_id)
+            .where(MovieDownload.torrent_id == torrent_id)
         )
         result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
         if result is None:
             return None
         return MovieSchema.model_validate(result)
 
-    async def get_movie_files_of_torrent(
+    async def get_movie_downloads_of_torrent(
         self, torrent_id: TorrentId
-    ) -> list[MovieFileSchema]:
-        stmt = select(MovieFile).where(MovieFile.torrent_id == torrent_id)
+    ) -> list[MovieDownloadSchema]:
+        stmt = select(MovieDownload).where(MovieDownload.torrent_id == torrent_id)
         result = (await self.db.execute(stmt)).scalars().all()
-        return [MovieFileSchema.model_validate(movie_file) for movie_file in result]
+        return [MovieDownloadSchema.model_validate(download) for download in result]
 
     async def get_active_torrents_initiated_by_user(
         self, user_id: UUID
@@ -127,9 +116,9 @@ class TorrentRepository:
         if not torrent_ids:
             return {}
         stmt = (
-            select(MovieFile.torrent_id, Movie)
-            .join(Movie, Movie.id == MovieFile.movie_id)
-            .where(MovieFile.torrent_id.in_(torrent_ids))
+            select(MovieDownload.torrent_id, Movie)
+            .join(Movie, Movie.id == MovieDownload.movie_id)
+            .where(MovieDownload.torrent_id.in_(torrent_ids))
         )
         rows = (await self.db.execute(stmt)).unique().all()
         return {row[0]: MovieSchema.model_validate(row[1]) for row in rows}
@@ -145,11 +134,11 @@ class TorrentRepository:
         if not torrent_ids:
             return {}
         stmt = (
-            select(EpisodeFile.torrent_id, Season.id, Season.number, Episode.number)
+            select(EpisodeDownload.torrent_id, Season.id, Season.number, Episode.number)
             .distinct()
-            .join(Episode, Episode.id == EpisodeFile.episode_id)
+            .join(Episode, Episode.id == EpisodeDownload.episode_id)
             .join(Season, Season.id == Episode.season_id)
-            .where(EpisodeFile.torrent_id.in_(torrent_ids))
+            .where(EpisodeDownload.torrent_id.in_(torrent_ids))
             .order_by(Season.number, Episode.number)
         )
         rows = (await self.db.execute(stmt)).all()
@@ -203,11 +192,11 @@ class TorrentRepository:
         if not torrent_ids:
             return {}
         stmt = (
-            select(EpisodeFile.torrent_id, Show)
-            .join(Episode, Episode.id == EpisodeFile.episode_id)
+            select(EpisodeDownload.torrent_id, Show)
+            .join(Episode, Episode.id == EpisodeDownload.episode_id)
             .join(Season, Season.id == Episode.season_id)
             .join(Show, Show.id == Season.show_id)
-            .where(EpisodeFile.torrent_id.in_(torrent_ids))
+            .where(EpisodeDownload.torrent_id.in_(torrent_ids))
         )
         rows = (await self.db.execute(stmt)).unique().all()
         return {row[0]: ShowSummarySchema.model_validate(row[1]) for row in rows}

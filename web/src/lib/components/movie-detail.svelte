@@ -20,7 +20,7 @@
 	import { resolve } from '$app/paths';
 
 	let { movie, movieFiles }: { movie: PublicMovie; movieFiles: PublicMovieFile[] } = $props();
-	let hasImportedFile = $derived(movieFiles.some((file) => file.imported));
+	let hasImportedFile = $derived(movieFiles.length > 0);
 	let user = getCurrentUser();
 
 	// Polled (rather than fetched once) so a "Downloading" badge's progress bar

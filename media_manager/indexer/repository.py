@@ -39,7 +39,6 @@ class IndexerRepository:
                 download_url=str(result.download_url),
                 seeders=result.seeders,
                 flags=result.flags,
-                quality=result.quality,
                 season=result.season,
                 episode=result.episode,
                 size=result.size,

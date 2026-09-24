@@ -1,15 +1,24 @@
 import uuid
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from media_manager.torrent.models import Quality
-
 # Increase to force immediate metadata refresh (regardless of configured metadata refresh interval).
 # Useful when metadata fetching logic changes or a new field is stored from metadata.
 CURRENT_METADATA_VERSION = 5
+
+
+class Quality(Enum):
+    """Resolution tier of a video file, measured by probing it. Lower is better."""
+
+    uhd = 1
+    fullhd = 2
+    hd = 3
+    sd = 4
+    unknown = 5
 
 
 class MediaAddedByUser(BaseModel):
@@ -62,15 +71,6 @@ class BaseMedia(BaseModel):
         return v or []
 
 
-class BaseMediaFile(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    quality: Quality
-    torrent_id: UUID | None = None
-    file_path_suffix: str
-    relative_path: str | None = None
-
-
 class SubtitleLanguage(BaseModel):
     """
     A subtitle's language, normalized across the vocabularies it can be
@@ -117,14 +117,13 @@ class SubtitleTrack(BaseModel):
 
 class MediaFileDetails(BaseModel):
     """
-    What the file on disk itself says about the media, as opposed to what the
-    database row claims. Populated by probing the file; every field is
-    optional because probing is best-effort.
+    What the file on disk itself says about the media. Populated by probing
+    the file; every field is optional because probing is best-effort.
     """
 
     size_bytes: int | None = None
-    probed_quality: Quality | None = None
-    """Quality measured from the video stream, which can differ from the recorded `quality`."""
+    quality: Quality | None = None
+    """Quality measured from the video stream's resolution."""
     duration_seconds: int | None = None
     width: int | None = None
     height: int | None = None
@@ -150,16 +149,33 @@ class WatchUrl(BaseModel):
     for labeling a "Watch on <name>" button. None whenever `url` is None."""
 
 
-class PublicMediaFile(BaseMediaFile):
-    downloaded: bool = False
-    imported: bool = False
-    file_path: str = ""
-    """Path of the file on disk, relative to the media type's library root.
+class BaseMediaFile(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
-    Falls back to the expected path (without extension) when the file has not
-    been imported yet.
-    """
-    exists_on_disk: bool = False
-    """Whether a file was actually found at `file_path`."""
+    torrent_id: UUID | None = None
+    """The torrent this file was imported from, if any."""
+    file_path_suffix: str
+    relative_path: str
+    """Path of the file relative to the media's root directory."""
     details: MediaFileDetails | None = None
-    """File facts read from disk; None when the file isn't there."""
+    """What probing the file last found, stored so it survives restarts and
+    doesn't need re-probing until the file changes. None until first probed."""
+    probed_mtime_ns: int | None = Field(default=None, exclude=True)
+    """The file's mtime when `details` was probed, to tell when it's stale.
+    Internal bookkeeping, so never serialized."""
+
+    def to_row(self) -> dict:
+        """Column values for the ORM model, with `details` as JSON-safe data
+        for its JSONB column (enums as their values)."""
+        row = self.model_dump()
+        row["details"] = self.details.model_dump(mode="json") if self.details else None
+        row["probed_mtime_ns"] = self.probed_mtime_ns
+        return row
+
+
+class PublicMediaFile(BaseMediaFile):
+    file_path: str = ""
+    """Path of the file on disk, relative to the media type's library root."""
+    exists_on_disk: bool = False
+    """Whether the file was actually found at `file_path`. False only for a
+    file that went missing since the last library scan, which removes it."""

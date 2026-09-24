@@ -52,7 +52,7 @@
 	);
 
 	const tableColumnHeadings = [
-		{ name: 'Quality', id: 'quality' },
+		{ name: 'Slot', id: 'slot_index' },
 		{ name: 'Size', id: 'size' },
 		{ name: 'Seeders', id: 'seeders' },
 		{ name: 'Score', id: 'score' },
@@ -76,7 +76,7 @@
 			});
 			if (response.status === 409) {
 				const errorMessage =
-					'A movie file for this quality/version already exists. Pick a different release.';
+					'A movie file or pending download for this version already exists. Pick a different release.';
 				console.warn(errorMessage);
 				torrentsError = errorMessage;
 				if (dialogueState.open) toast.info(errorMessage);

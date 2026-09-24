@@ -1,25 +1,5 @@
 import re
 
-from media_manager.torrent.models import Quality
-
-
-def derive_quality(title: str) -> Quality:
-    high_quality_pattern = r"\b(4k|2160p|uhd)\b"
-    medium_quality_pattern = r"\b(1080p|full[ ._-]?hd)\b"
-    low_quality_pattern = r"\b(720p|(?<!full[ ._-])hd(?![a-z]))\b"
-    very_low_quality_pattern = r"\b(480p|360p|sd)\b"
-
-    if re.search(high_quality_pattern, title, re.IGNORECASE):
-        return Quality.uhd
-    if re.search(medium_quality_pattern, title, re.IGNORECASE):
-        return Quality.fullhd
-    if re.search(low_quality_pattern, title, re.IGNORECASE):
-        return Quality.hd
-    if re.search(very_low_quality_pattern, title, re.IGNORECASE):
-        return Quality.sd
-
-    return Quality.unknown
-
 
 def derive_season(title: str) -> list[int]:
     title = title.lower()

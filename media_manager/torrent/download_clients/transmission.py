@@ -77,8 +77,6 @@ class TransmissionDownloadClient(AbstractDownloadClient):
         torrent = Torrent(
             status=TorrentStatus.unknown,
             title=indexer_result.title,
-            quality=indexer_result.quality,
-            imported=False,
             hash=torrent_hash,
             usenet=False,
         )

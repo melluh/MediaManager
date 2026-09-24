@@ -10,7 +10,7 @@ import asyncio
 import pytest
 
 from media_manager.movies.importer import MovieImportService
-from media_manager.torrent.schemas import Quality, Torrent, TorrentStatus
+from media_manager.torrent.schemas import Torrent, TorrentStatus
 
 
 class FakeTorrentRepository:
@@ -35,7 +35,6 @@ def _torrent() -> Torrent:
     return Torrent(
         status=TorrentStatus.finished,
         title="Some Movie 2024",
-        quality=Quality.unknown,
         imported=False,
         hash="deadbeef",
     )

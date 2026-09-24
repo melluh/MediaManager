@@ -2,13 +2,14 @@ import logging
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from media_manager.common.repository import BaseRepository, file_imported_expr
+from media_manager.common.repository import BaseRepository
+from media_manager.common.schemas import MediaFileDetails
 from media_manager.exceptions import NotFoundError
-from media_manager.movies.models import Movie, MovieFile
+from media_manager.movies.models import Movie, MovieDownload, MovieFile
 from media_manager.movies.schemas import (
     Movie as MovieSchema,
 )
@@ -22,8 +23,8 @@ from media_manager.movies.schemas import (
     MovieTorrent as MovieTorrentSchema,
 )
 from media_manager.torrent.models import Torrent
-from media_manager.torrent.schemas import Quality, TorrentId
 from media_manager.torrent.schemas import Torrent as TorrentSchema
+from media_manager.torrent.schemas import TorrentId
 
 log = logging.getLogger(__name__)
 
@@ -82,52 +83,80 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             file_schemas=movie_files, model_class=MovieFile
         )
 
-    async def set_movie_file_relative_path(
-        self, movie_id: MovieId, file_path_suffix: str, relative_path: str | None
-    ) -> None:
-        """
-        Records where a movie file was actually written, for a record that was
-        created before its file existed. None means no file is known for the
-        record, which is what the library scan writes when the file it pointed
-        at is gone.
-        """
-        stmt = (
-            update(MovieFile)
-            .where(
-                MovieFile.movie_id == movie_id,
-                MovieFile.file_path_suffix == file_path_suffix,
-            )
-            .values(relative_path=relative_path)
+    async def upsert_movie_file(self, movie_file: MovieFileSchema) -> None:
+        """Records an imported movie file, replacing any file already
+        recorded for the same movie and file path suffix."""
+        await self.upsert_media_file_base(
+            file_schema=movie_file,
+            model_class=MovieFile,
+            owner_column=MovieFile.movie_id,
         )
-        await self.db.execute(stmt)
-        await self.db.commit()
 
     async def set_movie_file_relative_paths_bulk(
-        self, updates: list[tuple[MovieId, str, str | None]]
+        self, updates: list[tuple[MovieId, str, str]]
     ) -> None:
         """
-        Same as `set_movie_file_relative_path`, but applies every update in
-        `updates` (movie_id, file_path_suffix, relative_path triples) in a
-        single transaction instead of one commit per row.
+        Relinks existing movie file records to where their file is now
+        ((movie_id, file_path_suffix, relative_path) triples), in a single
+        transaction.
         """
-        if not updates:
-            return
-        for movie_id, file_path_suffix, relative_path in updates:
-            stmt = (
-                update(MovieFile)
-                .where(
-                    MovieFile.movie_id == movie_id,
-                    MovieFile.file_path_suffix == file_path_suffix,
-                )
-                .values(relative_path=relative_path)
-            )
-            await self.db.execute(stmt)
-        await self.db.commit()
-
-    async def remove_movie_files_by_torrent_id(self, torrent_id: TorrentId) -> int:
-        return await self.remove_files_by_torrent_id_base(
-            torrent_id=torrent_id, model_class=MovieFile
+        await self.set_media_file_relative_paths_base(
+            model_class=MovieFile, owner_column=MovieFile.movie_id, updates=updates
         )
+
+    async def delete_movie_files(self, keys: list[tuple[MovieId, str]]) -> None:
+        """Deletes the movie file records with the given (movie_id, file_path_suffix) keys."""
+        await self.delete_media_files_base(
+            model_class=MovieFile, owner_column=MovieFile.movie_id, keys=keys
+        )
+
+    async def update_movie_file_details(self, movie_files: list[MovieFileSchema]) -> None:
+        """Stores freshly probed details for the given movie files."""
+        await self.update_media_file_details_base(
+            model_class=MovieFile,
+            owner_column=MovieFile.movie_id,
+            files=movie_files,
+            owner_field="movie_id",
+        )
+
+    async def add_movie_download(
+        self, torrent_id: TorrentId, movie_id: MovieId, file_path_suffix: str
+    ) -> None:
+        """Links a torrent to the movie it's downloading, and the file path
+        suffix its file is to be imported as."""
+        self.db.add(
+            MovieDownload(
+                torrent_id=torrent_id,
+                movie_id=movie_id,
+                file_path_suffix=file_path_suffix,
+            )
+        )
+        try:
+            await self.db.commit()
+        except SQLAlchemyError:
+            await self.db.rollback()
+            raise
+
+    async def get_taken_movie_file_path_suffixes(self, movie_id: MovieId) -> set[str]:
+        """
+        File path suffixes a new download for this movie can't use: those of
+        files already in the library, and those of downloads still headed for
+        it (neither imported nor cancelled).
+        """
+        files_stmt = select(MovieFile.file_path_suffix).where(
+            MovieFile.movie_id == movie_id
+        )
+        downloads_stmt = (
+            select(MovieDownload.file_path_suffix)
+            .join(Torrent, Torrent.id == MovieDownload.torrent_id)
+            .where(
+                MovieDownload.movie_id == movie_id,
+                ~Torrent.imported,
+                ~Torrent.cancelled,
+            )
+        )
+        stmt = files_stmt.union(downloads_stmt)
+        return set((await self.db.execute(stmt)).scalars().all())
 
     async def get_movie_files_by_movie_id(
         self, movie_id: MovieId
@@ -157,62 +186,38 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             )
         return grouped
 
-    async def get_movie_file_import_status(
+    async def get_movie_ids_with_files(
         self, movie_ids: Sequence[MovieId]
-    ) -> Sequence[tuple[MovieId, str, bool]]:
-        """
-        (movie_id, file_path_suffix, imported) for every MovieFile belonging
-        to the given movies - see `BaseRepository.get_file_import_status_base`,
-        shared with the equivalent TV query so both media types compute
-        "downloaded" the same way.
-        """
-        return await self.get_file_import_status_base(
-            entity_ids=movie_ids,
-            model_class=MovieFile,
-            entity_id_column=MovieFile.movie_id,
+    ) -> set[MovieId]:
+        """Which of the given movies have at least one file in the library."""
+        return await self.get_owners_with_files_base(
+            owner_ids=movie_ids, owner_column=MovieFile.movie_id
         )
 
-    async def get_movie_download_info(
+    async def get_all_movie_file_details(
         self,
-    ) -> dict[MovieId, tuple[bool, Quality | None]]:
+    ) -> dict[MovieId, list[MediaFileDetails | None]]:
         """
-        For every movie, whether it's downloaded and (if so) the best quality
-        among its downloaded files - computed in bulk for the movie list
-        endpoint's filters instead of per movie at request time. Uses the
-        same `file_imported_expr` predicate as
-        `BaseRepository.get_file_import_status_base`, projected here
-        alongside quality since this query needs both in one pass.
+        Every movie's stored file probe details (None for a file not probed
+        yet), keyed by movie - one query for the movie list's filters.
+        Movies with no files are absent.
         """
-        all_movie_ids = (await self.db.execute(select(Movie.id))).scalars().all()
-        info: dict[MovieId, tuple[bool, Quality | None]] = dict.fromkeys(
-            all_movie_ids, (False, None)
-        )
-
-        stmt = (
-            select(MovieFile.movie_id, MovieFile.quality, file_imported_expr(MovieFile))
-            .select_from(MovieFile)
-            .outerjoin(Torrent, MovieFile.torrent_id == Torrent.id)
-        )
-        rows = (await self.db.execute(stmt)).all()
-
-        for movie_id, quality, imported in rows:
-            if not imported:
-                continue
-            _, best_quality = info.get(movie_id, (False, None))
-            if best_quality is None or quality.value < best_quality.value:
-                best_quality = quality
-            info[movie_id] = (True, best_quality)
-        return info
+        stmt = select(MovieFile.movie_id, MovieFile.details)
+        grouped: dict[MovieId, list[MediaFileDetails | None]] = {}
+        for movie_id, details in (await self.db.execute(stmt)).all():
+            grouped.setdefault(MovieId(movie_id), []).append(
+                MediaFileDetails.model_validate(details) if details else None
+            )
+        return grouped
 
     async def get_torrents_by_movie_id(
         self, movie_id: MovieId
     ) -> list[MovieTorrentSchema]:
         try:
             stmt = (
-                select(Torrent, MovieFile.file_path_suffix)
-                .distinct()
-                .join(MovieFile, MovieFile.torrent_id == Torrent.id)
-                .where(MovieFile.movie_id == movie_id)
+                select(Torrent, MovieDownload.file_path_suffix)
+                .join(MovieDownload, MovieDownload.torrent_id == Torrent.id)
+                .where(MovieDownload.movie_id == movie_id)
             )
             results = (await self.db.execute(stmt)).all()
             formatted_results = []
@@ -221,7 +226,7 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
                     torrent_id=torrent.id,
                     torrent_title=torrent.title,
                     status=torrent.status,
-                    quality=torrent.quality,
+                    slot=torrent.slot,
                     imported=torrent.imported,
                     cancelled=torrent.cancelled,
                     file_path_suffix=file_path_suffix,
@@ -238,9 +243,8 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
         try:
             stmt = (
                 select(Torrent)
-                .distinct()
-                .join(MovieFile, MovieFile.torrent_id == Torrent.id)
-                .where(MovieFile.movie_id == movie_id)
+                .join(MovieDownload, MovieDownload.torrent_id == Torrent.id)
+                .where(MovieDownload.movie_id == movie_id)
             )
             results = (await self.db.execute(stmt)).scalars().unique().all()
         except SQLAlchemyError:
@@ -254,8 +258,7 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
             stmt = (
                 select(Movie)
                 .distinct()
-                .join(MovieFile, Movie.id == MovieFile.movie_id)
-                .join(Torrent, MovieFile.torrent_id == Torrent.id)
+                .join(MovieDownload, Movie.id == MovieDownload.movie_id)
                 .order_by(Movie.name)
             )
             results = (await self.db.execute(stmt)).scalars().unique().all()
@@ -268,8 +271,8 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
         try:
             stmt = (
                 select(Movie)
-                .join(MovieFile, Movie.id == MovieFile.movie_id)
-                .where(MovieFile.torrent_id == torrent_id)
+                .join(MovieDownload, Movie.id == MovieDownload.movie_id)
+                .where(MovieDownload.torrent_id == torrent_id)
             )
             result = (await self.db.execute(stmt)).unique().scalar_one_or_none()
             if not result:

@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import distinct, func, select, update
+from sqlalchemy import distinct, func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -12,7 +12,7 @@ from media_manager.torrent.models import Torrent as TorrentModel
 from media_manager.torrent.schemas import Torrent as TorrentSchema
 from media_manager.torrent.schemas import TorrentId
 from media_manager.tv import log
-from media_manager.tv.models import Episode, EpisodeFile, Season, Show
+from media_manager.tv.models import Episode, EpisodeDownload, EpisodeFile, Season, Show
 from media_manager.tv.schemas import Episode as EpisodeSchema
 from media_manager.tv.schemas import EpisodeFile as EpisodeFileSchema
 from media_manager.tv.schemas import (
@@ -244,10 +244,83 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             file_schemas=episode_files, model_class=EpisodeFile
         )
 
-    async def remove_episode_files_by_torrent_id(self, torrent_id: TorrentId) -> int:
-        return await self.remove_files_by_torrent_id_base(
-            torrent_id=torrent_id, model_class=EpisodeFile
+    async def upsert_episode_file(self, episode_file: EpisodeFileSchema) -> None:
+        """Records an imported episode file, replacing any file already
+        recorded for the same episode and file path suffix."""
+        await self.upsert_media_file_base(
+            file_schema=episode_file,
+            model_class=EpisodeFile,
+            owner_column=EpisodeFile.episode_id,
         )
+
+    async def delete_episode_files(self, keys: list[tuple[EpisodeId, str]]) -> None:
+        """Deletes the episode file records with the given (episode_id, file_path_suffix) keys."""
+        await self.delete_media_files_base(
+            model_class=EpisodeFile, owner_column=EpisodeFile.episode_id, keys=keys
+        )
+
+    async def update_episode_file_details(
+        self, episode_files: Sequence[EpisodeFileSchema]
+    ) -> None:
+        """Stores freshly probed details for the given episode files."""
+        await self.update_media_file_details_base(
+            model_class=EpisodeFile,
+            owner_column=EpisodeFile.episode_id,
+            files=episode_files,
+            owner_field="episode_id",
+        )
+
+    async def add_episode_downloads_bulk(
+        self,
+        torrent_id: TorrentId,
+        episode_ids: Sequence[EpisodeId],
+        file_path_suffix: str,
+    ) -> None:
+        """Links a torrent to the episodes it's downloading, and the file path
+        suffix their files are to be imported as, in a single transaction."""
+        self.db.add_all(
+            [
+                EpisodeDownload(
+                    torrent_id=torrent_id,
+                    episode_id=episode_id,
+                    file_path_suffix=file_path_suffix,
+                )
+                for episode_id in episode_ids
+            ]
+        )
+        try:
+            await self.db.commit()
+        except SQLAlchemyError:
+            await self.db.rollback()
+            raise
+
+    async def get_taken_episode_file_keys(
+        self, show_id: ShowId
+    ) -> set[tuple[EpisodeId, str]]:
+        """
+        (episode_id, file_path_suffix) pairs of a show a new download can't
+        use: those of files already in the library, and those of downloads
+        still headed for it (neither imported nor cancelled).
+        """
+        files_stmt = (
+            select(EpisodeFile.episode_id, EpisodeFile.file_path_suffix)
+            .join(Episode, Episode.id == EpisodeFile.episode_id)
+            .join(Season, Season.id == Episode.season_id)
+            .where(Season.show_id == show_id)
+        )
+        downloads_stmt = (
+            select(EpisodeDownload.episode_id, EpisodeDownload.file_path_suffix)
+            .join(Episode, Episode.id == EpisodeDownload.episode_id)
+            .join(Season, Season.id == Episode.season_id)
+            .join(TorrentModel, TorrentModel.id == EpisodeDownload.torrent_id)
+            .where(
+                Season.show_id == show_id,
+                ~TorrentModel.imported,
+                ~TorrentModel.cancelled,
+            )
+        )
+        rows = (await self.db.execute(files_stmt.union(downloads_stmt))).all()
+        return {(EpisodeId(episode_id), suffix) for episode_id, suffix in rows}
 
     async def get_episode_files_by_season_id(
         self, season_id: SeasonId
@@ -268,51 +341,20 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         results = (await self.db.execute(stmt)).scalars().all()
         return [EpisodeFileSchema.model_validate(sf) for sf in results]
 
-    async def set_episode_file_relative_path(
-        self, episode_id: EpisodeId, file_path_suffix: str, relative_path: str | None
-    ) -> bool:
-        """
-        Records where an episode file was actually written, for a record that
-        was created before its file existed. None means no file is known for
-        the record, which is what the library scan writes when the file it
-        pointed at is gone.
-
-        :return: Whether a matching row existed and was updated.
-        """
-        stmt = (
-            update(EpisodeFile)
-            .where(
-                EpisodeFile.episode_id == episode_id,
-                EpisodeFile.file_path_suffix == file_path_suffix,
-            )
-            .values(relative_path=relative_path)
-        )
-        result = await self.db.execute(stmt)
-        await self.db.commit()
-        return result.rowcount > 0
-
     async def set_episode_file_relative_paths_bulk(
         self,
-        updates: list[tuple[EpisodeId, str, str | None]],
+        updates: list[tuple[EpisodeId, str, str]],
     ) -> None:
         """
-        Same as `set_episode_file_relative_path`, but applies every update in
-        `updates` (episode_id, file_path_suffix, relative_path triples) in a
-        single transaction instead of one commit per row.
+        Relinks existing episode file records to where their file is now
+        ((episode_id, file_path_suffix, relative_path) triples), in a single
+        transaction.
         """
-        if not updates:
-            return
-        for episode_id, file_path_suffix, relative_path in updates:
-            stmt = (
-                update(EpisodeFile)
-                .where(
-                    EpisodeFile.episode_id == episode_id,
-                    EpisodeFile.file_path_suffix == file_path_suffix,
-                )
-                .values(relative_path=relative_path)
-            )
-            await self.db.execute(stmt)
-        await self.db.commit()
+        await self.set_media_file_relative_paths_base(
+            model_class=EpisodeFile,
+            owner_column=EpisodeFile.episode_id,
+            updates=updates,
+        )
 
     async def get_episode_files_by_show_id(
         self, show_id: ShowId
@@ -350,28 +392,20 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             )
         return grouped
 
-    async def get_episode_file_import_status(
+    async def get_episode_ids_with_files(
         self, episode_ids: Sequence[EpisodeId]
-    ) -> Sequence[tuple[EpisodeId, str, bool]]:
-        """
-        (episode_id, file_path_suffix, imported) for every EpisodeFile
-        belonging to the given episodes - see
-        `BaseRepository.get_file_import_status_base`, shared with the
-        equivalent movie query so both media types compute "downloaded" the
-        same way.
-        """
-        return await self.get_file_import_status_base(
-            entity_ids=episode_ids,
-            model_class=EpisodeFile,
-            entity_id_column=EpisodeFile.episode_id,
+    ) -> set[EpisodeId]:
+        """Which of the given episodes have at least one file in the library."""
+        return await self.get_owners_with_files_base(
+            owner_ids=episode_ids, owner_column=EpisodeFile.episode_id
         )
 
     async def get_torrents_by_show_id(self, show_id: ShowId) -> list[TorrentSchema]:
         stmt = (
             select(TorrentModel)
             .distinct()
-            .join(EpisodeFile, EpisodeFile.torrent_id == TorrentModel.id)
-            .join(Episode, Episode.id == EpisodeFile.episode_id)
+            .join(EpisodeDownload, EpisodeDownload.torrent_id == TorrentModel.id)
+            .join(Episode, Episode.id == EpisodeDownload.episode_id)
             .join(Season, Season.id == Episode.season_id)
             .where(Season.show_id == show_id)
         )
@@ -384,8 +418,7 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             .distinct()
             .join(Season, Show.id == Season.show_id)
             .join(Episode, Season.id == Episode.season_id)
-            .join(EpisodeFile, Episode.id == EpisodeFile.episode_id)
-            .join(TorrentModel, EpisodeFile.torrent_id == TorrentModel.id)
+            .join(EpisodeDownload, Episode.id == EpisodeDownload.episode_id)
             .options(_load_show_tree())
             .order_by(Show.name)
         )
@@ -399,8 +432,8 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
             select(Season.number)
             .distinct()
             .join(Episode, Episode.season_id == Season.id)
-            .join(EpisodeFile, EpisodeFile.episode_id == Episode.id)
-            .where(EpisodeFile.torrent_id == torrent_id)
+            .join(EpisodeDownload, EpisodeDownload.episode_id == Episode.id)
+            .where(EpisodeDownload.torrent_id == torrent_id)
         )
         results = (await self.db.execute(stmt)).scalars().unique().all()
         return [SeasonNumber(x) for x in results]
@@ -411,8 +444,8 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         stmt = (
             select(Episode.number)
             .distinct()
-            .join(EpisodeFile, EpisodeFile.episode_id == Episode.id)
-            .where(EpisodeFile.torrent_id == torrent_id)
+            .join(EpisodeDownload, EpisodeDownload.episode_id == Episode.id)
+            .where(EpisodeDownload.torrent_id == torrent_id)
             .order_by(Episode.number)
         )
         episode_numbers = (await self.db.execute(stmt)).scalars().all()

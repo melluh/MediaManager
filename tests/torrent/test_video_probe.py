@@ -1,14 +1,12 @@
 from pathlib import Path
 
 from media_manager.common.languages import UNKNOWN_LANGUAGE
-from media_manager.common.schemas import SubtitleLanguage, SubtitleTrack
-from media_manager.torrent.schemas import Quality
+from media_manager.common.schemas import Quality, SubtitleLanguage, SubtitleTrack
 from media_manager.torrent.video_probe import (
     EMPTY_PROBE,
     _sanitize_tag,
     _to_probe,
     probe_video_file,
-    resolve_file_quality,
 )
 
 
@@ -148,21 +146,3 @@ def test_probe_video_file_caches_per_file_revision(tmp_path: Path, monkeypatch):
     file.write_bytes(b"different data")
     probe_video_file(file)
     assert len(calls) == 2
-
-
-def test_resolve_file_quality_prefers_probed_quality():
-    assert (
-        resolve_file_quality(Quality.uhd, "movie.unknown.mkv", Quality.sd)
-        == Quality.uhd
-    )
-
-
-def test_resolve_file_quality_falls_back_to_filename():
-    assert (
-        resolve_file_quality(None, "Movie.2024.1080p.WEB-DL.mkv", Quality.sd)
-        == Quality.fullhd
-    )
-
-
-def test_resolve_file_quality_falls_back_to_torrent_quality():
-    assert resolve_file_quality(None, "movie.mkv", Quality.hd) == Quality.hd

@@ -9,12 +9,7 @@
 	import type { TorrentWithProgress } from '$lib/api/api';
 	import EmptyState from '$lib/components/empty-state.svelte';
 	import Magnet from '@lucide/svelte/icons/magnet';
-	import {
-		formatAddedTime,
-		formatBytes,
-		formatTorrentSeasonEpisodeRange,
-		getTorrentQualityString
-	} from '$lib/utils';
+	import { formatAddedTime, formatBytes, formatTorrentSeasonEpisodeRange } from '$lib/utils';
 
 	let {
 		torrents,
@@ -38,7 +33,7 @@
 		<Table.Header>
 			<Table.Row>
 				<Table.Head>Name</Table.Head>
-				<Table.Head>Quality</Table.Head>
+				<Table.Head>Slot</Table.Head>
 				<Table.Head>Size</Table.Head>
 				<Table.Head>Added</Table.Head>
 				<Table.Head>Status</Table.Head>
@@ -60,7 +55,7 @@
 									{torrent.title}{#if seasonEpisodeLabel}
 										<span class="text-muted-foreground">&nbsp;{seasonEpisodeLabel}</span>{/if}
 								</Table.Cell>
-								<Table.Cell>{getTorrentQualityString(torrent.quality)}</Table.Cell>
+								<Table.Cell>{torrent.slot ?? '—'}</Table.Cell>
 								<Table.Cell>{formatBytes(torrent.download_progress?.total_bytes) ?? '—'}</Table.Cell
 								>
 								<Table.Cell>{formatAddedTime(torrent.initiated_at) ?? '—'}</Table.Cell>

@@ -1,7 +1,7 @@
 """
-A torrent can end up linked to no movie or show at all - the media (or its
-file record) was deleted without also removing the torrent, or the file-record
-insert failed after the torrent's own row was already committed. Without
+A torrent can end up linked to no movie or show at all - the media was
+deleted without also removing the torrent, or the download-link insert failed
+after the torrent's own row was already committed. Without
 flagging it, such a torrent retries "Waiting for import" forever with nothing
 in the UI to show why.
 """
@@ -9,7 +9,7 @@ in the UI to show why.
 import asyncio
 
 from media_manager.movies.schemas import Movie
-from media_manager.torrent.schemas import Quality, Torrent, TorrentId, TorrentStatus
+from media_manager.torrent.schemas import Torrent, TorrentId, TorrentStatus
 from media_manager.torrent.service import TorrentService
 
 
@@ -47,7 +47,6 @@ def _torrent(title: str) -> Torrent:
     return Torrent(
         status=TorrentStatus.finished,
         title=title,
-        quality=Quality.unknown,
         imported=False,
         hash=title,
     )

@@ -7,7 +7,8 @@ from uuid import UUID
 import media_manager.metadataProvider.utils
 from media_manager.exceptions import InvalidConfigError
 from media_manager.indexer.schemas import IndexerQueryResult
-from media_manager.movies.schemas import Movie, MovieFile
+from media_manager.indexer.scoring import resolve_slot_label
+from media_manager.movies.schemas import Movie, MovieDownload
 from media_manager.notification.service import NotificationService
 from media_manager.torrent.manager import DownloadManager, get_download_manager
 from media_manager.torrent.repository import TorrentRepository
@@ -22,8 +23,8 @@ from media_manager.torrent.schemas import (
     download_state_to_torrent_status,
 )
 from media_manager.torrent.utils import get_torrent_filepath, list_torrent_media_files
-from media_manager.torrent.video_probe import probe_video_files, resolve_file_quality
-from media_manager.tv.schemas import EpisodeFile, Show, ShowSummary
+from media_manager.torrent.video_probe import probe_video_files
+from media_manager.tv.schemas import EpisodeDownload, Show, ShowSummary
 
 log = logging.getLogger(__name__)
 
@@ -37,13 +38,15 @@ class TorrentService:
         self.torrent_repository = torrent_repository
         self.download_manager = download_manager or get_download_manager()
 
-    async def get_episode_files_of_torrent(self, torrent: Torrent) -> list[EpisodeFile]:
+    async def get_episode_downloads_of_torrent(
+        self, torrent: Torrent
+    ) -> list[EpisodeDownload]:
         """
-        Returns all episode files of a torrent
-        :param torrent: the torrent to get the episode files of
-        :return: list of episode files
+        Returns the episodes a torrent was downloaded for
+        :param torrent: the torrent to get the episode links of
+        :return: list of episode download links
         """
-        return await self.torrent_repository.get_episode_files_of_torrent(
+        return await self.torrent_repository.get_episode_downloads_of_torrent(
             torrent_id=torrent.id
         )
 
@@ -77,10 +80,25 @@ class TorrentService:
 
         torrent.indexer = indexer_result.indexer
         torrent.comments = indexer_result.comments
+        torrent.slot = indexer_result.slot_label or resolve_slot_label(indexer_result)
 
         return await self.torrent_repository.save_torrent(torrent=torrent)
 
+    @staticmethod
+    def _is_completed(torrent: Torrent) -> bool:
+        """
+        Whether a torrent is done as far as the download client is concerned, so
+        its persisted status is final and there's no need to ask the client again.
+        """
+        return (
+            torrent.status == TorrentStatus.finished
+            or torrent.imported
+            or torrent.cancelled
+        )
+
     async def get_torrent_status(self, torrent: Torrent) -> Torrent:
+        if self._is_completed(torrent):
+            return torrent
         torrent.status = await asyncio.to_thread(
             self.download_manager.get_torrent_status, torrent
         )
@@ -225,14 +243,12 @@ class TorrentService:
 
     async def delete_torrent(self, torrent_id: TorrentId) -> None:
         log.info(f"Deleting torrent with ID: {torrent_id}")
-        t = await self.torrent_repository.get_torrent_by_id(torrent_id=torrent_id)
-        delete_media_files = not t.imported
-        await self.torrent_repository.delete_torrent(
-            torrent_id=torrent_id, delete_associated_media_files=delete_media_files
-        )
+        await self.torrent_repository.delete_torrent(torrent_id=torrent_id)
 
-    async def get_movie_files_of_torrent(self, torrent: Torrent) -> list[MovieFile]:
-        return await self.torrent_repository.get_movie_files_of_torrent(
+    async def get_movie_downloads_of_torrent(
+        self, torrent: Torrent
+    ) -> list[MovieDownload]:
+        return await self.torrent_repository.get_movie_downloads_of_torrent(
             torrent_id=torrent.id
         )
 
@@ -257,9 +273,7 @@ class TorrentService:
                     relative_path=file.relative_to(torrent_dir).as_posix(),
                     file_name=file.name,
                     size_bytes=sizes_by_file[file],
-                    quality=resolve_file_quality(
-                        probe.quality, file.name, torrent.quality
-                    ),
+                    probed_quality=probe.quality,
                     duration_seconds=probe.duration_seconds,
                 )
             )
@@ -336,17 +350,23 @@ class TorrentService:
 
         Torrents the bulk fetch has no progress for (client doesn't support it,
         or is unavailable) fall back to the older per-torrent status check.
+        Completed torrents aren't looked up at all; they keep their persisted status.
         """
+        active = [t for t in torrents if not self._is_completed(t)]
         progress_by_hash: dict[str, DownloadProgress] = {}
-        try:
-            progress_by_hash = await asyncio.to_thread(
-                self.download_manager.get_download_progress_bulk, torrents
-            )
-        except Exception:
-            log.exception("Error fetching download progress")
+        if active:
+            try:
+                progress_by_hash = await asyncio.to_thread(
+                    self.download_manager.get_download_progress_bulk, active
+                )
+            except Exception:
+                log.exception("Error fetching download progress")
 
         resolved: list[Torrent] = []
         for t in torrents:
+            if self._is_completed(t):
+                resolved.append(t)
+                continue
             progress = progress_by_hash.get(t.hash)
             if progress is None:
                 try:

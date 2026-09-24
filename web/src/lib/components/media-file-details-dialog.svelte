@@ -22,8 +22,7 @@
 	import HardDrive from '@lucide/svelte/icons/hard-drive';
 	import MonitorPlay from '@lucide/svelte/icons/monitor-play';
 	import Package from '@lucide/svelte/icons/package';
-	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
-	import { formatBytes, formatSecondsToOptimalUnit, getTorrentQualityString } from '$lib/utils';
+	import { formatBytes, formatSecondsToOptimalUnit, getQualityString } from '$lib/utils';
 
 	let { file }: { file: MediaFile } = $props();
 
@@ -34,15 +33,8 @@
 	// missing on the host or the file may be unreadable.
 	let details = $derived(file.details ?? null);
 
-	let claimedQuality = $derived(getTorrentQualityString(file.quality));
-	let probedQuality = $derived(
-		details?.probed_quality != null ? getTorrentQualityString(details.probed_quality) : null
-	);
-	// `quality` is what the release claimed, `probed_quality` is what the file
-	// actually is - a mislabelled release is the thing this dialog exists to show.
-	let qualityMismatch = $derived(
-		details?.probed_quality != null && details.probed_quality !== file.quality
-	);
+	// Measured from the video stream itself, not taken from the release name.
+	let quality = $derived(details?.quality != null ? getQualityString(details.quality) : null);
 
 	let sizeLabel = $derived(formatBytes(details?.size_bytes));
 	let durationLabel = $derived(
@@ -70,27 +62,12 @@
 		</Dialog.Description>
 	</Dialog.Header>
 
-	{#if qualityMismatch}
-		<div
-			class="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-destructive"
-		>
-			<TriangleAlert class="mt-0.5 size-4 shrink-0" />
-			<div class="min-w-0">
-				<p class="text-sm font-medium">Quality mismatch</p>
-				<p class="text-xs">
-					The release claims {claimedQuality}, but the file measures {probedQuality}.
-				</p>
-			</div>
-		</div>
-	{:else}
+	{#if quality}
 		<div class="flex flex-wrap items-center gap-2">
 			<Badge variant="outline">
 				<Film class="mr-1 size-3" />
-				{claimedQuality}
+				{quality}
 			</Badge>
-			{#if probedQuality}
-				<span class="text-xs text-muted-foreground">confirmed by probing the file</span>
-			{/if}
 		</div>
 	{/if}
 
@@ -107,12 +84,8 @@
 		<SubtitleTrackList subtitles={details.subtitles ?? []} />
 	{:else}
 		<EmptyState icon={FileQuestionMark} title="Not found on disk">
-			{#if file.downloaded}
-				No file was found at this path, so it could not be inspected. It may have been moved or
-				deleted outside of MediaManager.
-			{:else}
-				This version is still downloading, so there is nothing to inspect yet.
-			{/if}
+			No file was found at this path, so it could not be inspected. It may have been moved or
+			deleted outside of MediaManager.
 		</EmptyState>
 	{/if}
 

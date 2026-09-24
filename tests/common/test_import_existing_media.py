@@ -18,7 +18,6 @@ from media_manager.config import get_config
 from media_manager.exceptions import ConflictError
 from media_manager.movies.importer import MovieImportService
 from media_manager.movies.schemas import Movie, MovieFile, MovieId
-from media_manager.torrent.schemas import Quality
 from media_manager.tv.importer import TvImportService
 from media_manager.tv.schemas import (
     Episode,
@@ -43,16 +42,26 @@ class FakeMovieRepository:
     async def set_directory_name(self, entity_id: MovieId, directory_name: str) -> None:  # noqa: ARG002
         self.directory_name = directory_name
 
-    async def add_movie_file(self, movie_file: MovieFile) -> MovieFile:
-        self.movie_files.append(movie_file)
-        return movie_file
+    async def add_movie_files_bulk(self, movie_files: list[MovieFile]) -> None:
+        self.movie_files.extend(movie_files)
 
-    async def set_movie_file_relative_path(
-        self, movie_id: MovieId, file_path_suffix: str, relative_path: str | None
+    async def set_movie_file_relative_paths_bulk(
+        self, updates: list[tuple[MovieId, str, str]]
     ) -> None:
-        for file in self.movie_files:
-            if file.movie_id == movie_id and file.file_path_suffix == file_path_suffix:
-                file.relative_path = relative_path
+        for movie_id, file_path_suffix, relative_path in updates:
+            for file in self.movie_files:
+                if (
+                    file.movie_id == movie_id
+                    and file.file_path_suffix == file_path_suffix
+                ):
+                    file.relative_path = relative_path
+
+    async def delete_movie_files(self, keys: list[tuple[MovieId, str]]) -> None:
+        self.movie_files = [
+            file
+            for file in self.movie_files
+            if (file.movie_id, file.file_path_suffix) not in keys
+        ]
 
 
 class FakeTvRepository:
@@ -72,19 +81,26 @@ class FakeTvRepository:
     async def set_directory_name(self, entity_id: ShowId, directory_name: str) -> None:  # noqa: ARG002
         self.directory_name = directory_name
 
-    async def add_episode_file(self, episode_file: EpisodeFile) -> EpisodeFile:
-        self.episode_files.append(episode_file)
-        return episode_file
+    async def add_episode_files_bulk(self, episode_files: list[EpisodeFile]) -> None:
+        self.episode_files.extend(episode_files)
 
-    async def set_episode_file_relative_path(
-        self, episode_id: EpisodeId, file_path_suffix: str, relative_path: str | None
+    async def set_episode_file_relative_paths_bulk(
+        self, updates: list[tuple[EpisodeId, str, str]]
     ) -> None:
-        for file in self.episode_files:
-            if (
-                file.episode_id == episode_id
-                and file.file_path_suffix == file_path_suffix
-            ):
-                file.relative_path = relative_path
+        for episode_id, file_path_suffix, relative_path in updates:
+            for file in self.episode_files:
+                if (
+                    file.episode_id == episode_id
+                    and file.file_path_suffix == file_path_suffix
+                ):
+                    file.relative_path = relative_path
+
+    async def delete_episode_files(self, keys: list[tuple[EpisodeId, str]]) -> None:
+        self.episode_files = [
+            file
+            for file in self.episode_files
+            if (file.episode_id, file.file_path_suffix) not in keys
+        ]
 
 
 @pytest.fixture(autouse=True)
@@ -259,7 +275,6 @@ def test_importing_a_movie_that_already_has_files_is_refused(tmp_path, monkeypat
     repository.movie_files.append(
         MovieFile(
             movie_id=movie.id,
-            quality=Quality.unknown,
             torrent_id=None,
             file_path_suffix="",
             relative_path="The Movie (2024).mkv",
@@ -284,7 +299,6 @@ def test_importing_a_show_that_already_has_files_is_refused(tmp_path, monkeypatc
     repository.episode_files.append(
         EpisodeFile(
             episode_id=show.seasons[0].episodes[0].id,
-            quality=Quality.unknown,
             torrent_id=None,
             file_path_suffix="",
             relative_path="Season 1/The Show - S01E01.mkv",
@@ -331,7 +345,7 @@ def test_a_second_import_scan_of_an_imported_movie_changes_nothing(
     )
 
     assert plan.relinked == []
-    assert plan.cleared == []
+    assert plan.removed == []
     assert plan.adoptions == []
     assert repository.movie_files == imported_files
 
@@ -344,7 +358,6 @@ def test_a_movie_whose_directory_is_missing_is_left_untouched(tmp_path, monkeypa
     repository.movie_files.append(
         MovieFile(
             movie_id=movie.id,
-            quality=Quality.unknown,
             torrent_id=None,
             file_path_suffix="",
             relative_path="The Movie (2024).mkv",

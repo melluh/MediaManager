@@ -11,12 +11,7 @@ from media_manager.common.library_scan import (
     count_plans,
     scan_media_targets,
 )
-from media_manager.common.media_files import (
-    MediaFileLocation,
-    attach_media_file_details,
-    episode_file_stem,
-    season_directory_name,
-)
+from media_manager.common.media_files import refresh_media_file_details
 from media_manager.common.service import BaseMediaService
 from media_manager.config import get_config
 from media_manager.exceptions import MediaAlreadyExistsError
@@ -35,7 +30,6 @@ from media_manager.tv.metadata import TvMetadataService
 from media_manager.tv.repository import TvRepository
 from media_manager.tv.schemas import (
     Episode,
-    EpisodeFile,
     EpisodeId,
     EpisodeNumber,
     PublicEpisodeFile,
@@ -152,8 +146,9 @@ class TvService(BaseMediaService[Show, Show]):
         self, season: Season
     ) -> list[PublicEpisodeFile]:
         """
-        Get all public episode files for a given season, enriched with their
-        resolved path on disk and the details probed from the file itself.
+        Get all episode files of a given season, enriched with their resolved
+        path on disk and the details probed from the file itself (re-probed
+        only if the file changed since it was last probed).
 
         :param season: The season object.
         :return: A list of public episode files.
@@ -161,82 +156,50 @@ class TvService(BaseMediaService[Show, Show]):
         episode_files = await self.tv_repository.get_episode_files_by_season_id(
             season_id=season.id
         )
-        public_episode_files = [
-            PublicEpisodeFile.model_validate(x) for x in episode_files
-        ]
-        imported_by_key = {
-            (episode_id, file_path_suffix): imported
-            for episode_id, file_path_suffix, imported in (
-                await self.tv_repository.get_episode_file_import_status(
-                    episode_ids=[ef.episode_id for ef in public_episode_files]
-                )
-            )
-        }
-        for episode_file in public_episode_files:
-            imported = imported_by_key.get(
-                (episode_file.episode_id, episode_file.file_path_suffix), False
-            )
-            episode_file.downloaded = imported
-            episode_file.imported = imported
-
         show = await self.tv_repository.get_show_summary_by_season_id(
             season_id=season.id
         )
-        episode_numbers_by_id = {
-            episode.id: episode.number for episode in season.episodes
-        }
-        # A file whose episode isn't part of this season can't be located, so
-        # it is left without a path rather than pointed at a made-up one.
-        locatable = [
-            (episode_file, episode_numbers_by_id[episode_file.episode_id])
-            for episode_file in public_episode_files
-            if episode_file.episode_id in episode_numbers_by_id
+        return await self.tv_import_service.refresh_episode_file_details(
+            show=show, episode_files=episode_files
+        )
+
+    async def refresh_all_episode_file_details(self) -> None:
+        """
+        Bring every episode file's stored probe details up to date, so new
+        and changed files get probed without anyone opening their season
+        first. Unchanged files cost only a stat.
+        """
+        shows = await self.tv_repository.get_shows()
+        files_by_episode = (
+            await self.tv_repository.get_all_episode_files_grouped_by_episode()
+        )
+        # One batch for the whole library: a single stat/listing thread and a
+        # bounded pool of ffprobe subprocesses, instead of per show.
+        all_files = [
+            (show, PublicEpisodeFile.model_validate(episode_file))
+            for show in shows
+            for season in show.seasons
+            for episode in season.episodes
+            for episode_file in files_by_episode.get(episode.id, [])
         ]
-        await attach_media_file_details(
-            [episode_file for episode_file, _ in locatable],
+        changed = await refresh_media_file_details(
+            [episode_file for _, episode_file in all_files],
             [
-                self.get_episode_file_location(
-                    show=show,
-                    season_number=season.number,
-                    episode_number=episode_number,
-                    episode_file=episode_file,
-                )
-                for episode_file, episode_number in locatable
+                self.tv_import_service.get_episode_file_location(show=show)
+                for show, _ in all_files
             ],
         )
-        return public_episode_files
-
-    def get_episode_file_location(
-        self,
-        show: ShowSummary,
-        season_number: int,
-        episode_number: int,
-        episode_file: EpisodeFile,
-    ) -> MediaFileLocation:
-        """
-        Where an episode file is expected on disk: inside the show's season
-        directory, named after the show and its season/episode numbers,
-        reported relative to the parent TV folder (the default TV directory,
-        or the show's library root if it belongs to one).
-        """
-        show_root_path = self.get_root_show_directory(show=show)
-        return MediaFileLocation(
-            directory=show_root_path / season_directory_name(season_number),
-            stem=episode_file_stem(
-                show_name=show.name,
-                season_number=season_number,
-                episode_number=episode_number,
-                file_path_suffix=episode_file.file_path_suffix,
-            ),
-            relative_to=show_root_path.parent,
-            media_root=show_root_path,
+        await self.tv_repository.update_episode_file_details(changed)
+        log.info(
+            f"Episode file probe refresh: {len(all_files)} files, "
+            f"{len(changed)} updated"
         )
 
     async def scan_library_files(self) -> LibraryScanCounts:
         """
         Reconcile every show's episode file records with the files on disk:
-        relink records that lost track of their file, clear the path of records
-        whose file is gone, and adopt video files sitting anywhere under the
+        relink records that lost track of their file, remove records whose file
+        is gone, and adopt video files sitting anywhere under the
         show's directory without a record of their own.
 
         Shows whose root directory does not exist are skipped untouched - a
@@ -265,7 +228,7 @@ class TvService(BaseMediaService[Show, Show]):
             f"TV library scan: {counts.items_scanned} scanned, "
             f"{counts.items_skipped} skipped (directory missing), "
             f"{counts.paths_relinked} paths relinked, "
-            f"{counts.paths_cleared} paths cleared, "
+            f"{counts.files_removed} missing files removed, "
             f"{counts.files_adopted} files adopted"
         )
         return counts
@@ -386,20 +349,15 @@ class TvService(BaseMediaService[Show, Show]):
         self, episode_ids: Sequence[EpisodeId]
     ) -> dict[EpisodeId, bool]:
         """
-        Whether each episode has at least one imported file, computed from
-        the same query `get_public_episode_files_by_season_id` reads to
-        build a season's file list - so the season/show aggregate can never
-        disagree with what that list shows.
+        Whether each episode has at least one file in the library.
 
         :param episode_ids: The episodes to check.
-        :return: A status for every given episode id, defaulting to False
-            for one with no file records at all.
+        :return: A status for every given episode id.
         """
-        episode_ids = list(episode_ids)
-        rows = await self.tv_repository.get_episode_file_import_status(
-            episode_ids=episode_ids
+        with_files = await self.tv_repository.get_episode_ids_with_files(
+            episode_ids=list(episode_ids)
         )
-        return self.fold_file_import_status(episode_ids, rows)
+        return {episode_id: episode_id in with_files for episode_id in episode_ids}
 
     async def get_show_by_external_id(
         self, external_id: int, metadata_provider: str
@@ -461,18 +419,16 @@ class TvService(BaseMediaService[Show, Show]):
             episodes = await self.tv_repository.get_episodes_by_torrent_id(
                 torrent_id=show_torrent.id
             )
-            episode_files = await self.torrent_service.get_episode_files_of_torrent(
+            downloads = await self.torrent_service.get_episode_downloads_of_torrent(
                 torrent=show_torrent
             )
 
-            file_path_suffix = (
-                episode_files[0].file_path_suffix if episode_files else ""
-            )
+            file_path_suffix = downloads[0].file_path_suffix if downloads else ""
             season_torrent = RichSeasonTorrent(
                 torrent_id=show_torrent.id,
                 torrent_title=show_torrent.title,
                 status=show_torrent.status,
-                quality=show_torrent.quality,
+                slot=show_torrent.slot,
                 imported=show_torrent.imported,
                 cancelled=show_torrent.cancelled,
                 seasons=seasons,
@@ -519,12 +475,12 @@ class TvService(BaseMediaService[Show, Show]):
     ) -> dict[SeasonId, list[EpisodeId]]:
         """
         Resolve every episode a torrent for `indexer_result` would cover, and raise
-        if any of them already has a file for `file_path_suffix` (the pair the DB's
-        unique constraint on episode_file is keyed on).
+        if any of them already has a file, or a pending download, for
+        `file_path_suffix`. Not enforced by a DB constraint (it depends on the
+        other download's torrent state), so two concurrent requests could
+        still both pass.
         """
-        existing_files_by_episode = (
-            await self.tv_repository.get_episode_files_by_show_id(show_id=show_id)
-        )
+        taken = await self.tv_repository.get_taken_episode_file_keys(show_id=show_id)
         episode_ids_by_season: dict[SeasonId, list[EpisodeId]] = {}
         for season_number in indexer_result.season:
             season = await self.tv_repository.get_season_by_number(
@@ -555,13 +511,10 @@ class TvService(BaseMediaService[Show, Show]):
             episode_ids_by_season[season.id] = episode_ids
 
             for episode_id in episode_ids:
-                existing_files = existing_files_by_episode.get(episode_id, [])
-                if any(
-                    ef.file_path_suffix == file_path_suffix for ef in existing_files
-                ):
+                if (episode_id, file_path_suffix) in taken:
                     msg = (
-                        f"Episode file for episode {episode_id} of season {season.id} "
-                        "already exists, refusing to start download."
+                        f"A file or pending download for episode {episode_id} of "
+                        f"season {season.id} already exists, refusing to start download."
                     )
                     log.error(msg)
                     raise MediaAlreadyExistsError(msg)
@@ -600,37 +553,35 @@ class TvService(BaseMediaService[Show, Show]):
         )
         try:
             await self.torrent_service.pause_download(torrent=show_torrent)
-            for episode_ids in episode_ids_by_season.values():
-                for episode_id in episode_ids:
-                    episode_file = EpisodeFile(
-                        episode_id=episode_id,
-                        quality=indexer_result.quality,
-                        torrent_id=show_torrent.id,
-                        file_path_suffix=override_show_file_path_suffix,
-                    )
-                    await self.tv_repository.add_episode_file(episode_file=episode_file)
+            await self.tv_repository.add_episode_downloads_bulk(
+                torrent_id=show_torrent.id,
+                episode_ids=[
+                    episode_id
+                    for episode_ids in episode_ids_by_season.values()
+                    for episode_id in episode_ids
+                ],
+                file_path_suffix=override_show_file_path_suffix,
+            )
 
         except IntegrityError:
             log.error(
-                f"Episode file for episode {episode_id} and quality {indexer_result.quality} already exists, skipping."
+                f"Torrent {show_torrent.title} is already linked to one of its episodes"
             )
-            await self.tv_repository.remove_episode_files_by_torrent_id(show_torrent.id)
             await self.torrent_service.cancel_download(
                 torrent=show_torrent, delete_files=True
             )
             raise
         except Exception:
             log.exception(
-                f"Failed to link episode files for torrent {show_torrent.title} and show ID {show_id}, cancelling download"
+                f"Failed to link torrent {show_torrent.title} to episodes of show ID {show_id}, cancelling download"
             )
-            await self.tv_repository.remove_episode_files_by_torrent_id(show_torrent.id)
             await self.torrent_service.cancel_download(
                 torrent=show_torrent, delete_files=True
             )
             raise
         else:
             log.info(
-                f"Successfully added episode files for torrent {show_torrent.title} and show ID {show_id}"
+                f"Linked torrent {show_torrent.title} to episodes of show ID {show_id}"
             )
             await self.torrent_service.resume_download(torrent=show_torrent)
 

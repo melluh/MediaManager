@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, PrimaryKeyConstraint, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from media_manager.common.models import MediaFileMixin, MediaMixin
 from media_manager.database import Base
@@ -23,4 +23,23 @@ class MovieFile(Base, MediaFileMixin):
         ForeignKey(column="movie.id", ondelete="CASCADE"),
     )
 
-    torrent = relationship("Torrent", back_populates="movie_files", uselist=False)
+
+
+class MovieDownload(Base):
+    """
+    Links a torrent to the movie it was downloaded for, and the file path
+    suffix (version) its file is to be imported as. Created when the download
+    starts; the MovieFile row only appears once the file is imported.
+    """
+
+    __tablename__ = "movie_download"
+    __table_args__ = (PrimaryKeyConstraint("torrent_id", "movie_id"),)
+
+    torrent_id: Mapped[UUID] = mapped_column(
+        ForeignKey(column="torrent.id", ondelete="CASCADE"),
+    )
+    movie_id: Mapped[UUID] = mapped_column(
+        ForeignKey(column="movie.id", ondelete="CASCADE"),
+        index=True,
+    )
+    file_path_suffix: Mapped[str]

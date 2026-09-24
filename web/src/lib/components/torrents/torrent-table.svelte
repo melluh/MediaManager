@@ -2,7 +2,6 @@
 	import {
 		convertTorrentSeasonRangeToIntegerRange,
 		convertTorrentEpisodeRangeToIntegerRange,
-		getTorrentQualityString,
 		getTorrentStatusString
 	} from '$lib/utils.js';
 	import CheckmarkX from '$lib/components/checkmark-x.svelte';
@@ -59,7 +58,7 @@
 				<Table.Head>Episodes</Table.Head>
 			{/if}
 			<Table.Head>Download Status</Table.Head>
-			<Table.Head>Quality</Table.Head>
+			<Table.Head>Slot</Table.Head>
 			<Table.Head>File Path Suffix</Table.Head>
 			<Table.Head>Imported</Table.Head>
 			{#if user().is_superuser}
@@ -101,7 +100,7 @@
 					{getTorrentStatusString(torrent.status)}
 				</Table.Cell>
 				<Table.Cell class="font-medium">
-					{getTorrentQualityString(torrent.quality)}
+					{torrent.slot ?? '—'}
 				</Table.Cell>
 				<Table.Cell>
 					{torrent.file_path_suffix}

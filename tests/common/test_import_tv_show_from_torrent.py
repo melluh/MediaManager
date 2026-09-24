@@ -1,25 +1,25 @@
 """
-TvService.download_torrent creates an EpisodeFile row for each episode a
-torrent covers (with no relative_path yet) *before* the torrent even
-finishes downloading. When the import step later runs, it must update that
-same row - not insert a second one, which collides on the
-(episode_id, file_path_suffix) primary key with a UniqueViolation. This was
-a real bug: every plain TV import hit it, since the import path always used
-the same default file_path_suffix ("") as the download path.
+A download no longer creates EpisodeFile rows up front - it only links the
+torrent to its episodes (EpisodeDownload), with the file path suffix the
+files are to be imported as. The import is what creates each file row, once
+the file is on disk, under that suffix; importing over a file already
+recorded for the same episode and suffix replaces its record rather than
+colliding on the (episode_id, file_path_suffix) primary key.
 """
 
 import asyncio
+import uuid
 from pathlib import Path
 
 import pytest
 
 from media_manager.config import get_config
-from media_manager.torrent.schemas import Quality
+from media_manager.torrent.schemas import Torrent, TorrentStatus
 from media_manager.tv.importer import TvImportService
 from media_manager.tv.schemas import (
     Episode,
+    EpisodeDownload,
     EpisodeFile,
-    EpisodeId,
     EpisodeNumber,
     Season,
     SeasonNumber,
@@ -28,11 +28,7 @@ from media_manager.tv.schemas import (
 
 
 class FakeTvRepository:
-    """
-    Mimics the real repository's primary-key semantics closely enough to
-    catch the regression: add_episode_file raises on a duplicate
-    (episode_id, file_path_suffix), exactly like the DB's unique constraint.
-    """
+    """Mimics the real repository's upsert on (episode_id, file_path_suffix)."""
 
     def __init__(self, season: Season) -> None:
         self.season = season
@@ -41,31 +37,45 @@ class FakeTvRepository:
     async def get_season_by_number(self, season_number: int, show_id: object) -> Season:  # noqa: ARG002
         return self.season
 
-    async def set_episode_file_relative_path(
-        self, episode_id: EpisodeId, file_path_suffix: str, relative_path: str | None
-    ) -> bool:
-        updated = False
-        for file in self.episode_files:
-            if (
-                file.episode_id == episode_id
-                and file.file_path_suffix == file_path_suffix
-            ):
-                file.relative_path = relative_path
-                updated = True
-        return updated
+    async def upsert_episode_file(self, episode_file: EpisodeFile) -> None:
+        self.episode_files = [
+            file
+            for file in self.episode_files
+            if (file.episode_id, file.file_path_suffix)
+            != (episode_file.episode_id, episode_file.file_path_suffix)
+        ]
+        self.episode_files.append(episode_file.model_copy())
 
-    async def add_episode_file(self, episode_file: EpisodeFile) -> EpisodeFile:
-        for file in self.episode_files:
-            if (
-                file.episode_id == episode_file.episode_id
-                and file.file_path_suffix == episode_file.file_path_suffix
-            ):
-                msg = (
-                    'duplicate key value violates unique constraint "episode_file_pkey"'
-                )
-                raise RuntimeError(msg)
-        self.episode_files.append(episode_file)
-        return episode_file
+    async def update_episode_file_details(self, episode_files: list[EpisodeFile]) -> None:
+        for changed in episode_files:
+            for file in self.episode_files:
+                if (file.episode_id, file.file_path_suffix) == (
+                    changed.episode_id,
+                    changed.file_path_suffix,
+                ):
+                    file.details = changed.details
+                    file.probed_mtime_ns = changed.probed_mtime_ns
+
+
+class FakeTorrentRepository:
+    def __init__(self) -> None:
+        self.saved: list[Torrent] = []
+
+    async def save_torrent(self, torrent: Torrent) -> Torrent:
+        self.saved.append(torrent)
+        return torrent
+
+
+class FakeTorrentService:
+    def __init__(self, downloads: list[EpisodeDownload]) -> None:
+        self.downloads = downloads
+        self.torrent_repository = FakeTorrentRepository()
+
+    async def get_episode_downloads_of_torrent(
+        self,
+        torrent: Torrent,  # noqa: ARG002
+    ) -> list[EpisodeDownload]:
+        return self.downloads
 
 
 @pytest.fixture(autouse=True)
@@ -95,47 +105,75 @@ def _show_with_one_episode() -> tuple[Show, Season]:
     return show, season
 
 
-def test_importing_a_torrent_updates_the_download_time_record_in_place(
-    tmp_path: Path, monkeypatch
-):
+def _import(tmp_path: Path, monkeypatch, repository, torrent_service, show) -> Torrent:
     monkeypatch.setenv("MEDIAMANAGER_MISC__TV_DIRECTORY", str(tmp_path / "library"))
-    show, season = _show_with_one_episode()
-    episode = season.episodes[0]
-
-    repository = FakeTvRepository(season=season)
-    # The row download_torrent already created, before the torrent finished.
-    repository.episode_files.append(
-        EpisodeFile(
-            episode_id=episode.id,
-            quality=Quality.fullhd,
-            torrent_id=None,
-            file_path_suffix="",
-            relative_path=None,
-        )
-    )
+    monkeypatch.setenv("MEDIAMANAGER_MISC__TORRENT_DIRECTORY", str(tmp_path / "torrents"))
+    torrent = Torrent(status=TorrentStatus.finished, title="The.Show.S01E01", hash="x")
+    source_directory = tmp_path / "torrents" / "The.Show.S01E01"
+    source_directory.mkdir(parents=True)
+    (source_directory / "The.Show.S01E01.mkv").write_bytes(b"data")
 
     service = TvImportService(
         tv_repository=repository,
-        torrent_service=None,
+        torrent_service=torrent_service,
         notification_service=None,
         tv_metadata_service=None,
     )
+    asyncio.run(service.import_torrent_files(torrent=torrent, show=show))
+    return torrent
 
-    source_directory = tmp_path / "downloaded"
-    source_directory.mkdir()
-    (source_directory / "The.Show.S01E01.mkv").write_bytes(b"data")
 
-    success, error_msg = asyncio.run(
-        service.import_tv_show(
-            show=show,
-            source_directory=source_directory,
-            quality=Quality.fullhd,
-            torrent_id=None,
-        )
+def test_importing_a_torrent_records_its_files_under_the_download_suffix(
+    tmp_path: Path, monkeypatch
+):
+    show, season = _show_with_one_episode()
+    episode = season.episodes[0]
+    repository = FakeTvRepository(season=season)
+    torrent_service = FakeTorrentService(
+        downloads=[
+            EpisodeDownload(
+                torrent_id=uuid.uuid4(), episode_id=episode.id, file_path_suffix="WEB"
+            )
+        ]
     )
 
-    assert error_msg is None
-    assert success is True
-    # Updated in place, not duplicated.
-    assert len(repository.episode_files) == 1
-    assert repository.episode_files[0].relative_path is not None
+    torrent = _import(tmp_path, monkeypatch, repository, torrent_service, show)
+
+    assert torrent.imported is True
+    [episode_file] = repository.episode_files
+    assert episode_file.episode_id == episode.id
+    assert episode_file.file_path_suffix == "WEB"
+    assert episode_file.torrent_id == torrent.id
+    assert episode_file.relative_path == "Season 1/The Show - S01E01 - WEB.mkv"
+    # Probed right away, so the file shows up with its details.
+    assert episode_file.details is not None
+    assert episode_file.details.size_bytes == 4
+
+
+def test_importing_over_an_existing_file_replaces_its_record(
+    tmp_path: Path, monkeypatch
+):
+    show, season = _show_with_one_episode()
+    episode = season.episodes[0]
+    repository = FakeTvRepository(season=season)
+    repository.episode_files.append(
+        EpisodeFile(
+            episode_id=episode.id,
+            torrent_id=None,
+            file_path_suffix="",
+            relative_path="Season 1/Old Name.mkv",
+        )
+    )
+    torrent_service = FakeTorrentService(
+        downloads=[
+            EpisodeDownload(
+                torrent_id=uuid.uuid4(), episode_id=episode.id, file_path_suffix=""
+            )
+        ]
+    )
+
+    _import(tmp_path, monkeypatch, repository, torrent_service, show)
+
+    assert [file.relative_path for file in repository.episode_files] == [
+        "Season 1/The Show - S01E01.mkv"
+    ]
