@@ -57,17 +57,12 @@
 </script>
 
 {#if enabled && watchUrlLoading}
-	<Button disabled class="bg-green-600 text-white hover:bg-green-700">
+	<Button disabled variant="brand">
 		<LoaderCircle class="animate-spin" />
 		Watch
 	</Button>
 {:else if watchUrl}
-	<Button
-		href={watchUrl}
-		target="_blank"
-		rel="noopener noreferrer"
-		class="bg-green-600 text-white hover:bg-green-700"
-	>
+	<Button href={watchUrl} target="_blank" rel="noopener noreferrer" variant="brand">
 		<Play />
 		Watch on {watchMediaServerName}
 	</Button>

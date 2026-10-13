@@ -5,7 +5,7 @@
 	import DownloadSeasonsDialog from '$lib/components/download-dialogs/download-seasons-dialog.svelte';
 	import DownloadTable from '$lib/components/downloads/download-table.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
-	import MediaAvailabilityBadge from '$lib/components/media-availability-badge.svelte';
+	import MediaAvailabilityStatus from '$lib/components/media-availability-status.svelte';
 	import MediaActionsMenu from '$lib/components/media-actions-menu.svelte';
 	import { seasonBanner, showAvailability } from '$lib/components/show-availability.js';
 	import { withDownloadProgress } from '$lib/components/media-availability.js';
@@ -111,7 +111,7 @@
 
 <MediaHeroHeader media={show} isShow={true}>
 	{#snippet availability()}
-		<MediaAvailabilityBadge availability={showAvailabilityInfo} />
+		<MediaAvailabilityStatus availability={showAvailabilityInfo} />
 	{/snippet}
 	{#snippet actions()}
 		{#if user().is_superuser}

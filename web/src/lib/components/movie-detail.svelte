@@ -7,7 +7,7 @@
 	import DownloadTable from '$lib/components/downloads/download-table.svelte';
 	import DownloadingButton from '$lib/components/downloads/downloading-button.svelte';
 	import MediaHeroHeader from '$lib/components/media-hero-header.svelte';
-	import MediaAvailabilityBadge from '$lib/components/media-availability-badge.svelte';
+	import MediaAvailabilityStatus from '$lib/components/media-availability-status.svelte';
 	import MediaActionsMenu from '$lib/components/media-actions-menu.svelte';
 	import { movieAvailability } from '$lib/components/movie-availability.js';
 	import { withDownloadProgress } from '$lib/components/media-availability.js';
@@ -86,7 +86,7 @@
 
 <MediaHeroHeader media={movie} isShow={false}>
 	{#snippet availability()}
-		<MediaAvailabilityBadge availability={movieAvailabilityInfo} />
+		<MediaAvailabilityStatus availability={movieAvailabilityInfo} />
 	{/snippet}
 	{#snippet actions()}
 		{#if user().is_superuser}

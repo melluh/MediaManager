@@ -37,7 +37,7 @@
 		isShow: boolean;
 		/** Download/admin controls, rendered next to the title, right-aligned. */
 		actions?: Snippet;
-		/** Availability badge(s), rendered under the title. Visible to every viewer, not just admins. */
+		/** Availability status, rendered under the title. Visible to every viewer, not just admins. */
 		availability?: Snippet;
 		/** Additional cards, rendered below the Overview card inside the same layout. */
 		children?: Snippet;
@@ -76,22 +76,23 @@
 {/if}
 <div class="mx-auto w-full px-4 md:max-w-[80em]">
 	<div class="relative z-10 mt-4 mb-4 flex flex-col gap-6 sm:flex-row sm:items-end">
-		<div class="mt-4 flex min-w-0 flex-1 flex-col gap-2">
-			<div class="flex items-start gap-x-8">
-				<h1
-					class="min-w-0 flex-1 scroll-m-20 text-left text-4xl font-extrabold tracking-tight lg:text-5xl"
-				>
+		<!-- On mobile the actions sit full-width below the title and status; from
+		     md up they sit next to them, right-aligned. -->
+		<div class="mt-4 flex min-w-0 flex-1 flex-col gap-8 md:flex-row md:items-start">
+			<div class="flex min-w-0 flex-col gap-1.5 md:flex-1">
+				<h1 class="scroll-m-20 text-left text-4xl font-extrabold tracking-tight lg:text-5xl">
 					{media.name}
 				</h1>
-				{#if actions}
-					<div class="flex h-10 shrink-0 items-center gap-2 lg:h-12">
-						{@render actions()}
-					</div>
-				{/if}
+				{@render availability?.()}
 			</div>
-
-			{#if availability}
-				{@render availability()}
+			{#if actions}
+				<!-- empty:hidden: non-admins get an actions snippet that renders nothing.
+				     On mobile the primary (first) action stretches to the full width. -->
+				<div
+					class="flex h-10 shrink-0 items-center gap-2 *:first:flex-1 empty:hidden md:*:first:flex-none lg:h-12"
+				>
+					{@render actions()}
+				</div>
 			{/if}
 		</div>
 	</div>

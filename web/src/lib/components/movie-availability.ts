@@ -2,7 +2,7 @@ import type { MovieTorrent, PublicMovie, PublicMovieFile } from '$lib/api/api';
 import { getTorrentStatusString } from '$lib/utils';
 import type { AvailabilityBadgeInfo, MediaAvailability } from './media-availability';
 
-/** Short quality labels for the badge, e.g. "Available (1080p)". Quality 5
+/** Short quality labels for the availability status, e.g. "Available (1080p)". Quality 5
  * ("unknown") is deliberately absent - an unknown quality reads as no
  * quality info at all, not as a label worth showing. */
 const qualityShortMap: Record<number, string> = {

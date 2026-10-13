@@ -4,7 +4,6 @@
 	import { untrack } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { PublicShow } from '$lib/api/api';
-	import { cn } from '$lib/utils.ts';
 	import DownloadDialogWrapper from '$lib/components/download-dialogs/download-dialog-wrapper.svelte';
 	import DownloadSeasonsSelectStep from '$lib/components/download-dialogs/download-seasons-select-step.svelte';
 	import DownloadSeasonsReviewStep from '$lib/components/download-dialogs/download-seasons-review-step.svelte';
@@ -71,10 +70,7 @@
 		}
 	}
 	triggerText="Download"
-	triggerClass={cn(
-		buttonVariants({ variant: 'default' }),
-		'bg-blue-600 text-white hover:bg-blue-700'
-	)}
+	triggerClass={buttonVariants({ variant: 'brand-secondary' })}
 	{asMenuItem}
 	{menuLabel}
 	title="Download Seasons"

@@ -21,8 +21,8 @@
 <Tooltip.Root disableHoverableContent>
 	<Tooltip.Trigger>
 		{#snippet child({ props })}
-			<span {...props} class="inline-block">
-				<Button disabled class="relative overflow-hidden bg-blue-600 text-white hover:bg-blue-600">
+			<span {...props} class="inline-flex">
+				<Button disabled variant="brand-secondary" class="relative flex-1 overflow-hidden">
 					Downloading{percent != null ? ` ${Math.round(percent)}%` : ''}
 					<LoaderCircle class="animate-spin" />
 					{#if percent != null}

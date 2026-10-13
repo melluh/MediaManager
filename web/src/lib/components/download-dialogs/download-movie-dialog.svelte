@@ -7,7 +7,6 @@
 	import List from '@lucide/svelte/icons/list';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import SearchX from '@lucide/svelte/icons/search-x';
-	import { cn } from '$lib/utils';
 	import { untrack } from 'svelte';
 
 	import { Input } from '$lib/components/ui/input';
@@ -160,7 +159,7 @@
 	triggerText="Download"
 	triggerClass={hasImportedFile
 		? buttonVariants({ variant: 'secondary' })
-		: cn(buttonVariants({ variant: 'default' }), 'bg-blue-600 text-white hover:bg-blue-700')}
+		: buttonVariants({ variant: 'brand-secondary' })}
 	{asMenuItem}
 	{menuLabel}
 	title={`Download ${movie.name}`}

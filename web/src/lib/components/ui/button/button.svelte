@@ -9,6 +9,9 @@
 			variant: {
 				default: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow',
 				destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm',
+				brand: 'bg-brand text-brand-foreground hover:bg-brand/90 shadow',
+				'brand-secondary':
+					'bg-brand-secondary text-brand-secondary-foreground hover:bg-brand-secondary/90 shadow',
 				outline:
 					'border-input bg-background hover:bg-accent hover:text-accent-foreground border shadow-sm',
 				secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm',

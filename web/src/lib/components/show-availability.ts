@@ -21,7 +21,7 @@ export const seasonBannerClasses: Record<SeasonBannerState, string> = {
 /**
  * Classifies a single season's download state - the single source of truth
  * shared by the per-season poster banner and the show-level availability
- * badge, so the two can never disagree about the same show.
+ * status, so the two can never disagree about the same show.
  */
 export function seasonBanner(
 	season: PublicShow['seasons'][number],
@@ -64,10 +64,9 @@ export function seasonBanner(
 }
 
 /**
- * Aggregates every season's banner into the show-level availability badge.
- * Only seasons that have actually aired factor into "fully available" - an
- * ongoing show's next (unreleased) season, or a specials season with no
- * episodes yet, must never keep the show from reading "Available".
+ * Aggregates every season's banner into the show-level availability status.
+ * Lists the seasons that can be watched (e.g. "S01-S03 available"); seasons
+ * that haven't aired yet are left out of both that and the downloading list.
  */
 export function showAvailability(
 	show: PublicShow,
@@ -85,11 +84,7 @@ export function showAvailability(
 		.map(({ season }) => season.number);
 
 	let primary: AvailabilityBadgeInfo;
-	if (released.length === 0) {
-		primary = { label: 'Not downloaded yet', tone: 'neutral' };
-	} else if (availableSeasons.length === released.length) {
-		primary = { label: 'Available', tone: 'available' };
-	} else if (availableSeasons.length > 0) {
+	if (availableSeasons.length > 0) {
 		primary = { label: `${formatSeasonRunLabel(availableSeasons)} available`, tone: 'available' };
 	} else {
 		primary = { label: 'Not downloaded yet', tone: 'neutral' };

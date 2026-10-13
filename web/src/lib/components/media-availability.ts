@@ -1,5 +1,5 @@
 /**
- * Shared vocabulary for the "availability badge" shown on movie/show detail
+ * Shared vocabulary for the availability status shown on movie/show detail
  * pages. `primary` states whether the media can be watched right now (and at
  * what quality/season range); `secondary` reports an in-flight download
  * independently, since a movie/show can be available *and* have another
@@ -11,7 +11,7 @@ export type AvailabilityTone = 'available' | 'downloading' | 'error' | 'neutral'
 export interface AvailabilityBadgeInfo {
 	label: string;
 	tone: AvailabilityTone;
-	/** Percentage complete (0-100), only ever set on a 'downloading' badge. */
+	/** Percentage complete (0-100), only ever set on a 'downloading' status. */
 	progress?: number | null;
 }
 
