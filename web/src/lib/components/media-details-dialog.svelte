@@ -82,6 +82,7 @@
 					<UserPill
 						userId={media.added_by.id}
 						name={media.added_by.display_name || media.added_by.email}
+						isAdmin={media.added_by.is_superuser}
 					/>
 				{/if}
 			</div>

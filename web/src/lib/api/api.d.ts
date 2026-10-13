@@ -2143,6 +2143,11 @@ export interface components {
 			email: string;
 			/** Display Name */
 			display_name?: string | null;
+			/**
+			 * Is Superuser
+			 * @default false
+			 */
+			is_superuser: boolean;
 		};
 		/**
 		 * MediaFileDetails

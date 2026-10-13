@@ -29,6 +29,7 @@ class MediaAddedByUser(BaseModel):
     id: UUID
     email: str
     display_name: str | None = None
+    is_superuser: bool = False
 
 
 class BaseMedia(BaseModel):
