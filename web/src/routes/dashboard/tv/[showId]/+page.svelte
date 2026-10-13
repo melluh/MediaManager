@@ -18,6 +18,7 @@
 	import { poll } from '$lib/hooks/poll.svelte';
 	import { downloadsSignature } from '$lib/components/downloads/download-status.js';
 	import { invalidateAll } from '$app/navigation';
+	import { ResponsiveCarouselOpts } from '$lib/hooks/responsive-carousel-opts.svelte.js';
 	import { resolve } from '$app/paths';
 	import client from '$lib/api';
 
@@ -26,6 +27,7 @@
 	let show = $derived(showContext.show());
 	let torrents = $derived(showContext.torrents());
 	let user = getCurrentUser();
+	const carouselOpts = new ResponsiveCarouselOpts();
 
 	let anyEpisodeDownloaded = $derived(
 		show.seasons.some((season) => season.episodes.some((episode) => episode.downloaded))
@@ -147,10 +149,10 @@
 	{#if show.seasons.length > 0}
 		<section class="mt-4 flex flex-col gap-3">
 			<h2 class="text-lg font-semibold">Seasons</h2>
-			<Carousel.Root class="w-full md:max-[102rem]:px-10" opts={{ align: 'start' }}>
+			<Carousel.Root class="w-full md:max-[102rem]:px-10" opts={carouselOpts.opts}>
 				<Carousel.Content>
 					{#each show.seasons as season (season.id)}
-						<Carousel.Item class="basis-1/3 sm:basis-1/4 md:basis-1/5 lg:basis-1/7">
+						<Carousel.Item class="basis-2/5 sm:basis-1/4 md:basis-1/5 lg:basis-1/7">
 							<SeasonFilesDialog
 								{show}
 								{season}
