@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 
+from media_manager.health.registry import get_health_registry
+from media_manager.health.schemas import ServiceStatus
+
 
 class AbstractMediaServerProvider(ABC):
     """
@@ -35,3 +38,22 @@ class AbstractMediaServerProvider(ABC):
         recently-downloaded file in yet).
         """
         raise NotImplementedError()
+
+    @abstractmethod
+    async def ping(self) -> bool:
+        """
+        Check whether the media server is reachable.
+
+        :return: True if the server responds successfully, False otherwise.
+        """
+        raise NotImplementedError()
+
+    def _report_unavailable(self, message: str) -> None:
+        """
+        Mark this media server unavailable in the health registry. Called when
+        any request to it fails; the periodic health check marks it healthy
+        again once a ping succeeds.
+        """
+        get_health_registry().update(
+            self.name, self.display_name, ServiceStatus.unavailable, message
+        )

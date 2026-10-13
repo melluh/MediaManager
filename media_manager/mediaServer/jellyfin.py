@@ -58,14 +58,21 @@ class JellyfinProvider(AbstractMediaServerProvider):
         self.external_url = (config.external_url or config.url).rstrip("/")
         self.api_key = config.api_key
 
+    async def __get(self, path: str, params: dict | None = None) -> dict:
+        try:
+            response = await _client.get(
+                url=f"{self.url}{path}",
+                headers={"Authorization": f"MediaBrowser Token={self.api_key}"},
+                params=params,
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            self._report_unavailable(f"Request failed: {e}")
+            raise
+
     async def __get_items(self, params: dict) -> dict:
-        response = await _client.get(
-            url=f"{self.url}/Items",
-            headers={"Authorization": f"MediaBrowser Token={self.api_key}"},
-            params=params,
-        )
-        response.raise_for_status()
-        return response.json()
+        return await self.__get("/Items", params)
 
     async def __scan_full_library(
         self, imdb_id: str | None, external_id: int, metadata_provider: str
@@ -169,3 +176,13 @@ class JellyfinProvider(AbstractMediaServerProvider):
         return await _watch_url_cache.get_or_set(
             (metadata_provider, external_id, imdb_id), factory
         )
+
+    @override
+    async def ping(self) -> bool:
+        # /System/Info requires authentication, so this also catches a bad API key.
+        try:
+            await self.__get("/System/Info")
+        except Exception:  # noqa: BLE001 # ping should report failure for any reason
+            return False
+        else:
+            return True

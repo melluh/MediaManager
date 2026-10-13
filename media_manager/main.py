@@ -65,6 +65,7 @@ from media_manager.health.registry import get_health_registry
 from media_manager.health.router import router as health_router
 from media_manager.health.schemas import ServiceStatus
 from media_manager.logging import LOGGING_CONFIG, setup_logging
+from media_manager.mediaServer.manager import get_media_server_provider
 from media_manager.metadataProvider.utils import migrate_legacy_poster_images
 from media_manager.notification.router import router as notification_router
 from media_manager.scheduler import (
@@ -163,6 +164,20 @@ async def _health_check_loop() -> None:
                 )
         except Exception:
             log.exception("Indexer health check failed")
+
+        try:
+            media_server = get_media_server_provider()
+            if media_server is not None:
+                # A failed ping already marked it unavailable (with the
+                # request's error), like any other failed request does.
+                if await media_server.ping():
+                    registry.update(
+                        media_server.name,
+                        media_server.display_name,
+                        ServiceStatus.healthy,
+                    )
+        except Exception:
+            log.exception("Media server health check failed")
 
 
 @asynccontextmanager
