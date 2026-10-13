@@ -22,6 +22,7 @@ from media_manager.auth.users import (
     SECRET,
     create_default_admin_user,
     current_active_user,
+    current_active_user_allow_unverified,
     current_superuser,
     fastapi_users,
     get_user_manager,
@@ -147,7 +148,7 @@ def get_auth_metadata() -> AuthMetadata:
     },
 )
 async def get_current_user(
-    user: Annotated[User, Depends(current_active_user)],
+    user: Annotated[User, Depends(current_active_user_allow_unverified)],
 ) -> UserReadWithPermissions:
     permissions = UserPermissions(
         can_edit_account=user.is_superuser or auth_config.allow_self_account_edit,

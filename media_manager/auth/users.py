@@ -361,6 +361,9 @@ fastapi_users = FastAPIUsers[User, uuid.UUID](
 )
 
 current_active_user = fastapi_users.current_user(active=True, verified=True)
+# Only for endpoints an unverified user needs in order to learn that they are
+# unverified, like GET /users/me. Everything else should use current_active_user.
+current_active_user_allow_unverified = fastapi_users.current_user(active=True)
 current_superuser = fastapi_users.current_user(
     active=True, verified=True, superuser=True
 )

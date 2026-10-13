@@ -7,7 +7,6 @@
 	import type { LayoutProps } from './$types';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { toast } from 'svelte-sonner';
 	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
 	import { serviceHealth } from '$lib/hooks/service-health.svelte.js';
 	import { Resolved } from '$lib/hooks/resolved.svelte';
@@ -34,10 +33,13 @@
 	// any page-local state (like an open dialog) beneath it.
 	const userResult = new Resolved(() => data.user);
 	let user = $derived(userResult.value?.state === 'ok' ? userResult.value.user : undefined);
-	// 'unauthorized' stays on the loading indicator: we're on our way out of the dashboard.
+	// 'unauthorized' and unverified users stay on the loading indicator: we're on our
+	// way out of the dashboard, and everything inside it would 403 for an unverified user.
 	let status: LoadStatus = $derived(
 		userResult.value?.state === 'ok'
-			? 'ready'
+			? userResult.value.user.is_verified
+				? 'ready'
+				: 'loading'
 			: userResult.value?.state === 'unreachable'
 				? 'error'
 				: 'loading'
@@ -55,15 +57,13 @@
 		const result = userResult.value;
 		if (result?.state === 'unauthorized') {
 			goto(resolve('/login', {}));
+		} else if (result?.state === 'ok' && !result.user.is_verified) {
+			goto(resolve('/login/verify', {}));
 		} else if (result?.state === 'ok') {
-			// Only poll once we know we're authenticated, otherwise these fire 401s
-			// while the session is still being established.
+			// Only poll once we know we're authenticated and verified, otherwise these
+			// fire 401s/403s while the session is still being established.
 			notificationCount.startPolling();
 			serviceHealth.startPolling();
-			if (!result.user.is_verified) {
-				toast.info('Your account requires verification. Redirecting...');
-				goto(resolve('/login/verify', {}));
-			}
 		}
 	});
 </script>
