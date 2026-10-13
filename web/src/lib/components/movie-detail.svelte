@@ -137,6 +137,7 @@
 		<DownloadTable
 			torrents={movieTorrents}
 			emptyTitle="No torrents for this movie"
+			showMediaLink={false}
 			onChange={() => refreshMovieTorrents().catch(() => {})}
 		/>
 	</section>

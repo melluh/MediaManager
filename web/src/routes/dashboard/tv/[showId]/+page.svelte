@@ -173,6 +173,7 @@
 			<DownloadTable
 				torrents={showTorrentsWithProgress}
 				emptyTitle="No torrents for this show"
+				showMediaLink={false}
 				onChange={() => refreshShowTorrents().catch(() => {})}
 			/>
 		</div>

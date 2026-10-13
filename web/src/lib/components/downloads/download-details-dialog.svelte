@@ -49,11 +49,14 @@
 
 	let {
 		torrent,
-		onChange
+		onChange,
+		showMediaLink = true
 	}: {
 		torrent: TorrentWithProgress;
 		/** Called after an action changed the download, so the owner can refresh it. */
 		onChange?: () => void;
+		/** Hide the "View media" link when the dialog is already shown on that media's page. */
+		showMediaLink?: boolean;
 	} = $props();
 
 	let user = getCurrentUser();
@@ -72,7 +75,7 @@
 		!torrent.cancelled && statusBadge.variant !== 'destructive' && statusBadge.variant !== 'default'
 	);
 	let mediaHref = $derived.by(() => {
-		if (!torrent.media) return undefined;
+		if (!showMediaLink || !torrent.media) return undefined;
 		const slugOrId = torrent.media.slug ?? torrent.media.id;
 		return torrent.media.is_show
 			? resolve('/dashboard/tv/[showId]', { showId: slugOrId })

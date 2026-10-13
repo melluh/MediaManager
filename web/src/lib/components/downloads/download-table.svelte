@@ -15,7 +15,8 @@
 		torrents,
 		emptyTitle = 'No torrents found',
 		emptyDescription = 'Torrents appear here once a download is started.',
-		onChange
+		onChange,
+		showMediaLink = true
 	}: {
 		torrents: TorrentWithProgress[];
 		/** Shown in place of the table when there are no torrents. */
@@ -23,6 +24,8 @@
 		emptyDescription?: string;
 		/** Called after a download was changed from its details dialog. */
 		onChange?: () => void;
+		/** Whether the details dialog links to the download's media page. */
+		showMediaLink?: boolean;
 	} = $props();
 </script>
 
@@ -68,7 +71,7 @@
 							</Table.Row>
 						{/snippet}
 					</Dialog.Trigger>
-					<DownloadDetailsDialog {torrent} {onChange} />
+					<DownloadDetailsDialog {torrent} {onChange} {showMediaLink} />
 				</Dialog.Root>
 			{/each}
 		</Table.Body>
