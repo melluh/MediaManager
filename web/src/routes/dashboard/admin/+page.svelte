@@ -1,41 +1,37 @@
 <script lang="ts">
-	import UserTable from '$lib/components/users/user-table.svelte';
 	import StatTile from '$lib/components/admin/stat-tile.svelte';
-	import DiskUsageList from '$lib/components/admin/disk-usage-list.svelte';
 	import PageHeading from '$lib/components/page-heading.svelte';
 	import PageLoading from '$lib/components/page-loading.svelte';
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getCurrentUser, setCrumbs } from '$lib/context.svelte';
-	import { Resolved } from '$lib/hooks/resolved.svelte';
+	import { setCrumbs } from '$lib/context.svelte';
+	import HardDrive from '@lucide/svelte/icons/hard-drive';
+	import Users from '@lucide/svelte/icons/users';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	setCrumbs([{ label: 'Administration' }]);
 
-	let currentUser = getCurrentUser();
-
-	// This page is admin-only. The backend enforces this on every /admin/*
-	// call; this redirect is just so a non-admin who reaches the URL directly
-	// doesn't sit on an empty page.
-	$effect(() => {
-		if (!currentUser().is_superuser) {
-			goto(resolve('/dashboard', {}));
+	const sections = [
+		{
+			title: 'Disk Usage',
+			description: 'Storage used by your library paths',
+			path: '/dashboard/admin/disk-usage',
+			icon: HardDrive
+		},
+		{
+			title: 'Users',
+			description: 'Edit, delete or change the permissions of other users',
+			path: '/dashboard/admin/users',
+			icon: Users
 		}
-	});
-
-	// Resolved in place rather than awaited in markup, so saving a user (which
-	// calls invalidateAll()) doesn't remount UserTable and close its dialogs.
-	const stats = new Resolved(() => data.stats);
-	const diskUsage = new Resolved(() => data.diskUsage);
-	const users = new Resolved(() => data.users);
-	const passwordLoginEnabled = new Resolved(() => data.passwordLoginEnabled);
+	] as const;
 </script>
 
 <svelte:head>
 	<title>Administration - MediaManager</title>
-	<meta content="Server statistics, disk usage, and management tools" name="description" />
+	<meta content="Server statistics and management tools" name="description" />
 </svelte:head>
 
 <main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
@@ -43,47 +39,37 @@
 
 	<section id="stats" class="mt-4 flex flex-col gap-3">
 		<h2 class="text-2xl font-semibold">Server Statistics</h2>
-		{#if stats.status === 'loading'}
+		{#await data.stats}
 			<PageLoading message="Loading statistics…" />
-		{:else if !stats.value}
-			<p class="text-sm text-muted-foreground">Could not load server statistics.</p>
-		{:else}
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-				<StatTile value={stats.value.movie_count} label="Movies" />
-				<StatTile value={stats.value.show_count} label="TV Shows" />
-				<StatTile value={stats.value.episode_count} label="Downloaded Episodes" />
-			</div>
-		{/if}
+		{:then stats}
+			{#if !stats}
+				<p class="text-sm text-muted-foreground">Could not load server statistics.</p>
+			{:else}
+				<div class="grid grid-cols-3 gap-2 md:gap-4">
+					<StatTile value={stats.movie_count} label="Movies" />
+					<StatTile value={stats.show_count} label="TV Shows" />
+					<StatTile value={stats.episode_count} label="Downloaded Episodes" />
+				</div>
+			{/if}
+		{/await}
 	</section>
 
-	<section id="disk-usage" class="mt-4 flex flex-col gap-3">
-		<h2 class="text-2xl font-semibold">Disk Usage</h2>
-		{#if diskUsage.status === 'loading'}
-			<PageLoading message="Loading disk usage…" />
-		{:else if !diskUsage.value}
-			<p class="text-sm text-muted-foreground">Could not load disk usage.</p>
-		{:else if diskUsage.value.entries.length === 0}
-			<p class="text-sm text-muted-foreground">No configured library paths found.</p>
-		{:else}
-			<DiskUsageList entries={diskUsage.value.entries} />
-		{/if}
-	</section>
-
-	<section id="users" class="mt-4 flex flex-col gap-3">
-		<div>
-			<h2 class="text-2xl font-semibold">Users</h2>
-			<p class="text-sm text-muted-foreground">
-				Edit, delete or change the permissions of other users
-			</p>
+	<section id="manage" class="mt-4 flex flex-col gap-3">
+		<h2 class="text-2xl font-semibold">Manage</h2>
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+			{#each sections as section (section.path)}
+				<a
+					href={resolve(section.path, {})}
+					class="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted"
+				>
+					<section.icon class="size-6 shrink-0 text-muted-foreground" />
+					<div class="flex-1">
+						<p class="font-semibold">{section.title}</p>
+						<p class="text-sm text-muted-foreground">{section.description}</p>
+					</div>
+					<ChevronRight class="size-4 shrink-0 text-muted-foreground" />
+				</a>
+			{/each}
 		</div>
-		{#if users.value === undefined || passwordLoginEnabled.value === undefined}
-			<PageLoading message="Loading users…" />
-		{:else}
-			<UserTable
-				currentUserId={currentUser().id}
-				passwordLoginEnabled={passwordLoginEnabled.value}
-				users={users.value}
-			/>
-		{/if}
 	</section>
 </main>
