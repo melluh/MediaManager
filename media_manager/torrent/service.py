@@ -29,6 +29,21 @@ from media_manager.tv.schemas import EpisodeDownload, Show, ShowSummary
 log = logging.getLogger(__name__)
 
 
+async def _enqueue_torrent_imports() -> None:
+    # Imported lazily: media_manager.scheduler imports this module, so
+    # importing it at module load time here would be circular.
+    from media_manager.scheduler import (
+        import_all_movie_torrents_task,
+        import_all_show_torrents_task,
+    )
+
+    # Both, rather than looking up whether the torrent is a movie or a show:
+    # the importer for the other type finds no media for it and skips it.
+    await asyncio.gather(
+        import_all_movie_torrents_task.kiq(), import_all_show_torrents_task.kiq()
+    )
+
+
 class TorrentService:
     def __init__(
         self,
@@ -99,11 +114,32 @@ class TorrentService:
     async def get_torrent_status(self, torrent: Torrent) -> Torrent:
         if self._is_completed(torrent):
             return torrent
+        old_status = torrent.status
         torrent.status = await asyncio.to_thread(
             self.download_manager.get_torrent_status, torrent
         )
         await self.torrent_repository.save_torrent(torrent=torrent)
+        await self._import_if_just_finished(torrent, old_status)
         return torrent
+
+    async def _import_if_just_finished(
+        self, torrent: Torrent, old_status: TorrentStatus
+    ) -> None:
+        """
+        Kicks the import tasks as soon as a torrent is seen to have finished,
+        instead of leaving it on "Waiting for import" until the next cron run.
+        """
+        if (
+            old_status == TorrentStatus.finished
+            or torrent.status != TorrentStatus.finished
+            or torrent.imported
+            or torrent.cancelled
+        ):
+            return
+        try:
+            await _enqueue_torrent_imports()
+        except Exception:
+            log.exception(f"Failed to enqueue import for torrent {torrent.title}")
 
     async def cancel_download(
         self, torrent: Torrent, delete_files: bool = False
@@ -378,11 +414,14 @@ class TorrentService:
 
             derived_status = download_state_to_torrent_status(progress.state)
             if derived_status != t.status:
+                old_status = t.status
                 t.status = derived_status
                 try:
                     await self.torrent_repository.save_torrent(torrent=t)
                 except Exception:
                     log.exception(f"Error saving status for torrent {t.title}")
+                else:
+                    await self._import_if_just_finished(t, old_status)
             resolved.append(t)
 
         return resolved, progress_by_hash

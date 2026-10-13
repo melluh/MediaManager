@@ -56,6 +56,10 @@ log = logging.getLogger(__name__)
 # whole media root at once.
 _MAX_CONCURRENT_IMPORT_LOOKUPS = 8
 
+# One import run per media type at a time: a run kicked the moment a download
+# finishes can overlap the cron run, and both would import the same torrent.
+_import_run_locks: dict[str, asyncio.Lock] = {}
+
 # The scan only ever wants the best match, and every extra page is another
 # request per directory. Interactive search keeps the provider default.
 _IMPORT_SEARCH_MAX_PAGES = 1
@@ -489,6 +493,18 @@ class BaseMediaService[T, S]:
         )
 
     async def import_all_torrents_base(
+        self,
+        get_media_func: Callable[[Any], Awaitable[S | None]],
+        import_torrent_func: Callable[[Any, S], Awaitable[None]],
+        media_type_name: str,
+    ) -> None:
+        lock = _import_run_locks.setdefault(media_type_name, asyncio.Lock())
+        async with lock:
+            await self._import_all_torrents_locked(
+                get_media_func, import_torrent_func, media_type_name
+            )
+
+    async def _import_all_torrents_locked(
         self,
         get_media_func: Callable[[Any], Awaitable[S | None]],
         import_torrent_func: Callable[[Any, S], Awaitable[None]],

@@ -110,3 +110,39 @@ def test_a_cancelled_torrent_is_never_imported():
     )
 
     assert torrent_service.torrent_repository.saved == []
+
+
+def test_overlapping_import_runs_import_each_torrent_once():
+    # A run kicked when a download finishes can overlap the cron run.
+    torrent = _torrent()
+    service = MovieImportService(
+        movie_repository=None,
+        torrent_service=FakeTorrentService([torrent]),
+        notification_service=None,
+        movie_metadata_service=None,
+    )
+    imported: list[Torrent] = []
+
+    async def get_media_func(_torrent: Torrent) -> object:
+        return object()
+
+    async def import_torrent_func(t: Torrent, _media: object) -> None:
+        await asyncio.sleep(0)
+        imported.append(t)
+        t.imported = True
+
+    async def run_twice() -> None:
+        await asyncio.gather(
+            *(
+                service.import_all_torrents_base(
+                    get_media_func=get_media_func,
+                    import_torrent_func=import_torrent_func,
+                    media_type_name="overlap-test",
+                )
+                for _ in range(2)
+            )
+        )
+
+    asyncio.run(run_twice())
+
+    assert imported == [torrent]
