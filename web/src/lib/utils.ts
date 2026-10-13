@@ -113,7 +113,8 @@ export function padSeasonOrEpisodeNumber(n: number): string {
  * Renders sorted numbers as prefixed runs, collapsing only genuinely
  * consecutive ones: [1,2,3] becomes "S01-S03" but [1,3] stays "S01, S03".
  * Taking just the first and last would claim a torrent covers seasons or
- * episodes it does not actually contain.
+ * episodes it does not actually contain. Season runs of exactly two read as
+ * "S01 & S02" rather than a range.
  */
 function formatContiguousRuns(numbers: number[], prefix: string): string {
 	const sorted = [...numbers].sort((a, b) => a - b);
@@ -135,12 +136,14 @@ function formatContiguousRuns(numbers: number[], prefix: string): string {
 function formatRun(start: number, end: number, prefix: string): string {
 	const startLabel = `${prefix}${padSeasonOrEpisodeNumber(start)}`;
 	if (start === end) return startLabel;
-	return `${startLabel}-${prefix}${padSeasonOrEpisodeNumber(end)}`;
+	const separator = prefix === 'S' && end === start + 1 ? ' & ' : '-';
+	return `${startLabel}${separator}${prefix}${padSeasonOrEpisodeNumber(end)}`;
 }
 
 /**
- * Formats season numbers as prefixed runs, e.g. [1,2,3] -> "S01-S03" and
- * [1,3] -> "S01, S03". Used for the availability badge's season range label.
+ * Formats season numbers as prefixed runs, e.g. [1,2,3] -> "S01-S03",
+ * [1,2] -> "S01 & S02" and [1,3] -> "S01, S03". Used for the availability
+ * badge's season range label.
  */
 export function formatSeasonRunLabel(seasons: number[]): string {
 	return formatContiguousRuns(seasons, 'S');
