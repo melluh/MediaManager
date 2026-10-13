@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import distinct, func, select
+from sqlalchemy import BigInteger, distinct, func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -137,6 +137,22 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         stmt = select(func.count(Show.id))
         result = (await self.db.execute(stmt)).scalar_one_or_none()
         return result or 0
+
+    async def sum_file_sizes_by_library(self) -> dict[str, int]:
+        """
+        Total stored size of every episode file, per show library name, from
+        each file's last probe. Files never probed are left out.
+        """
+        size = EpisodeFile.details["size_bytes"].astext.cast(BigInteger)
+        stmt = (
+            select(Show.library, func.sum(size))
+            .join(Season, Season.show_id == Show.id)
+            .join(Episode, Episode.season_id == Season.id)
+            .join(EpisodeFile, EpisodeFile.episode_id == Episode.id)
+            .group_by(Show.library)
+        )
+        rows = (await self.db.execute(stmt)).all()
+        return {library: int(total or 0) for library, total in rows}
 
     async def save_show(self, show: ShowSchema) -> ShowSchema:
         db_show = await self.db.get(Show, show.id) if show.id else None

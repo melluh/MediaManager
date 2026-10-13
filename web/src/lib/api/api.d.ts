@@ -1938,6 +1938,18 @@ export interface components {
 			/** Reason */
 			reason: string;
 		};
+		/** DiskUsageCategory */
+		DiskUsageCategory: {
+			/**
+			 * Key
+			 * @enum {string}
+			 */
+			key: 'movies' | 'tv' | 'images' | 'other';
+			/** Label */
+			label: string;
+			/** Bytes */
+			bytes: number;
+		};
 		/** DiskUsageEntry */
 		DiskUsageEntry: {
 			/** Names */
@@ -1950,6 +1962,11 @@ export interface components {
 			used_bytes: number;
 			/** Free Bytes */
 			free_bytes: number;
+			/**
+			 * Categories
+			 * @default []
+			 */
+			categories: components['schemas']['DiskUsageCategory'][];
 			/**
 			 * Available
 			 * @default true
@@ -3491,6 +3508,7 @@ export type BodyVerifyVerifyApiV1AuthVerifyPost =
 	components['schemas']['Body_verify_verify_api_v1_auth_verify_post'];
 export type CombinedSearchResult = components['schemas']['CombinedSearchResult'];
 export type CoverageGap = components['schemas']['CoverageGap'];
+export type DiskUsageCategory = components['schemas']['DiskUsageCategory'];
 export type DiskUsageEntry = components['schemas']['DiskUsageEntry'];
 export type DiskUsageStats = components['schemas']['DiskUsageStats'];
 export type DownloadProgress = components['schemas']['DownloadProgress'];

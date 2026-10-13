@@ -3,7 +3,6 @@ from fastapi.params import Depends
 
 from media_manager.admin.dependencies import admin_service_dep
 from media_manager.admin.schemas import DiskUsageStats, LibraryStats
-from media_manager.admin.service import AdminService
 from media_manager.auth.users import current_superuser
 from media_manager.config import get_config
 
@@ -16,5 +15,5 @@ async def get_admin_stats(service: admin_service_dep) -> LibraryStats:
 
 
 @router.get("/disk-usage", status_code=status.HTTP_200_OK)
-async def get_disk_usage() -> DiskUsageStats:
-    return await AdminService.get_disk_usage(get_config())
+async def get_disk_usage(service: admin_service_dep) -> DiskUsageStats:
+    return await service.get_disk_usage(get_config())

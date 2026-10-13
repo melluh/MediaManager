@@ -2,7 +2,7 @@ import logging
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import BigInteger, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,6 +55,20 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
         stmt = select(func.count(Movie.id))
         result = (await self.db.execute(stmt)).scalar_one_or_none()
         return result or 0
+
+    async def sum_file_sizes_by_library(self) -> dict[str, int]:
+        """
+        Total stored size of every movie file, per movie library name, from
+        each file's last probe. Files never probed are left out.
+        """
+        size = MovieFile.details["size_bytes"].astext.cast(BigInteger)
+        stmt = (
+            select(Movie.library, func.sum(size))
+            .join(MovieFile, MovieFile.movie_id == Movie.id)
+            .group_by(Movie.library)
+        )
+        rows = (await self.db.execute(stmt)).all()
+        return {library: int(total or 0) for library, total in rows}
 
     async def delete_movie(self, movie_id: MovieId) -> None:
         await self.delete(entity_id=movie_id)

@@ -5,8 +5,14 @@ import shutil
 from pathlib import Path
 from typing import NamedTuple
 
-from media_manager.admin.schemas import DiskUsageEntry, DiskUsageStats, LibraryStats
-from media_manager.config import MediaManagerConfig
+from media_manager.admin.schemas import (
+    DiskUsageCategory,
+    DiskUsageCategoryKey,
+    DiskUsageEntry,
+    DiskUsageStats,
+    LibraryStats,
+)
+from media_manager.config import LibraryItem, MediaManagerConfig
 from media_manager.movies.repository import MovieRepository
 from media_manager.tv.repository import TvRepository
 
@@ -20,6 +26,16 @@ class _PathStat(NamedTuple):
     total_bytes: int | None
     used_bytes: int | None
     free_bytes: int | None
+
+
+CategoryBytes = dict[int, dict[DiskUsageCategoryKey, int]]
+"""Bytes per category, per filesystem (st_dev)."""
+
+_CATEGORY_LABELS: dict[DiskUsageCategoryKey, str] = {
+    "movies": "Movies",
+    "tv": "TV Shows",
+    "images": "Images",
+}
 
 
 class AdminService:
@@ -38,14 +54,21 @@ class AdminService:
             ),
         )
 
-    @staticmethod
-    async def get_disk_usage(config: MediaManagerConfig) -> DiskUsageStats:
+    async def get_disk_usage(self, config: MediaManagerConfig) -> DiskUsageStats:
         """
         Reports disk usage for every configured media/torrent path, grouped
         by filesystem (st_dev) so that libraries sharing one mount are
         reported once instead of being double-counted. A path that can't be
         statted (missing/unmounted) gets its own entry with available=False
         rather than failing the whole request.
+
+        Each filesystem's used space is broken down into categories. Movies
+        and TV shows are summed from the file sizes stored by the periodic
+        probe refresh, attributed to the filesystem of their library's root.
+        Images have no stored sizes, so the image directory is walked. The
+        rest is "other": torrents count there only when they were never
+        imported, since an imported torrent is hardlinked into the library
+        and already counted as a movie or episode.
         """
         misc = config.misc
         candidates: list[tuple[str, Path]] = [
@@ -60,7 +83,82 @@ class AdminService:
         stats = await asyncio.gather(
             *(AdminService._stat_path(name, path) for name, path in candidates)
         )
-        return AdminService._group_disk_usage(stats)
+        device_by_path = {stat.path: stat.device for stat in stats}
+
+        category_bytes: CategoryBytes = {}
+
+        def add(path: Path, key: DiskUsageCategoryKey, size: int) -> None:
+            device = device_by_path.get(path)
+            if device is None:
+                return
+            per_device = category_bytes.setdefault(device, {})
+            per_device[key] = per_device.get(key, 0) + size
+
+        movie_sizes = await self.movie_repository.sum_file_sizes_by_library()
+        for library, size in movie_sizes.items():
+            root = AdminService._library_root(
+                library, misc.movie_directory, misc.movie_libraries
+            )
+            add(root, "movies", size)
+        tv_sizes = await self.tv_repository.sum_file_sizes_by_library()
+        for library, size in tv_sizes.items():
+            root = AdminService._library_root(
+                library, misc.tv_directory, misc.tv_libraries
+            )
+            add(root, "tv", size)
+        if device_by_path.get(misc.image_directory) is not None:
+            image_bytes = await asyncio.to_thread(
+                AdminService._directory_size, misc.image_directory
+            )
+            add(misc.image_directory, "images", image_bytes)
+
+        return AdminService._group_disk_usage(stats, category_bytes)
+
+    @staticmethod
+    def _library_root(
+        library: str, default_dir: Path, libraries: list[LibraryItem]
+    ) -> Path:
+        """The directory a library's media live in, resolved the same way as
+        `get_root_directory` does for a single media item."""
+        for item in libraries:
+            if item.name == library:
+                return Path(item.path)
+        return default_dir
+
+    @staticmethod
+    def _directory_size(root: Path) -> int:
+        """
+        Bytes allocated to every file under `root`, like `du -sx`: symlinks
+        aren't followed, other filesystems mounted inside aren't entered, and
+        a hardlinked file is counted once.
+        """
+        try:
+            root_device = root.stat().st_dev
+        except OSError:
+            return 0
+        seen: set[int] = set()
+        total = 0
+        pending = [root]
+        while pending:
+            directory = pending.pop()
+            try:
+                with os.scandir(directory) as scan:
+                    entries = list(scan)
+            except OSError:
+                continue
+            for entry in entries:
+                try:
+                    stat = entry.stat(follow_symlinks=False)
+                except OSError:
+                    continue
+                if stat.st_dev != root_device:
+                    continue
+                if entry.is_dir(follow_symlinks=False):
+                    pending.append(Path(entry.path))
+                elif entry.is_file(follow_symlinks=False) and stat.st_ino not in seen:
+                    seen.add(stat.st_ino)
+                    total += stat.st_blocks * 512
+        return total
 
     @staticmethod
     async def _stat_path(name: str, path: Path) -> _PathStat:
@@ -74,7 +172,9 @@ class AdminService:
             return _PathStat(name, path, device, usage.total, usage.used, usage.free)
 
     @staticmethod
-    def _group_disk_usage(stats: list[_PathStat]) -> DiskUsageStats:
+    def _group_disk_usage(
+        stats: list[_PathStat], category_bytes: CategoryBytes
+    ) -> DiskUsageStats:
         groups: dict[int, DiskUsageEntry] = {}
         unavailable: list[DiskUsageEntry] = []
 
@@ -105,4 +205,21 @@ class AdminService:
                 existing.names.append(stat.name)
                 existing.paths.append(str(stat.path))
 
+        for device, entry in groups.items():
+            entry.categories = AdminService._categories(
+                entry.used_bytes, category_bytes.get(device, {})
+            )
+
         return DiskUsageStats(entries=[*groups.values(), *unavailable])
+
+    @staticmethod
+    def _categories(
+        used_bytes: int, sizes: dict[DiskUsageCategoryKey, int]
+    ) -> list[DiskUsageCategory]:
+        categories = [
+            DiskUsageCategory(key=key, label=label, bytes=sizes[key])
+            for key, label in _CATEGORY_LABELS.items()
+            if sizes.get(key)
+        ]
+        other = max(0, used_bytes - sum(category.bytes for category in categories))
+        return [*categories, DiskUsageCategory(key="other", label="Other", bytes=other)]

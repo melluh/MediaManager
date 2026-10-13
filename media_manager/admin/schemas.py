@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -5,6 +7,15 @@ class LibraryStats(BaseModel):
     movie_count: int
     show_count: int
     episode_count: int
+
+
+DiskUsageCategoryKey = Literal["movies", "tv", "images", "other"]
+
+
+class DiskUsageCategory(BaseModel):
+    key: DiskUsageCategoryKey
+    label: str
+    bytes: int
 
 
 class DiskUsageEntry(BaseModel):
@@ -15,6 +26,11 @@ class DiskUsageEntry(BaseModel):
     total_bytes: int
     used_bytes: int
     free_bytes: int
+    categories: list[DiskUsageCategory] = []
+    """What the used space on this filesystem is taken up by. Categories
+    with nothing on this filesystem are left out, except "other", which is
+    always last and holds whatever MediaManager didn't put there. Empty when
+    the filesystem is unavailable."""
     available: bool = True
     """False if the path could not be statted (missing/unmounted); the byte
     fields are 0 in that case."""
