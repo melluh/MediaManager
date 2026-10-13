@@ -6,14 +6,22 @@
 	 * only touches the shared fields can accept either.
 	 */
 	export type MediaFile = PublicMovieFile | PublicEpisodeFile;
+
+	/** Whether two records are the same file: a movie/episode has one file per suffix. */
+	export function isSameMediaFile(a: MediaFile, b: MediaFile): boolean {
+		const ownerId = (file: MediaFile) => ('movie_id' in file ? file.movie_id : file.episode_id);
+		return ownerId(a) === ownerId(b) && a.file_path_suffix === b.file_path_suffix;
+	}
 </script>
 
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import TorrentStat from '$lib/components/download-dialogs/torrent-stat.svelte';
 	import EmptyState from '$lib/components/empty-state.svelte';
 	import SubtitleTrackList from '$lib/components/subtitle-track-list.svelte';
+	import DeleteMediaFileDialog from '$lib/components/delete-media-file-dialog.svelte';
 	import { formatAudioChannels } from '$lib/components/media-file-format';
 	import AudioLines from '@lucide/svelte/icons/audio-lines';
 	import Clock from '@lucide/svelte/icons/clock';
@@ -22,9 +30,21 @@
 	import HardDrive from '@lucide/svelte/icons/hard-drive';
 	import MonitorPlay from '@lucide/svelte/icons/monitor-play';
 	import Package from '@lucide/svelte/icons/package';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import { getCurrentUser } from '$lib/context.svelte';
 	import { formatBytes, formatSecondsToOptimalUnit, getQualityString } from '$lib/utils';
 
-	let { file }: { file: MediaFile } = $props();
+	let {
+		file,
+		onDeleted
+	}: {
+		file: MediaFile;
+		/** Called after the file was deleted, so the owner can close this dialog and refresh. */
+		onDeleted?: () => void;
+	} = $props();
+
+	let user = getCurrentUser();
+	let deleteConfirmOpen = $state(false);
 
 	const UNKNOWN = 'unknown';
 
@@ -94,4 +114,19 @@
 			Version suffix: <span class="font-mono">{file.file_path_suffix}</span>
 		</p>
 	{/if}
+
+	{#if user().is_superuser}
+		<div class="flex flex-wrap gap-2 border-t pt-3 *:flex-1">
+			<Button
+				variant="outline"
+				class="text-destructive hover:text-destructive"
+				onclick={() => (deleteConfirmOpen = true)}
+			>
+				<Trash2 />
+				Delete File
+			</Button>
+		</div>
+	{/if}
 </Dialog.Content>
+
+<DeleteMediaFileDialog {file} bind:open={deleteConfirmOpen} {onDeleted} />

@@ -14,13 +14,17 @@
 	import DownloadMovieDialog from '$lib/components/download-dialogs/download-movie-dialog.svelte';
 	import WatchButton from '$lib/components/watch-button.svelte';
 	import MediaFileTable from '$lib/components/media-file-table.svelte';
+	import { isSameMediaFile } from '$lib/components/media-file-details-dialog.svelte';
 	import { poll } from '$lib/hooks/poll.svelte';
 	import { downloadsSignature } from '$lib/components/downloads/download-status.js';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
 	let { movie, movieFiles }: { movie: PublicMovie; movieFiles: PublicMovieFile[] } = $props();
-	let hasImportedFile = $derived(movieFiles.length > 0);
+	// Overridden locally when a file is deleted, so it leaves the list right
+	// away instead of after the page data is refreshed.
+	let files = $derived(movieFiles);
+	let hasImportedFile = $derived(files.length > 0);
 	let user = getCurrentUser();
 
 	// Polled (rather than fetched once) so a "Downloading" badge's progress bar
@@ -56,7 +60,7 @@
 		movieTorrents.find((t) => t.initiated_by_user_id === user().id)?.download_progress
 	);
 	let movieAvailabilityInfo = $derived(
-		withDownloadProgress(movieAvailability(movie, movieFiles), ownMovieDownloadProgress?.progress)
+		withDownloadProgress(movieAvailability(movie, files), ownMovieDownloadProgress?.progress)
 	);
 
 	// While a torrent is already downloading, the primary action shouldn't
@@ -117,11 +121,15 @@
 	<section class="mt-4 flex flex-col gap-3">
 		<h2 class="text-lg font-semibold">Files</h2>
 		<MediaFileTable
-			files={movieFiles}
+			{files}
 			leadingLabel="File Path"
 			leadingCell={filePathCell}
 			emptyDescription="This movie hasn't been downloaded or imported yet."
 			dialogKeyPrefix="movieFileDetails"
+			onFileDeleted={(file) => {
+				files = files.filter((other) => !isSameMediaFile(other, file));
+				invalidateAll();
+			}}
 		/>
 	</section>
 	<section class="mt-4 flex flex-col gap-3">

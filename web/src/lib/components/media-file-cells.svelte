@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="TFile extends MediaFile">
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
@@ -13,14 +13,23 @@
 	// The quality and details cells every media file table row ends with.
 	let {
 		file,
-		dialogKey
+		dialogKey,
+		onFileDeleted
 	}: {
-		file: MediaFile;
+		file: TFile;
 		/** Must be unique on the page; used for the shallow-routed details dialog. */
 		dialogKey: string;
+		/** Called after the file was deleted from its details dialog, to refresh the list. */
+		onFileDeleted?: (file: TFile) => void;
 	} = $props();
 
 	const detailsDialog = $derived(shallowDialog(dialogKey));
+
+	// The file is gone, so close its details rather than leave them showing.
+	function closeAndRefresh() {
+		detailsDialog.open = false;
+		onFileDeleted?.(file);
+	}
 </script>
 
 <Table.Cell class="w-[120px]">
@@ -38,7 +47,7 @@
 				<Info class="size-4" />
 				Details
 			</Dialog.Trigger>
-			<MediaFileDetailsDialog {file} />
+			<MediaFileDetailsDialog {file} onDeleted={closeAndRefresh} />
 		</Dialog.Root>
 	{/if}
 </Table.Cell>

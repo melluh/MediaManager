@@ -5,10 +5,12 @@
 	import type { PublicEpisodeFile, PublicShow } from '$lib/api/api';
 	import SeasonPosterCard from '$lib/components/season-poster-card.svelte';
 	import SeasonEpisodeFilesTable from '$lib/components/season-episode-files-table.svelte';
+	import { isSameMediaFile } from '$lib/components/media-file-details-dialog.svelte';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 	import { untrack } from 'svelte';
 	import client from '$lib/api';
+	import { invalidateAll } from '$app/navigation';
 
 	type Season = PublicShow['seasons'][number];
 
@@ -47,6 +49,13 @@
 				episodeFiles = [];
 			});
 	});
+
+	// Removed from the list right away; the show's availability depends on
+	// its files too, so the page is refreshed as well.
+	function onFileDeleted(file: PublicEpisodeFile) {
+		episodeFiles = episodeFiles?.filter((other) => !isSameMediaFile(other, file)) ?? null;
+		invalidateAll();
+	}
 </script>
 
 <Dialog.Root bind:open={dialogState.open}>
@@ -82,7 +91,7 @@
 						Loading episode files…
 					</div>
 				{:else}
-					<SeasonEpisodeFilesTable {season} {episodeFiles} />
+					<SeasonEpisodeFilesTable {season} {episodeFiles} {onFileDeleted} />
 				{/if}
 			</Card.Content>
 		</Card.Root>

@@ -11,10 +11,13 @@ from media_manager.common.library_scan import (
     count_plans,
     scan_media_targets,
 )
-from media_manager.common.media_files import refresh_media_file_details
+from media_manager.common.media_files import (
+    delete_media_file_from_disk,
+    refresh_media_file_details,
+)
 from media_manager.common.service import BaseMediaService
 from media_manager.config import get_config
-from media_manager.exceptions import MediaAlreadyExistsError
+from media_manager.exceptions import MediaAlreadyExistsError, NotFoundError
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
 from media_manager.indexer.scoring import slot_and_score_results
 from media_manager.indexer.service import IndexerService
@@ -162,6 +165,35 @@ class TvService(BaseMediaService[Show, Show]):
         return await self.tv_import_service.refresh_episode_file_details(
             show=show, episode_files=episode_files
         )
+
+    async def delete_episode_file(
+        self, episode_id: EpisodeId, file_path_suffix: str
+    ) -> None:
+        """
+        Delete one of an episode's files from disk, along with its record.
+
+        :param episode_id: The episode the file belongs to.
+        :param file_path_suffix: The suffix (version) identifying the file.
+        """
+        episode_files = await self.tv_repository.get_episode_files_by_episode_id(
+            episode_id=episode_id
+        )
+        episode_file = next(
+            (f for f in episode_files if f.file_path_suffix == file_path_suffix),
+            None,
+        )
+        if episode_file is None:
+            msg = f"Episode {episode_id} has no file with suffix {file_path_suffix!r}"
+            raise NotFoundError(msg)
+        season = await self.tv_repository.get_season_by_episode(episode_id=episode_id)
+        show = await self.tv_repository.get_show_summary_by_season_id(
+            season_id=season.id
+        )
+        await delete_media_file_from_disk(
+            episode_file, self.tv_import_service.get_episode_file_location(show=show)
+        )
+        log.info(f"Deleted episode file: {episode_file.relative_path}")
+        await self.tv_repository.delete_episode_files([(episode_id, file_path_suffix)])
 
     async def refresh_all_episode_file_details(self) -> None:
         """

@@ -29,6 +29,7 @@ from media_manager.tv.dependencies import (
     tv_service_dep,
 )
 from media_manager.tv.schemas import (
+    EpisodeId,
     PublicEpisodeFile,
     PublicShow,
     RichShowTorrent,
@@ -473,6 +474,23 @@ async def get_episode_files(
     Get episode files associated with a specific season.
     """
     return await tv_service.get_public_episode_files_by_season_id(season=season)
+
+
+@router.delete(
+    "/episodes/{episode_id}/files",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(current_superuser)],
+)
+async def delete_episode_file(
+    tv_service: tv_service_dep, episode_id: EpisodeId, file_path_suffix: str = ""
+) -> None:
+    """
+    Delete one of an episode's files from disk, identified by its file path
+    suffix (version), and remove its record.
+    """
+    await tv_service.delete_episode_file(
+        episode_id=episode_id, file_path_suffix=file_path_suffix
+    )
 
 
 # -----------------------------------------------------------------------------

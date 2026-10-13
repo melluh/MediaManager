@@ -410,6 +410,23 @@ async def get_movie_files_by_movie_id(
     return await movie_service.get_public_movie_files(movie=movie)
 
 
+@router.delete(
+    "/{movie_id}/files",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(current_superuser)],
+)
+async def delete_movie_file(
+    movie_service: movie_service_dep, movie: movie_dep, file_path_suffix: str = ""
+) -> None:
+    """
+    Delete one of a movie's files from disk, identified by its file path
+    suffix (version), and remove its record.
+    """
+    await movie_service.delete_movie_file(
+        movie=movie, file_path_suffix=file_path_suffix
+    )
+
+
 @router.post(
     "/{movie_id}/rescan",
     dependencies=[Depends(current_superuser)],

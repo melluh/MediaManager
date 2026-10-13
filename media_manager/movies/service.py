@@ -14,12 +14,13 @@ from media_manager.common.library_scan import (
 )
 from media_manager.common.media_files import (
     best_quality,
+    delete_media_file_from_disk,
     distinct_subtitle_languages,
     refresh_media_file_details,
 )
 from media_manager.common.service import BaseMediaService
 from media_manager.config import get_config
-from media_manager.exceptions import MediaAlreadyExistsError
+from media_manager.exceptions import MediaAlreadyExistsError, NotFoundError
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
 from media_manager.indexer.scoring import resolve_slot_label, slot_and_score_results
 from media_manager.indexer.service import IndexerService
@@ -110,6 +111,28 @@ class MovieService(BaseMediaService[Movie, Movie]):
 
         # Delete from database
         await self.movie_repository.delete_movie(movie.id)
+
+    async def delete_movie_file(self, movie: Movie, file_path_suffix: str) -> None:
+        """
+        Delete one of a movie's files from disk, along with its record.
+
+        :param movie: The movie the file belongs to.
+        :param file_path_suffix: The suffix (version) identifying the file.
+        """
+        movie_files = await self.movie_repository.get_movie_files_by_movie_id(
+            movie_id=movie.id
+        )
+        movie_file = next(
+            (f for f in movie_files if f.file_path_suffix == file_path_suffix), None
+        )
+        if movie_file is None:
+            msg = f"Movie {movie.id} has no file with suffix {file_path_suffix!r}"
+            raise NotFoundError(msg)
+        await delete_media_file_from_disk(
+            movie_file, self.movie_import_service.get_movie_file_location(movie=movie)
+        )
+        log.info(f"Deleted movie file: {movie_file.relative_path}")
+        await self.movie_repository.delete_movie_files([(movie.id, file_path_suffix)])
 
     async def get_public_movie_files(self, movie: Movie) -> list[PublicMovieFile]:
         """

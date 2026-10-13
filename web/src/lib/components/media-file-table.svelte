@@ -12,7 +12,8 @@
 		leadingCell,
 		emptyTitle = 'No files found',
 		emptyDescription,
-		dialogKeyPrefix
+		dialogKeyPrefix,
+		onFileDeleted
 	}: {
 		files: TFile[];
 		/** Header for the first column, which is the only media-type-specific one. */
@@ -24,6 +25,8 @@
 		emptyDescription?: string;
 		/** Must be unique per table on the page; used for the shallow-routed dialogs. */
 		dialogKeyPrefix: string;
+		/** Called after a file was deleted from its details dialog, to refresh the list. */
+		onFileDeleted?: (file: TFile) => void;
 	} = $props();
 </script>
 
@@ -46,7 +49,7 @@
 			{#each files as file, index (file)}
 				<Table.Row>
 					<Table.Cell>{@render leadingCell(file)}</Table.Cell>
-					<MediaFileCells {file} dialogKey={`${dialogKeyPrefix}:${index}`} />
+					<MediaFileCells {file} dialogKey={`${dialogKeyPrefix}:${index}`} {onFileDeleted} />
 				</Table.Row>
 			{/each}
 		</Table.Body>

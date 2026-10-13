@@ -7,7 +7,16 @@
 
 	type Season = PublicShow['seasons'][number];
 
-	let { season, episodeFiles }: { season: Season; episodeFiles: PublicEpisodeFile[] } = $props();
+	let {
+		season,
+		episodeFiles,
+		onFileDeleted
+	}: {
+		season: Season;
+		episodeFiles: PublicEpisodeFile[];
+		/** Called after a file was deleted from its details dialog, to refresh the list. */
+		onFileDeleted?: (file: PublicEpisodeFile) => void;
+	} = $props();
 
 	type EpisodeRow = {
 		episode: Season['episodes'][number];
@@ -67,6 +76,7 @@
 					<MediaFileCells
 						file={row.file}
 						dialogKey={`seasonFiles:${season.id}:episodeFileDetails:${row.episode.id}:${row.fileIndex}`}
+						{onFileDeleted}
 					/>
 				{:else}
 					<Table.Cell colspan={3} class="text-center text-sm text-muted-foreground">

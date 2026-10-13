@@ -781,6 +781,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/tv/episodes/{episode_id}/files': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/**
+		 * Delete Episode File
+		 * @description Delete one of an episode's files from disk, identified by its file path
+		 *     suffix (version), and remove its record.
+		 */
+		delete: operations['delete_episode_file_api_v1_tv_episodes__episode_id__files_delete'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/tv/shows/{show_id}/season-download-plan': {
 		parameters: {
 			query?: never;
@@ -1308,7 +1329,12 @@ export interface paths {
 		get: operations['get_movie_files_by_movie_id_api_v1_movies__movie_id__files_get'];
 		put?: never;
 		post?: never;
-		delete?: never;
+		/**
+		 * Delete Movie File
+		 * @description Delete one of a movie's files from disk, identified by its file path
+		 *     suffix (version), and remove its record.
+		 */
+		delete: operations['delete_movie_file_api_v1_movies__movie_id__files_delete'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -5015,6 +5041,37 @@ export interface operations {
 			};
 		};
 	};
+	delete_episode_file_api_v1_tv_episodes__episode_id__files_delete: {
+		parameters: {
+			query?: {
+				file_path_suffix?: string;
+			};
+			header?: never;
+			path: {
+				episode_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
 	get_season_download_plan_api_v1_tv_shows__show_id__season_download_plan_get: {
 		parameters: {
 			query: {
@@ -5716,6 +5773,38 @@ export interface operations {
 			query?: {
 				delete_files_on_disk?: boolean;
 				delete_torrents?: boolean;
+			};
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	delete_movie_file_api_v1_movies__movie_id__files_delete: {
+		parameters: {
+			query?: {
+				file_path_suffix?: string;
 			};
 			header?: never;
 			path: {

@@ -8,6 +8,8 @@ finds is stored on its record too, and only re-probed once the file changes
 """
 
 import asyncio
+import contextlib
+import errno
 import mimetypes
 import os
 from collections.abc import Sequence
@@ -17,12 +19,14 @@ from stat import S_ISREG
 
 from media_manager.common.languages import language_or_unknown, parse_language
 from media_manager.common.schemas import (
+    BaseMediaFile,
     MediaFileDetails,
     PublicMediaFile,
     Quality,
     SubtitleLanguage,
     SubtitleTrack,
 )
+from media_manager.exceptions import ConflictError
 from media_manager.torrent.utils import remove_special_characters
 from media_manager.torrent.video_probe import probe_video_files
 
@@ -252,6 +256,100 @@ async def refresh_media_file_details[F: PublicMediaFile](
             file.probed_mtime_ns = state.mtime_ns
             changed.append(file)
     return changed
+
+
+async def delete_media_file_from_disk(
+    file: BaseMediaFile, location: MediaFileLocation
+) -> None:
+    """
+    Deletes a file record's file from disk along with its sidecar subtitles,
+    then every directory it was in that is now empty, up to and including
+    the media's root directory (an import recreates them). A file that's
+    already gone is not an error.
+
+    Never deletes anything outside the media's root directory: a
+    `relative_path` that leads out of it, or through a symlinked directory
+    (the root included), is refused rather than followed.
+    """
+    # Normalized lexically first, so a path using ".." to climb out of the
+    # root is refused before the disk is touched at all.
+    media_root = Path(os.path.normpath(location.media_root.absolute()))
+    path = Path(os.path.normpath(media_root / file.relative_path))
+    if not path.is_relative_to(media_root) or path == media_root:
+        msg = f"Refusing to delete {file.relative_path}: it is outside the media folder"
+        raise ConflictError(msg)
+    await asyncio.to_thread(
+        _delete_file_and_empty_parents, media_root, path.relative_to(media_root).parts
+    )
+
+
+def _open_directory(path: str | Path, dir_fd: int | None = None) -> int | None:
+    """
+    Opens a directory without following a symlink. None when it doesn't
+    exist; refused when it's a symlink (ELOOP) or not a directory at all.
+    """
+    try:
+        return os.open(
+            path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=dir_fd
+        )
+    except FileNotFoundError:
+        return None
+    except OSError as e:
+        if e.errno not in (errno.ELOOP, errno.ENOTDIR):
+            raise
+        msg = f"Refusing to delete through {Path(path).name}: it is not a plain folder"
+        raise ConflictError(msg) from e
+
+
+def _delete_file_and_empty_parents(media_root: Path, parts: tuple[str, ...]) -> None:
+    """
+    Walks down from `media_root` one directory at a time, opening each with
+    O_NOFOLLOW and doing every deletion relative to an open directory, so a
+    symlink is never followed - not even one swapped in mid-walk.
+    """
+    *directory_names, file_name = parts
+    root_fd = _open_directory(media_root)
+    if root_fd is None:
+        return
+    fds = [root_fd]
+    try:
+        for name in directory_names:
+            fd = _open_directory(name, dir_fd=fds[-1])
+            if fd is None:
+                return
+            fds.append(fd)
+
+        # Sidecars are matched against the file's own stem, the same way
+        # probing found them (see `_stat_batch`). unlink never follows a
+        # symlink, so a symlinked file only ever has the link itself removed.
+        stem = Path(file_name).stem
+        with os.scandir(fds[-1]) as scan:
+            sidecars = [
+                entry.name
+                for entry in scan
+                if entry.name.startswith(f"{stem}.")
+                and entry.name != file_name
+                and is_subtitle_file(Path(entry.name))
+                and not entry.is_dir(follow_symlinks=False)
+            ]
+        for name in [file_name, *sidecars]:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(name, dir_fd=fds[-1])
+
+        # rmdir only ever removes an empty directory, so this can't race
+        # another file appearing in it. Stops at the first directory that
+        # isn't empty; the root itself is removed by path, and rmdir refuses
+        # a symlink rather than following it.
+        for parent_fd, name in reversed(list(zip(fds, directory_names, strict=False))):
+            try:
+                os.rmdir(name, dir_fd=parent_fd)
+            except OSError:
+                return
+        with contextlib.suppress(OSError):
+            os.rmdir(media_root)
+    finally:
+        for fd in fds:
+            os.close(fd)
 
 
 def distinct_subtitle_languages(
