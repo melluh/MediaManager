@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from uuid import UUID, uuid4
 
 from media_manager.admin.service import AdminService, _PathStat
 
@@ -8,21 +9,37 @@ async def _gather_stats(*coros):
     return await asyncio.gather(*coros)
 
 
+LargestRow = tuple[UUID, str, str, int | None, int]
+
+
 class _StubRepository:
-    def __init__(self, sizes: dict[str, int] | None = None) -> None:
+    def __init__(
+        self,
+        sizes: dict[str, int] | None = None,
+        largest: list[LargestRow] | None = None,
+    ) -> None:
         self.sizes = sizes or {}
+        self.largest = largest or []
 
     async def sum_file_sizes_by_library(self) -> dict[str, int]:
         return self.sizes
+
+    async def largest_movies(self, limit: int) -> list[LargestRow]:
+        return self.largest[:limit]
+
+    async def largest_shows(self, limit: int) -> list[LargestRow]:
+        return self.largest[:limit]
 
 
 def _admin_service(
     movie_sizes: dict[str, int] | None = None,
     tv_sizes: dict[str, int] | None = None,
+    largest_movies: list[LargestRow] | None = None,
+    largest_shows: list[LargestRow] | None = None,
 ) -> AdminService:
     return AdminService(
-        movie_repository=_StubRepository(movie_sizes),  # type: ignore[arg-type]
-        tv_repository=_StubRepository(tv_sizes),  # type: ignore[arg-type]
+        movie_repository=_StubRepository(movie_sizes, largest_movies),  # type: ignore[arg-type]
+        tv_repository=_StubRepository(tv_sizes, largest_shows),  # type: ignore[arg-type]
     )
 
 
@@ -199,3 +216,20 @@ def test_get_disk_usage_attributes_library_sizes_to_their_filesystem(tmp_path):
     assert sizes["tv"] == 234
     assert sizes["images"] > 0
     assert "other" in sizes
+
+
+def test_largest_media_mixes_up_to_20_movies_and_20_shows_largest_first():
+    movies = [(uuid4(), f"movie-{i}", f"Movie {i}", 2000, 100 - i) for i in range(25)]
+    shows = [(uuid4(), f"show-{i}", f"Show {i}", None, 1_000 - i) for i in range(25)]
+    service = _admin_service(largest_movies=movies, largest_shows=shows)
+
+    result = asyncio.run(service._largest_media())
+
+    assert len(result) == 40
+    assert [item.bytes for item in result] == sorted(
+        (item.bytes for item in result), reverse=True
+    )
+    # Every show outranks every movie here.
+    assert [item.media_type for item in result] == ["show"] * 20 + ["movie"] * 20
+    assert result[0].slug == "show-0"
+    assert result[20].slug == "movie-0"

@@ -154,6 +154,31 @@ class TvRepository(BaseRepository[Show, ShowSchema]):
         rows = (await self.db.execute(stmt)).all()
         return {library: int(total or 0) for library, total in rows}
 
+    async def largest_shows(
+        self, limit: int
+    ) -> list[tuple[ShowId, str, str, int | None, int]]:
+        """
+        The `limit` shows whose episode files take up the most space, largest
+        first, as (id, slug, name, year, bytes). Sizes come from each file's
+        last probe; shows without any probed size are left out.
+        """
+        size = func.sum(EpisodeFile.details["size_bytes"].astext.cast(BigInteger))
+        stmt = (
+            select(Show.id, Show.slug, Show.name, Show.year, size)
+            .join(Season, Season.show_id == Show.id)
+            .join(Episode, Episode.season_id == Season.id)
+            .join(EpisodeFile, EpisodeFile.episode_id == Episode.id)
+            .group_by(Show.id)
+            .having(size > 0)
+            .order_by(size.desc())
+            .limit(limit)
+        )
+        rows = (await self.db.execute(stmt)).all()
+        return [
+            (show_id, slug, name, year, int(total))
+            for show_id, slug, name, year, total in rows
+        ]
+
     async def save_show(self, show: ShowSchema) -> ShowSchema:
         db_show = await self.db.get(Show, show.id) if show.id else None
 

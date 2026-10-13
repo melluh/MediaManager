@@ -167,15 +167,14 @@ async def _health_check_loop() -> None:
 
         try:
             media_server = get_media_server_provider()
-            if media_server is not None:
-                # A failed ping already marked it unavailable (with the
-                # request's error), like any other failed request does.
-                if await media_server.ping():
-                    registry.update(
-                        media_server.name,
-                        media_server.display_name,
-                        ServiceStatus.healthy,
-                    )
+            # A failed ping already marked it unavailable (with the
+            # request's error), like any other failed request does.
+            if media_server is not None and await media_server.ping():
+                registry.update(
+                    media_server.name,
+                    media_server.display_name,
+                    ServiceStatus.healthy,
+                )
         except Exception:
             log.exception("Media server health check failed")
 

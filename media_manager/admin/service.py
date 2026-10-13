@@ -3,13 +3,15 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import NamedTuple
+from typing import Literal, NamedTuple
+from uuid import UUID
 
 from media_manager.admin.schemas import (
     DiskUsageCategory,
     DiskUsageCategoryKey,
     DiskUsageEntry,
     DiskUsageStats,
+    LargestMediaItem,
     LibraryStats,
 )
 from media_manager.config import LibraryItem, MediaManagerConfig
@@ -36,6 +38,9 @@ _CATEGORY_LABELS: dict[DiskUsageCategoryKey, str] = {
     "tv": "TV Shows",
     "images": "Images",
 }
+
+
+_LARGEST_MEDIA_LIMIT = 20
 
 
 class AdminService:
@@ -112,7 +117,38 @@ class AdminService:
             )
             add(misc.image_directory, "images", image_bytes)
 
-        return AdminService._group_disk_usage(stats, category_bytes)
+        result = AdminService._group_disk_usage(stats, category_bytes)
+        result.largest_media = await self._largest_media()
+        return result
+
+    async def _largest_media(self) -> list[LargestMediaItem]:
+        """The movies and the shows taking up the most space, up to
+        `_LARGEST_MEDIA_LIMIT` of each, mixed and largest first. Both are
+        kept in full so the page can show the top movies, top shows, or the
+        top of both combined."""
+        movies = await self.movie_repository.largest_movies(_LARGEST_MEDIA_LIMIT)
+        shows = await self.tv_repository.largest_shows(_LARGEST_MEDIA_LIMIT)
+        items = [
+            *(AdminService._largest_item("movie", row) for row in movies),
+            *(AdminService._largest_item("show", row) for row in shows),
+        ]
+        items.sort(key=lambda item: item.bytes, reverse=True)
+        return items
+
+    @staticmethod
+    def _largest_item(
+        media_type: Literal["movie", "show"],
+        row: tuple[UUID, str, str, int | None, int],
+    ) -> LargestMediaItem:
+        media_id, slug, name, year, size = row
+        return LargestMediaItem(
+            id=media_id,
+            slug=slug,
+            name=name,
+            year=year,
+            media_type=media_type,
+            bytes=size,
+        )
 
     @staticmethod
     def _library_root(

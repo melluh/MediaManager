@@ -1,5 +1,6 @@
 <script lang="ts">
 	import DiskUsageList from '$lib/components/admin/disk-usage-list.svelte';
+	import LargestMediaList from '$lib/components/admin/largest-media-list.svelte';
 	import PageHeading from '$lib/components/page-heading.svelte';
 	import PageLoading from '$lib/components/page-loading.svelte';
 	import { resolve } from '$app/paths';
@@ -31,6 +32,9 @@
 			<p class="text-sm text-muted-foreground">No configured library paths found.</p>
 		{:else}
 			<DiskUsageList entries={diskUsage.entries} />
+			{#if diskUsage.largest_media.length > 0}
+				<LargestMediaList class="mt-6" items={diskUsage.largest_media} />
+			{/if}
 		{/if}
 	{/await}
 </main>

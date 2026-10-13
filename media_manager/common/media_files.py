@@ -272,9 +272,10 @@ async def delete_media_file_from_disk(
     (the root included), is refused rather than followed.
     """
     # Normalized lexically first, so a path using ".." to climb out of the
-    # root is refused before the disk is touched at all.
-    media_root = Path(os.path.normpath(location.media_root.absolute()))
-    path = Path(os.path.normpath(media_root / file.relative_path))
+    # root is refused before the disk is touched at all. normpath is purely
+    # lexical, so it doesn't block.
+    media_root = Path(os.path.normpath(location.media_root.absolute()))  # noqa: ASYNC240
+    path = Path(os.path.normpath(media_root / file.relative_path))  # noqa: ASYNC240
     if not path.is_relative_to(media_root) or path == media_root:
         msg = f"Refusing to delete {file.relative_path}: it is outside the media folder"
         raise ConflictError(msg)
@@ -346,7 +347,7 @@ def _delete_file_and_empty_parents(media_root: Path, parts: tuple[str, ...]) -> 
             except OSError:
                 return
         with contextlib.suppress(OSError):
-            os.rmdir(media_root)
+            media_root.rmdir()
     finally:
         for fd in fds:
             os.close(fd)

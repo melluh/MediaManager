@@ -70,6 +70,29 @@ class MovieRepository(BaseRepository[Movie, MovieSchema]):
         rows = (await self.db.execute(stmt)).all()
         return {library: int(total or 0) for library, total in rows}
 
+    async def largest_movies(
+        self, limit: int
+    ) -> list[tuple[MovieId, str, str, int | None, int]]:
+        """
+        The `limit` movies whose files take up the most space, largest first,
+        as (id, slug, name, year, bytes). Sizes come from each file's last
+        probe; movies without any probed size are left out.
+        """
+        size = func.sum(MovieFile.details["size_bytes"].astext.cast(BigInteger))
+        stmt = (
+            select(Movie.id, Movie.slug, Movie.name, Movie.year, size)
+            .join(MovieFile, MovieFile.movie_id == Movie.id)
+            .group_by(Movie.id)
+            .having(size > 0)
+            .order_by(size.desc())
+            .limit(limit)
+        )
+        rows = (await self.db.execute(stmt)).all()
+        return [
+            (movie_id, slug, name, year, int(total))
+            for movie_id, slug, name, year, total in rows
+        ]
+
     async def delete_movie(self, movie_id: MovieId) -> None:
         await self.delete(entity_id=movie_id)
 

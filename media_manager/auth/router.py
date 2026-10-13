@@ -21,7 +21,6 @@ from media_manager.auth.schemas import (
 from media_manager.auth.users import (
     SECRET,
     create_default_admin_user,
-    current_active_user,
     current_active_user_allow_unverified,
     current_superuser,
     fastapi_users,

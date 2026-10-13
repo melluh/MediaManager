@@ -1977,6 +1977,11 @@ export interface components {
 		DiskUsageStats: {
 			/** Entries */
 			entries: components['schemas']['DiskUsageEntry'][];
+			/**
+			 * Largest Media
+			 * @default []
+			 */
+			largest_media: components['schemas']['LargestMediaItem'][];
 		};
 		/** DownloadProgress */
 		DownloadProgress: {
@@ -2124,6 +2129,27 @@ export interface components {
 			slot_index?: number | null;
 			/** Effective Mbps */
 			effective_mbps?: number | null;
+		};
+		/** LargestMediaItem */
+		LargestMediaItem: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			/** Slug */
+			slug: string;
+			/** Name */
+			name: string;
+			/** Year */
+			year: number | null;
+			/**
+			 * Media Type
+			 * @enum {string}
+			 */
+			media_type: 'movie' | 'show';
+			/** Bytes */
+			bytes: number;
 		};
 		/** LibraryItem */
 		LibraryItem: {
@@ -3521,6 +3547,7 @@ export type HealthResponse = components['schemas']['HealthResponse'];
 export type ImportErrorKind = components['schemas']['ImportErrorKind'];
 export type ImportMatchConfidence = components['schemas']['ImportMatchConfidence'];
 export type IndexerQueryResult = components['schemas']['IndexerQueryResult'];
+export type LargestMediaItem = components['schemas']['LargestMediaItem'];
 export type LibraryItem = components['schemas']['LibraryItem'];
 export type LibraryScanCounts = components['schemas']['LibraryScanCounts'];
 export type LibraryStats = components['schemas']['LibraryStats'];

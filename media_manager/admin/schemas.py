@@ -1,4 +1,5 @@
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -36,5 +37,17 @@ class DiskUsageEntry(BaseModel):
     fields are 0 in that case."""
 
 
+class LargestMediaItem(BaseModel):
+    id: UUID
+    slug: str
+    name: str
+    year: int | None
+    media_type: Literal["movie", "show"]
+    bytes: int
+
+
 class DiskUsageStats(BaseModel):
     entries: list[DiskUsageEntry]
+    largest_media: list[LargestMediaItem] = []
+    """The movies and the shows taking up the most space (up to 20 of
+    each), mixed, largest first."""
