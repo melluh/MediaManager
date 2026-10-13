@@ -5,6 +5,6 @@
 	let { pulsating = true }: { pulsating?: boolean } = $props();
 </script>
 
-<Card.Root class="col-span-full overflow-hidden sm:col-span-1">
+<Card.Root class="overflow-hidden">
 	<Skeleton class="aspect-2/3 w-full rounded-none {pulsating ? '' : 'animate-none'}" />
 </Card.Root>

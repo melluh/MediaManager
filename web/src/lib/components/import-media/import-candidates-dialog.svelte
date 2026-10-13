@@ -99,7 +99,7 @@
 				<Button variant="outline" size="sm" onclick={retry}>Try again</Button>
 			</div>
 		{:else}
-			<MediaGrid class="md:grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4">
+			<MediaGrid class="sm:grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4">
 				{#each candidates ?? [] as candidate (candidate.external_id)}
 					<SuggestedMediaCard result={candidate} action={() => handleImportMedia(candidate)} />
 				{:else}

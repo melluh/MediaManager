@@ -40,7 +40,7 @@
 	} = $props();
 </script>
 
-<Card.Root class={cn('group col-span-full overflow-hidden sm:col-span-1', className)}>
+<Card.Root class={cn('group overflow-hidden', className)}>
 	<svelte:element
 		this={href ? 'a' : 'button'}
 		href={href as never}
