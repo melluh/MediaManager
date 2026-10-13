@@ -1,14 +1,25 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import UserRoleBadge from '$lib/components/users/user-role-badge.svelte';
+	import UserStatusBadge from '$lib/components/users/user-status-badge.svelte';
+	import UserPill from '$lib/components/user-pill.svelte';
 	import InlineEditField from '$lib/components/inline-edit-field.svelte';
-	import ToggleField from '$lib/components/toggle-field.svelte';
 	import ChangePasswordDialog from '$lib/components/change-password-dialog.svelte';
+	import DeleteUserDialog from '$lib/components/users/delete-user-dialog.svelte';
+	import DeactivateUserDialog from '$lib/components/users/deactivate-user-dialog.svelte';
 	import { toast } from 'svelte-sonner';
 	import { refreshAll } from '$app/navigation';
 	import client from '$lib/api';
 	import type { UserRead, UserUpdate } from '$lib/api/api';
 	import X from '@lucide/svelte/icons/x';
+	import UserCheck from '@lucide/svelte/icons/user-check';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import UserX from '@lucide/svelte/icons/user-x';
+	import ShieldCheck from '@lucide/svelte/icons/shield-check';
+	import ShieldOff from '@lucide/svelte/icons/shield-off';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 
 	let {
 		user = $bindable(),
@@ -47,37 +58,125 @@
 		return true;
 	}
 
-	async function saveToggle(field: 'is_verified' | 'is_active' | 'is_superuser', value: boolean) {
-		if (!user) return;
-		const previousValue = user[field];
-		user[field] = value;
-		if (!(await patchUser({ [field]: value }))) {
-			user[field] = previousValue;
-			toast.error(`Failed to update user ${user.email}`);
+	let isChangingAdmin = $state(false);
+
+	async function setAdmin(isSuperuser: boolean) {
+		if (!user || isChangingAdmin) return;
+		isChangingAdmin = true;
+		const ok = await patchUser({ is_superuser: isSuperuser });
+		isChangingAdmin = false;
+		if (!ok) {
+			toast.error(`Failed to ${isSuperuser ? 'promote' : 'demote'} user ${user.email}`);
 			return;
 		}
-		toast.success(`User ${user.email} updated successfully.`);
+		user.is_superuser = isSuperuser;
+		toast.success(
+			isSuperuser
+				? `User ${user.email} promoted to admin.`
+				: `User ${user.email} is no longer an admin.`
+		);
+		await refreshAll();
+	}
+
+	let isReactivating = $state(false);
+	let deleteDialogOpen = $state(false);
+	let deactivateDialogOpen = $state(false);
+
+	async function reactivate() {
+		if (!user || isReactivating) return;
+		isReactivating = true;
+		const ok = await patchUser({ is_active: true });
+		isReactivating = false;
+		if (!ok) {
+			toast.error(`Failed to reactivate user ${user.email}`);
+			return;
+		}
+		user.is_active = true;
+		toast.success(`User ${user.email} reactivated.`);
 		await refreshAll();
 	}
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="w-full max-w-[600px] rounded-lg p-6 shadow-lg">
-		<Dialog.Header>
-			<Dialog.Title class="mb-1 text-xl font-semibold">Edit user</Dialog.Title>
-			<Dialog.Description class="mb-4 text-sm">
-				Edit {user?.email}
-			</Dialog.Description>
-		</Dialog.Header>
+	<Dialog.Content class="w-full max-w-[600px] rounded-lg p-6 shadow-lg" showCloseButton={false}>
+		<div class="flex items-start justify-between gap-4">
+			<Dialog.Header>
+				<Dialog.Title class="mb-1 text-xl font-semibold">Editing user</Dialog.Title>
+				<Dialog.Description class="mb-4 flex flex-wrap items-center gap-2 text-sm">
+					{#if user}
+						<UserPill
+							userId={user.id}
+							name={user.display_name || user.email}
+							isAdmin={user.is_superuser}
+						/>
+						<UserStatusBadge {user} />
+						{#if user.is_superuser}
+							<UserRoleBadge {user} />
+						{/if}
+					{/if}
+				</Dialog.Description>
+			</Dialog.Header>
+			<div class="flex shrink-0 items-center gap-2">
+				{#if user}
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'sm' })}>
+							Actions<ChevronDown class="ml-1 size-4" />
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="end" class="w-48">
+							{#if user.is_superuser}
+								<DropdownMenu.Item disabled={isChangingAdmin} onclick={() => setAdmin(false)}>
+									<ShieldOff />
+									Demote from admin
+								</DropdownMenu.Item>
+							{:else}
+								<DropdownMenu.Item disabled={isChangingAdmin} onclick={() => setAdmin(true)}>
+									<ShieldCheck />
+									Promote to admin
+								</DropdownMenu.Item>
+							{/if}
+							{#if user.is_active}
+								<DropdownMenu.Separator />
+								<DropdownMenu.Item
+									onclick={() => (deactivateDialogOpen = true)}
+									class="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+								>
+									<UserX />
+									Deactivate
+								</DropdownMenu.Item>
+							{:else}
+								<DropdownMenu.Item disabled={isReactivating} onclick={reactivate}>
+									<UserCheck />
+									Reactivate
+								</DropdownMenu.Item>
+								<DropdownMenu.Separator />
+								<DropdownMenu.Item
+									onclick={() => (deleteDialogOpen = true)}
+									class="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+								>
+									<Trash2 />
+									Delete permanently
+								</DropdownMenu.Item>
+							{/if}
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				{/if}
+				<Dialog.Close class={buttonVariants({ variant: 'ghost', size: 'icon', class: 'size-8' })}>
+					<X class="size-4" />
+					<span class="sr-only">Close</span>
+				</Dialog.Close>
+			</div>
+		</div>
 		{#if user}
-			<div class="space-y-6">
+			<div class="space-y-2">
 				<InlineEditField
+					horizontal
 					id="edit-display-name"
 					label="Display Name"
 					onSave={saveDisplayName}
 					value={user.display_name ?? ''}
 				/>
 				<InlineEditField
+					horizontal
 					id="edit-email"
 					label="Email"
 					onSave={saveEmail}
@@ -85,39 +184,20 @@
 					value={user.email}
 				/>
 				{#if passwordLoginEnabled}
-					<div>
-						<span class="mb-1 block text-sm font-medium">Password</span>
-						<ChangePasswordDialog userId={user.id} />
+					<div class="grid grid-cols-[8rem_1fr] items-center gap-4">
+						<span class="text-sm font-medium text-muted-foreground">Password</span>
+						<div><ChangePasswordDialog userId={user.id} /></div>
 					</div>
 				{/if}
-				<hr />
-				<ToggleField
-					checked={user.is_verified}
-					description="New users that created their own account need to be verified before they can sign in and use the app."
-					id="verified"
-					label="Verified"
-					onCheckedChange={(checked) => saveToggle('is_verified', checked)}
-				/>
-				<ToggleField
-					checked={user.is_active}
-					description="Deactivate a user account to block access without deleting the account."
-					id="active"
-					label="Active"
-					onCheckedChange={(checked) => saveToggle('is_active', checked)}
-				/>
-				<ToggleField
-					checked={user.is_superuser}
-					description="Admins can manage users and access all administrative settings."
-					id="superuser"
-					label="Admin"
-					onCheckedChange={(checked) => saveToggle('is_superuser', checked)}
-				/>
 			</div>
 		{/if}
-		<div class="mt-8 flex justify-end gap-2">
-			<Button onclick={() => (open = false)} variant="outline">
-				<X class="mr-2 size-4" />Close
-			</Button>
-		</div>
 	</Dialog.Content>
 </Dialog.Root>
+<DeactivateUserDialog
+	{user}
+	bind:open={deactivateDialogOpen}
+	onDeactivated={() => {
+		if (user) user.is_active = false;
+	}}
+/>
+<DeleteUserDialog {user} bind:open={deleteDialogOpen} onDeleted={() => (open = false)} />

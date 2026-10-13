@@ -15,7 +15,8 @@
 		type = 'text',
 		onSave,
 		editable = true,
-		disabledMessage
+		disabledMessage,
+		horizontal = false
 	}: {
 		id: string;
 		label: string;
@@ -24,6 +25,8 @@
 		onSave: (newValue: string) => Promise<boolean>;
 		editable?: boolean;
 		disabledMessage?: string;
+		/** Label in a fixed-width column to the left of the value, for table-like layouts. */
+		horizontal?: boolean;
 	} = $props();
 
 	let editing = $state(false);
@@ -63,8 +66,13 @@
 	}
 </script>
 
-<div>
-	<Label class="mb-1 block text-sm font-medium" for={id}>{label}</Label>
+<div class={horizontal ? 'grid grid-cols-[8rem_1fr] items-center gap-4' : undefined}>
+	<Label
+		class={horizontal
+			? 'text-sm font-medium text-muted-foreground'
+			: 'mb-1 block text-sm font-medium'}
+		for={id}>{label}</Label
+	>
 	{#if editing}
 		<div class="flex items-center gap-2">
 			<Input

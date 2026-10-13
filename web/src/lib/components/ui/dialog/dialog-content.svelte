@@ -10,10 +10,13 @@
 		class: className,
 		portalProps,
 		children,
+		showCloseButton = true,
 		...restProps
 	}: WithoutChildrenOrChild<DialogPrimitive.ContentProps> & {
 		portalProps?: DialogPrimitive.PortalProps;
 		children: Snippet;
+		/** Hide to place your own `Dialog.Close` (e.g. inline with header actions). */
+		showCloseButton?: boolean;
 	} = $props();
 </script>
 
@@ -28,11 +31,13 @@
 		{...restProps}
 	>
 		{@render children?.()}
-		<DialogPrimitive.Close
-			class="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+		{#if showCloseButton}
+			<DialogPrimitive.Close
+				class="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
 		>
 			<X class="size-4" />
 			<span class="sr-only">Close</span>
-		</DialogPrimitive.Close>
+			</DialogPrimitive.Close>
+		{/if}
 	</DialogPrimitive.Content>
 </Dialog.Portal>

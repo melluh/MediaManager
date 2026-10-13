@@ -19,6 +19,18 @@ import { page } from '$app/state';
  * and racing it against the async `history.back()` this uses to close is
  * unnecessary.
  */
+let pendingClose: Promise<void> | null = null;
+
+/**
+ * Resolves once any dialog closed via `shallowDialog` has finished popping its
+ * history entry. SvelteKit cancels in-flight invalidations on `popstate`, so a
+ * `refreshAll()` started while a close is still pending is silently dropped —
+ * await this first when refreshing right after closing a dialog.
+ */
+export function shallowDialogsSettled(): Promise<void> {
+	return pendingClose ?? Promise.resolve();
+}
+
 export function shallowDialog(key: string) {
 	return {
 		get open() {
@@ -30,6 +42,15 @@ export function shallowDialog(key: string) {
 				if (stack.includes(key)) return;
 				pushState('', { ...page.state, dialogs: [...stack, key] });
 			} else if (stack.includes(key)) {
+				// SvelteKit's own popstate listener is registered first, so by the
+				// time this resolves it has already handled the history change.
+				const closed = new Promise<void>((resolve) =>
+					addEventListener('popstate', () => resolve(), { once: true })
+				);
+				pendingClose = closed;
+				closed.then(() => {
+					if (pendingClose === closed) pendingClose = null;
+				});
 				history.back();
 			}
 		}

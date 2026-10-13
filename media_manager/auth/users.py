@@ -79,6 +79,18 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             raise exceptions.UserAlreadyExists() from e
 
     @override
+    async def on_before_delete(
+        self, user: models.UP, request: Request | None = None
+    ) -> None:
+        # Unverified users can't sign in, so they can't have created anything
+        # yet; rejecting a pending sign-up therefore needs no deactivation first.
+        if user.is_active and user.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Only deactivated or unverified users can be deleted. Deactivate the user first.",
+            )
+
+    @override
     async def on_after_update(
         self,
         user: models.UP,
