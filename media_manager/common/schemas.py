@@ -145,9 +145,6 @@ class WatchUrl(BaseModel):
     never blocks the movie/show page from loading."""
 
     url: str | None = None
-    media_server_name: str | None = None
-    """Display name of the media server the url points to (e.g. "Jellyfin"),
-    for labeling a "Watch on <name>" button. None whenever `url` is None."""
 
 
 class BaseMediaFile(BaseModel):

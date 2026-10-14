@@ -133,11 +133,9 @@ class BaseMediaService[T, S]:
 
     async def get_watch_url(self, media: S) -> WatchUrl:
         """
-        Deep link into the configured media server for this item, paired
-        with the server's display name for labeling a "Watch on <name>"
-        button. `url` is None when no media server is configured or it
-        doesn't have the item indexed yet - in which case `media_server_name`
-        is None too.
+        Deep link into the configured media server for this item. `url` is
+        None when no media server is configured or it doesn't have the item
+        indexed yet.
         """
         provider = get_media_server_provider()
         if provider is None:
@@ -154,9 +152,7 @@ class BaseMediaService[T, S]:
                 exc_info=True,
             )
             return WatchUrl()
-        if url is None:
-            return WatchUrl()
-        return WatchUrl(url=url, media_server_name=provider.display_name)
+        return WatchUrl(url=url)
 
     def get_root_directory(
         self, media: S, default_dir: Path, libraries: list[Any]

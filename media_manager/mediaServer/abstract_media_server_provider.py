@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from media_manager.health.registry import get_health_registry
 from media_manager.health.schemas import ServiceStatus
+from media_manager.mediaServer.schemas import MediaServerUser
 
 
 class AbstractMediaServerProvider(ABC):
@@ -36,6 +37,21 @@ class AbstractMediaServerProvider(ABC):
         A browser-facing deep link to this item on the media server, or None
         if the server has no matching item (e.g. it hasn't scanned a
         recently-downloaded file in yet).
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def list_users(self) -> list[MediaServerUser]:
+        """
+        All user accounts on the media server, for linking them to
+        MediaManager users.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def get_user(self, user_id: str) -> MediaServerUser | None:
+        """
+        The media server account with this id, or None if it doesn't exist.
         """
         raise NotImplementedError()
 

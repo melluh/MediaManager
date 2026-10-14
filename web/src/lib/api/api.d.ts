@@ -245,6 +245,29 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/users/{user_id}/media-server-account': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Link Media Server Account
+		 * @description Link a user to an account on the configured media server, replacing any
+		 *     account they were linked to before. Only superusers can do this, since
+		 *     there's no way to verify which account actually belongs to a user.
+		 */
+		put: operations['link_media_server_account_api_v1_users__user_id__media_server_account_put'];
+		post?: never;
+		/** Unlink Media Server Account */
+		delete: operations['unlink_media_server_account_api_v1_users__user_id__media_server_account_delete'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/users/me': {
 		parameters: {
 			query?: never;
@@ -1738,6 +1761,49 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/media-server/users': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Media Server Users
+		 * @description All accounts on the media server, for linking them to MediaManager users,
+		 *     along with which user each one is already linked to.
+		 */
+		get: operations['get_media_server_users_api_v1_media_server_users_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/meta': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Meta
+		 * @description Static information about this instance's setup, such as the configured
+		 *     media server. Fetched once per session by the frontend rather than
+		 *     repeated on every endpoint that needs it.
+		 */
+		get: operations['get_meta_api_v1_meta_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/': {
 		parameters: {
 			query?: never;
@@ -2272,11 +2338,55 @@ export interface components {
 			/** @default none */
 			confidence: components['schemas']['ImportMatchConfidence'];
 		};
+		/** MediaServerAccountLink */
+		MediaServerAccountLink: {
+			/** External User Id */
+			external_user_id: string;
+		};
+		/** MediaServerAccountRead */
+		MediaServerAccountRead: {
+			/** Provider */
+			provider: string;
+			/** External User Id */
+			external_user_id: string;
+			/** Username */
+			username: string;
+		};
+		/** MediaServerInfo */
+		MediaServerInfo: {
+			/** Name */
+			name: string;
+			/** Display Name */
+			display_name: string;
+		};
+		/**
+		 * MediaServerUserOption
+		 * @description A media server account offered when linking it to a MediaManager user.
+		 */
+		MediaServerUserOption: {
+			/** Id */
+			id: string;
+			/** Name */
+			name: string;
+			/** Linked User Id */
+			linked_user_id?: string | null;
+			/** Linked User Name */
+			linked_user_name?: string | null;
+		};
 		/**
 		 * MediaType
 		 * @enum {string}
 		 */
 		MediaType: 'movie' | 'tv';
+		/**
+		 * Meta
+		 * @description Static information about this MediaManager instance's setup. It only
+		 *     changes when the config does (i.e. on restart), so clients can fetch it
+		 *     once and cache it for the whole session.
+		 */
+		Meta: {
+			media_server?: components['schemas']['MediaServerInfo'] | null;
+		};
 		/** MetaDataProviderSearchResult */
 		MetaDataProviderSearchResult: {
 			/** Poster Images */
@@ -3453,6 +3563,8 @@ export interface components {
 			display_name?: string | null;
 			/** Oauth Accounts */
 			oauth_accounts?: components['schemas']['OAuthAccountRead'][];
+			/** Media Server Accounts */
+			media_server_accounts?: components['schemas']['MediaServerAccountRead'][];
 		};
 		/** UserReadWithPermissions */
 		UserReadWithPermissions: {
@@ -3485,6 +3597,8 @@ export interface components {
 			display_name?: string | null;
 			/** Oauth Accounts */
 			oauth_accounts?: components['schemas']['OAuthAccountRead'][];
+			/** Media Server Accounts */
+			media_server_accounts?: components['schemas']['MediaServerAccountRead'][];
 			permissions: components['schemas']['UserPermissions'];
 		};
 		/** UserUpdate */
@@ -3524,8 +3638,6 @@ export interface components {
 		WatchUrl: {
 			/** Url */
 			url?: string | null;
-			/** Media Server Name */
-			media_server_name?: string | null;
 		};
 	};
 	responses: never;
@@ -3571,7 +3683,12 @@ export type LibraryStats = components['schemas']['LibraryStats'];
 export type MediaAddedByUser = components['schemas']['MediaAddedByUser'];
 export type MediaFileDetails = components['schemas']['MediaFileDetails'];
 export type MediaImportSuggestion = components['schemas']['MediaImportSuggestion'];
+export type MediaServerAccountLink = components['schemas']['MediaServerAccountLink'];
+export type MediaServerAccountRead = components['schemas']['MediaServerAccountRead'];
+export type MediaServerInfo = components['schemas']['MediaServerInfo'];
+export type MediaServerUserOption = components['schemas']['MediaServerUserOption'];
 export type MediaType = components['schemas']['MediaType'];
+export type Meta = components['schemas']['Meta'];
 export type MetaDataProviderSearchResult = components['schemas']['MetaDataProviderSearchResult'];
 export type Movie = components['schemas']['Movie'];
 export type MovieListItem = components['schemas']['MovieListItem'];
@@ -4070,6 +4187,70 @@ export interface operations {
 			path: {
 				user_id: string;
 				oauth_account_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	link_media_server_account_api_v1_users__user_id__media_server_account_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['MediaServerAccountLink'];
+			};
+		};
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['MediaServerAccountRead'];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	unlink_media_server_account_api_v1_users__user_id__media_server_account_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: string;
 			};
 			cookie?: never;
 		};
@@ -6600,6 +6781,46 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['DiskUsageStats'];
+				};
+			};
+		};
+	};
+	get_media_server_users_api_v1_media_server_users_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['MediaServerUserOption'][];
+				};
+			};
+		};
+	};
+	get_meta_api_v1_meta_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Meta'];
 				};
 			};
 		};

@@ -1,5 +1,6 @@
 import logging
-from typing import override
+from typing import Any, override
+from urllib.parse import quote
 
 import httpx
 
@@ -8,6 +9,7 @@ from media_manager.config import get_config
 from media_manager.mediaServer.abstract_media_server_provider import (
     AbstractMediaServerProvider,
 )
+from media_manager.mediaServer.schemas import MediaServerUser
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +31,10 @@ _SEARCH_PAGE_SIZE = 25
 """Items requested from the filtered (AnyProviderIdEquals) lookup - large
 enough to contain the match on the Jellyfin versions where the filter still
 works."""
+
+_NOT_FOUND_STATUSES = {400, 404}
+"""Responses meaning "no such item" rather than a broken server - Jellyfin
+answers 400 instead of 404 for an id that isn't a valid GUID."""
 
 _FULL_SCAN_PAGE_SIZE = 500
 """Page size for the fallback full-library scan, only hit when the filtered
@@ -58,7 +64,7 @@ class JellyfinProvider(AbstractMediaServerProvider):
         self.external_url = (config.external_url or config.url).rstrip("/")
         self.api_key = config.api_key
 
-    async def __get(self, path: str, params: dict | None = None) -> dict:
+    async def __get(self, path: str, params: dict | None = None) -> Any:  # noqa: ANN401 # parsed JSON body
         try:
             response = await _client.get(
                 url=f"{self.url}{path}",
@@ -67,6 +73,12 @@ class JellyfinProvider(AbstractMediaServerProvider):
             )
             response.raise_for_status()
             return response.json()
+        except httpx.HTTPStatusError as e:
+            # The server answered, so a lookup for something that doesn't
+            # exist says nothing about its health.
+            if e.response.status_code not in _NOT_FOUND_STATUSES:
+                self._report_unavailable(f"Request failed: {e}")
+            raise
         except Exception as e:
             self._report_unavailable(f"Request failed: {e}")
             raise
@@ -176,6 +188,21 @@ class JellyfinProvider(AbstractMediaServerProvider):
         return await _watch_url_cache.get_or_set(
             (metadata_provider, external_id, imdb_id), factory
         )
+
+    @override
+    async def list_users(self) -> list[MediaServerUser]:
+        users = await self.__get("/Users")
+        return [MediaServerUser(id=user["Id"], name=user["Name"]) for user in users]
+
+    @override
+    async def get_user(self, user_id: str) -> MediaServerUser | None:
+        try:
+            user = await self.__get(f"/Users/{quote(user_id, safe='')}")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code in _NOT_FOUND_STATUSES:
+                return None
+            raise
+        return MediaServerUser(id=user["Id"], name=user["Name"])
 
     @override
     async def ping(self) -> bool:

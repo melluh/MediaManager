@@ -68,24 +68,25 @@
 					<UserRoleBadge {user} />
 				</Table.Cell>
 				<Table.Cell>
-					{#if user.id === currentUserId}
-						<span class="text-sm text-muted-foreground italic">This is your own account</span>
-					{:else}
-						<div class="flex gap-2">
-							<Button
-								variant="secondary"
-								onclick={() => {
-									selectedUser = user;
-									editDialog.open = true;
-								}}
-							>
-								<Pencil class="mr-2 size-4" />Edit
-							</Button>
-						</div>
-					{/if}
+					<div class="flex gap-2">
+						<Button
+							variant="secondary"
+							onclick={() => {
+								selectedUser = user;
+								editDialog.open = true;
+							}}
+						>
+							<Pencil class="mr-2 size-4" />Edit
+						</Button>
+					</div>
 				</Table.Cell>
 			</Table.Row>
 		{/each}
 	</Table.Body>
 </Table.Root>
-<EditUserDialog bind:user={selectedUser} bind:open={editDialog.open} {passwordLoginEnabled} />
+<EditUserDialog
+	bind:user={selectedUser}
+	bind:open={editDialog.open}
+	{passwordLoginEnabled}
+	isSelf={selectedUser?.id === currentUserId}
+/>

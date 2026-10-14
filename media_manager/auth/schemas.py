@@ -12,9 +12,22 @@ class OAuthAccountRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MediaServerAccountRead(BaseModel):
+    provider: str
+    external_user_id: str
+    username: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MediaServerAccountLink(BaseModel):
+    external_user_id: str
+
+
 class UserRead(schemas.BaseUser[uuid.UUID]):
     display_name: str | None = None
     oauth_accounts: list[OAuthAccountRead] = Field(default_factory=list)
+    media_server_accounts: list[MediaServerAccountRead] = Field(default_factory=list)
 
 
 class UserCreate(schemas.BaseUserCreate):

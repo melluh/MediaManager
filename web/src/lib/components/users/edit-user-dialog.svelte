@@ -2,6 +2,7 @@
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import * as Alert from '$lib/components/ui/alert/index.js';
 	import UserRoleBadge from '$lib/components/users/user-role-badge.svelte';
 	import UserStatusBadge from '$lib/components/users/user-status-badge.svelte';
 	import UserPill from '$lib/components/user-pill.svelte';
@@ -20,13 +21,23 @@
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import ShieldOff from '@lucide/svelte/icons/shield-off';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import Info from '@lucide/svelte/icons/info';
 	import UnlinkOAuthAccountDialog from '$lib/components/users/unlink-oauth-account-dialog.svelte';
+	import MediaServerAccountPicker from '$lib/components/users/media-server-account-picker.svelte';
+	import { meta } from '$lib/hooks/meta.svelte.js';
 
 	let {
 		user = $bindable(),
 		open = $bindable(),
-		passwordLoginEnabled
-	}: { user: UserRead | null; open: boolean; passwordLoginEnabled: boolean } = $props();
+		passwordLoginEnabled,
+		isSelf = false
+	}: {
+		user: UserRead | null;
+		open: boolean;
+		passwordLoginEnabled: boolean;
+		// Hides the actions that would lock the admin out of their own account.
+		isSelf?: boolean;
+	} = $props();
 
 	async function patchUser(body: UserUpdate): Promise<boolean> {
 		if (!user) return false;
@@ -120,7 +131,7 @@
 				</Dialog.Description>
 			</Dialog.Header>
 			<div class="flex shrink-0 items-center gap-2">
-				{#if user}
+				{#if user && !isSelf}
 					<DropdownMenu.Root>
 						<DropdownMenu.Trigger class={buttonVariants({ variant: 'outline', size: 'sm' })}>
 							Actions<ChevronDown class="ml-1 size-4" />
@@ -170,6 +181,15 @@
 			</div>
 		</div>
 		{#if user}
+			{#if isSelf}
+				<Alert.Root class="mb-4 flex items-center gap-3">
+					<Info class="size-4 shrink-0" />
+					<Alert.Description
+						><strong>This is your own account. </strong> You can edit the account details, but you can't
+						demote, deactivate, or delete your own account.</Alert.Description
+					>
+				</Alert.Root>
+			{/if}
 			<div class="space-y-2">
 				<InlineEditField
 					horizontal
@@ -186,10 +206,12 @@
 					type="email"
 					value={user.email}
 				/>
-				{#if passwordLoginEnabled}
-					<div class="grid grid-cols-[8rem_1fr] items-center gap-4">
-						<span class="text-sm font-medium text-muted-foreground">Password</span>
-						<div><ChangePasswordDialog userId={user.id} /></div>
+				{#if meta.current?.media_server}
+					<div class="grid min-h-9 grid-cols-[8rem_1fr] items-center gap-4">
+						<span class="text-sm font-medium text-muted-foreground">
+							{meta.current.media_server.display_name} Account
+						</span>
+						<MediaServerAccountPicker bind:user mediaServer={meta.current.media_server} />
 					</div>
 				{/if}
 				<div class="grid min-h-9 grid-cols-[8rem_1fr] items-center gap-4">
@@ -220,6 +242,12 @@
 						<p class="text-sm text-muted-foreground">No linked OAuth accounts.</p>
 					{/if}
 				</div>
+				{#if passwordLoginEnabled}
+					<div class="grid grid-cols-[8rem_1fr] items-center gap-4">
+						<span class="text-sm font-medium text-muted-foreground">Password</span>
+						<div><ChangePasswordDialog userId={user.id} /></div>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</Dialog.Content>

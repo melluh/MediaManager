@@ -31,6 +31,7 @@ import media_manager.movies.router as movies_router
 import media_manager.search.router as search_router
 import media_manager.torrent.router as torrent_router
 import media_manager.tv.router as tv_router
+from media_manager.auth.db import User
 from media_manager.auth.router import (
     auth_metadata_router,
     get_openid_router,
@@ -43,6 +44,7 @@ from media_manager.auth.users import (
     bearer_auth_backend,
     cookie_auth_backend,
     current_active_user,
+    current_active_user_allow_unverified,
     fastapi_users,
 )
 from media_manager.config import MediaManagerConfig
@@ -66,6 +68,8 @@ from media_manager.health.router import router as health_router
 from media_manager.health.schemas import ServiceStatus
 from media_manager.logging import LOGGING_CONFIG, setup_logging
 from media_manager.mediaServer.manager import get_media_server_provider
+from media_manager.mediaServer.router import router as media_server_router
+from media_manager.meta.router import router as meta_router
 from media_manager.metadataProvider.utils import migrate_legacy_poster_images
 from media_manager.notification.router import router as notification_router
 from media_manager.scheduler import (
@@ -361,10 +365,40 @@ for route in users_crud_router.routes:
     # frontend client picks up that richer response type instead.
     if route.path == "/me" and "GET" in route.methods:
         route.include_in_schema = False
+
+
+async def reject_locking_out_self(
+    request: Request,
+    user: User = Depends(current_active_user_allow_unverified),
+) -> None:
+    # Admins edit their own account through PATCH /users/{id} like anyone
+    # else's, but must not be able to remove their own access by accident.
+    if str(request.path_params.get("id", "")).lower() != str(user.id):
+        return
+    if request.method == "DELETE":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can't delete your own account.",
+        )
+    if request.method == "PATCH":
+        body = await request.json()
+        if body.get("is_active") is False:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can't deactivate your own account.",
+            )
+        if body.get("is_superuser") is False:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can't remove your own admin role.",
+            )
+
+
 api_app.include_router(
     users_crud_router,
     prefix="/users",
     tags=["users"],
+    dependencies=[Depends(reject_locking_out_self)],
 )
 api_app.include_router(auth_metadata_router, tags=["openid"])
 
@@ -380,6 +414,10 @@ api_app.include_router(
 api_app.include_router(health_router, prefix="/health", tags=["health"])
 api_app.include_router(search_router.router, prefix="/search", tags=["search"])
 api_app.include_router(admin_router.router, prefix="/admin", tags=["admin"])
+api_app.include_router(
+    media_server_router, prefix="/media-server", tags=["media server"]
+)
+api_app.include_router(meta_router, prefix="/meta", tags=["meta"])
 
 # serve static image files
 app.mount(

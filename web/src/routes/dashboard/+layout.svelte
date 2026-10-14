@@ -9,6 +9,7 @@
 	import { resolve } from '$app/paths';
 	import { notificationCount } from '$lib/hooks/notification-count.svelte.js';
 	import { serviceHealth } from '$lib/hooks/service-health.svelte.js';
+	import { meta } from '$lib/hooks/meta.svelte.js';
 	import { Resolved } from '$lib/hooks/resolved.svelte';
 	import {
 		setCrumbSetter,
@@ -64,6 +65,7 @@
 			// fire 401s/403s while the session is still being established.
 			notificationCount.startPolling();
 			serviceHealth.startPolling();
+			meta.load();
 		}
 	});
 </script>

@@ -26,7 +26,11 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 
-from media_manager.auth.db import OAuthAccount, User  # noqa: E402
+from media_manager.auth.db import (  # noqa: E402
+    MediaServerAccount,
+    OAuthAccount,
+    User,
+)
 from media_manager.common.models import MediaImage  # noqa: E402
 from media_manager.config import MediaManagerConfig  # noqa: E402
 from media_manager.database import Base  # noqa: E402
@@ -50,6 +54,7 @@ __all__ = [
     "EpisodeFile",
     "IndexerQueryResult",
     "MediaImage",
+    "MediaServerAccount",
     "Movie",
     "MovieFile",
     "Notification",

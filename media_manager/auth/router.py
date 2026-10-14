@@ -9,10 +9,12 @@ from fastapi_users.router import get_oauth_router
 from httpx_oauth.oauth2 import OAuth2
 from sqlalchemy import delete, select
 
-from media_manager.auth.db import OAuthAccount, User
+from media_manager.auth.db import MediaServerAccount, OAuthAccount, User
 from media_manager.auth.schemas import (
     AdminUserCreate,
     AuthMetadata,
+    MediaServerAccountLink,
+    MediaServerAccountRead,
     UserCreate,
     UserPermissions,
     UserRead,
@@ -30,6 +32,7 @@ from media_manager.auth.users import (
 )
 from media_manager.config import MediaManagerConfig
 from media_manager.database import DbSessionDependency
+from media_manager.mediaServer.router import media_server_provider_dep
 
 
 @asynccontextmanager
@@ -132,6 +135,86 @@ async def unlink_oauth_account(
 ) -> None:
     stmt = delete(OAuthAccount).where(
         OAuthAccount.id == oauth_account_id, OAuthAccount.user_id == user_id
+    )
+    result = await db.execute(stmt)
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Linked account not found.",
+        )
+
+
+@users_router.put(
+    "/users/{user_id}/media-server-account",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(current_superuser)],
+)
+async def link_media_server_account(
+    user_id: uuid.UUID,
+    payload: MediaServerAccountLink,
+    db: DbSessionDependency,
+    provider: media_server_provider_dep,
+) -> MediaServerAccountRead:
+    """
+    Link a user to an account on the configured media server, replacing any
+    account they were linked to before. Only superusers can do this, since
+    there's no way to verify which account actually belongs to a user.
+    """
+    if await db.get(User, user_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+        )
+    try:
+        server_user = await provider.get_user(payload.external_user_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Could not fetch the account from {provider.display_name}.",
+        ) from exc
+    if server_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No such {provider.display_name} account.",
+        )
+
+    accounts = (
+        await db.execute(
+            select(MediaServerAccount).where(
+                MediaServerAccount.provider == provider.name,
+                (MediaServerAccount.user_id == user_id)
+                | (MediaServerAccount.external_user_id == server_user.id),
+            )
+        )
+    ).scalars()
+    account = None
+    for existing in accounts:
+        if existing.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"This {provider.display_name} account is already linked "
+                "to another user.",
+            )
+        account = existing
+    if account is None:
+        account = MediaServerAccount(user_id=user_id, provider=provider.name)
+        db.add(account)
+    account.external_user_id = server_user.id
+    account.username = server_user.name
+    await db.flush()
+    return MediaServerAccountRead.model_validate(account)
+
+
+@users_router.delete(
+    "/users/{user_id}/media-server-account",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(current_superuser)],
+)
+async def unlink_media_server_account(
+    user_id: uuid.UUID, db: DbSessionDependency, provider: media_server_provider_dep
+) -> None:
+    stmt = delete(MediaServerAccount).where(
+        MediaServerAccount.user_id == user_id,
+        MediaServerAccount.provider == provider.name,
     )
     result = await db.execute(stmt)
     if result.rowcount == 0:
