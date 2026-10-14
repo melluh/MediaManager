@@ -2644,6 +2644,8 @@ export interface components {
 			oauth_name: string;
 			/** Account Email */
 			account_email: string;
+			/** Last Used At */
+			last_used_at?: string | null;
 		};
 		/** PublicEpisode */
 		PublicEpisode: {

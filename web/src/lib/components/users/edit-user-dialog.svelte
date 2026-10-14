@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
@@ -23,6 +23,7 @@
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import Info from '@lucide/svelte/icons/info';
 	import UnlinkOAuthAccountDialog from '$lib/components/users/unlink-oauth-account-dialog.svelte';
+	import OAuthAccountList from '$lib/components/users/oauth-account-list.svelte';
 	import MediaServerAccountPicker from '$lib/components/users/media-server-account-picker.svelte';
 	import { meta } from '$lib/hooks/meta.svelte.js';
 
@@ -216,31 +217,13 @@
 				{/if}
 				<div class="grid min-h-9 grid-cols-[8rem_1fr] items-center gap-4">
 					<span class="text-sm font-medium text-muted-foreground">Linked Accounts</span>
-					{#if user.oauth_accounts?.length}
-						<div class="flex flex-wrap gap-2">
-							{#each user.oauth_accounts as account (account.id)}
-								<div
-									class="flex h-9 items-center gap-2 rounded-md border pr-1 pl-3 text-sm font-medium"
-								>
-									<span>{account.oauth_name}: {account.account_email}</span>
-									<Button
-										variant="ghost"
-										size="icon"
-										class="size-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-										onclick={() => {
-											accountToUnlink = account;
-											unlinkDialogOpen = true;
-										}}
-									>
-										<Trash2 class="size-4" />
-										<span class="sr-only">Unlink {account.oauth_name} account</span>
-									</Button>
-								</div>
-							{/each}
-						</div>
-					{:else}
-						<p class="text-sm text-muted-foreground">No linked OAuth accounts.</p>
-					{/if}
+					<OAuthAccountList
+						accounts={user.oauth_accounts ?? []}
+						onUnlink={(account) => {
+							accountToUnlink = account;
+							unlinkDialogOpen = true;
+						}}
+					/>
 				</div>
 				{#if passwordLoginEnabled}
 					<div class="grid grid-cols-[8rem_1fr] items-center gap-4">

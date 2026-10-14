@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import datetime
 
 from fastapi import Depends
 from fastapi_users.db import (
@@ -7,7 +8,7 @@ from fastapi_users.db import (
     SQLAlchemyBaseUserTableUUID,
     SQLAlchemyUserDatabase,
 )
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,6 +20,11 @@ class OAuthAccount(SQLAlchemyBaseOAuthAccountTableUUID, Base):
     refresh_token: Mapped[str | None] = mapped_column(
         String(length=4096), nullable=True
     )
+    last_used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+    """When the account was last used to log in. NULL if it hasn't been since
+    this started being tracked."""
 
 
 class MediaServerAccount(Base):

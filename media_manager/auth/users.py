@@ -2,6 +2,7 @@ import contextlib
 import logging
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 from typing import Any, override
 
 from fastapi import Depends, HTTPException, Request
@@ -140,6 +141,15 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             associate_by_email=associate_by_email,
             is_verified_by_default=is_verified_by_default,
         )
+        for oauth_account in user.oauth_accounts:
+            if (
+                oauth_account.oauth_name == oauth_name
+                and oauth_account.account_id == account_id
+            ):
+                user = await self.user_db.update_oauth_account(
+                    user, oauth_account, {"last_used_at": datetime.now(UTC)}
+                )
+                break
         return await self._sync_oidc_display_name(user, access_token)
 
     async def _sync_oidc_display_name(self, user: User, access_token: str) -> User:

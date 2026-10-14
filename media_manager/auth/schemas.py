@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from fastapi_users import schemas
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -8,6 +9,7 @@ class OAuthAccountRead(BaseModel):
     id: uuid.UUID
     oauth_name: str
     account_email: str
+    last_used_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
