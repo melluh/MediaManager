@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import UserRoleBadge from '$lib/components/users/user-role-badge.svelte';
@@ -12,7 +12,7 @@
 	import { toast } from 'svelte-sonner';
 	import { refreshAll } from '$app/navigation';
 	import client from '$lib/api';
-	import type { UserRead, UserUpdate } from '$lib/api/api';
+	import type { OAuthAccountRead, UserRead, UserUpdate } from '$lib/api/api';
 	import X from '@lucide/svelte/icons/x';
 	import UserCheck from '@lucide/svelte/icons/user-check';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
@@ -20,6 +20,7 @@
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import ShieldOff from '@lucide/svelte/icons/shield-off';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import UnlinkOAuthAccountDialog from '$lib/components/users/unlink-oauth-account-dialog.svelte';
 
 	let {
 		user = $bindable(),
@@ -81,6 +82,8 @@
 	let isReactivating = $state(false);
 	let deleteDialogOpen = $state(false);
 	let deactivateDialogOpen = $state(false);
+	let unlinkDialogOpen = $state(false);
+	let accountToUnlink: OAuthAccountRead | null = $state(null);
 
 	async function reactivate() {
 		if (!user || isReactivating) return;
@@ -189,6 +192,34 @@
 						<div><ChangePasswordDialog userId={user.id} /></div>
 					</div>
 				{/if}
+				<div class="grid min-h-9 grid-cols-[8rem_1fr] items-center gap-4">
+					<span class="text-sm font-medium text-muted-foreground">Linked Accounts</span>
+					{#if user.oauth_accounts?.length}
+						<div class="flex flex-wrap gap-2">
+							{#each user.oauth_accounts as account (account.id)}
+								<div
+									class="flex h-9 items-center gap-2 rounded-md border pr-1 pl-3 text-sm font-medium"
+								>
+									<span>{account.oauth_name}: {account.account_email}</span>
+									<Button
+										variant="ghost"
+										size="icon"
+										class="size-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+										onclick={() => {
+											accountToUnlink = account;
+											unlinkDialogOpen = true;
+										}}
+									>
+										<Trash2 class="size-4" />
+										<span class="sr-only">Unlink {account.oauth_name} account</span>
+									</Button>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="text-sm text-muted-foreground">No linked OAuth accounts.</p>
+					{/if}
+				</div>
 			</div>
 		{/if}
 	</Dialog.Content>
@@ -198,6 +229,15 @@
 	bind:open={deactivateDialogOpen}
 	onDeactivated={() => {
 		if (user) user.is_active = false;
+	}}
+/>
+<UnlinkOAuthAccountDialog
+	{user}
+	account={accountToUnlink}
+	bind:open={unlinkDialogOpen}
+	onUnlinked={() => {
+		if (user)
+			user.oauth_accounts = user.oauth_accounts?.filter((a) => a.id !== accountToUnlink?.id);
 	}}
 />
 <DeleteUserDialog {user} bind:open={deleteDialogOpen} onDeleted={() => (open = false)} />

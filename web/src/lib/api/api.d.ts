@@ -228,6 +228,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/users/{user_id}/oauth-accounts/{oauth_account_id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Unlink Oauth Account */
+		delete: operations['unlink_oauth_account_api_v1_users__user_id__oauth_accounts__oauth_account_id__delete'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/users/me': {
 		parameters: {
 			query?: never;
@@ -4046,6 +4063,36 @@ export interface operations {
 			};
 		};
 	};
+	unlink_oauth_account_api_v1_users__user_id__oauth_accounts__oauth_account_id__delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: string;
+				oauth_account_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
 	get_current_user_api_v1_users_me_get: {
 		parameters: {
 			query?: never;
@@ -5846,38 +5893,6 @@ export interface operations {
 			};
 		};
 	};
-	delete_movie_file_api_v1_movies__movie_id__files_delete: {
-		parameters: {
-			query?: {
-				file_path_suffix?: string;
-			};
-			header?: never;
-			path: {
-				/** @description The ID of the movie */
-				movie_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
 	set_library_api_v1_movies__movie_id__library_post: {
 		parameters: {
 			query: {
@@ -5962,6 +5977,38 @@ export interface operations {
 				content: {
 					'application/json': components['schemas']['PublicMovieFile'][];
 				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	delete_movie_file_api_v1_movies__movie_id__files_delete: {
+		parameters: {
+			query?: {
+				file_path_suffix?: string;
+			};
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 			/** @description Validation Error */
 			422: {

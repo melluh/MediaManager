@@ -7,9 +7,9 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from fastapi_users import BaseUserManager, exceptions
 from fastapi_users.router import get_oauth_router
 from httpx_oauth.oauth2 import OAuth2
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
-from media_manager.auth.db import User
+from media_manager.auth.db import OAuthAccount, User
 from media_manager.auth.schemas import (
     AdminUserCreate,
     AuthMetadata,
@@ -120,6 +120,25 @@ async def admin_create_user(
             detail=f"Invalid password: {exc.reason}",
         ) from exc
     return UserRead.model_validate(user)
+
+
+@users_router.delete(
+    "/users/{user_id}/oauth-accounts/{oauth_account_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(current_superuser)],
+)
+async def unlink_oauth_account(
+    user_id: uuid.UUID, oauth_account_id: uuid.UUID, db: DbSessionDependency
+) -> None:
+    stmt = delete(OAuthAccount).where(
+        OAuthAccount.id == oauth_account_id, OAuthAccount.user_id == user_id
+    )
+    result = await db.execute(stmt)
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Linked account not found.",
+        )
 
 
 @auth_metadata_router.get("/auth/metadata", status_code=status.HTTP_200_OK)
