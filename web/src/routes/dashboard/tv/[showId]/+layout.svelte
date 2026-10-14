@@ -2,10 +2,12 @@
 	import PageLoading from '$lib/components/page-loading.svelte';
 	import PageLoadError from '$lib/components/page-load-error.svelte';
 	import SeededMediaDetail from '$lib/components/seeded-media-detail.svelte';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { Resolved } from '$lib/hooks/resolved.svelte';
 	import { setShowContext } from '$lib/context.svelte';
+	import { validate as uuidValidate } from 'uuid';
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
@@ -15,6 +17,16 @@
 	// only render once it has loaded. A refresh of the same show (e.g. after an
 	// import finishes) updates in place; navigating to another show reloads.
 	const details = new Resolved(() => data.show, { key: () => page.params.showId });
+
+	// Canonicalise UUID urls onto the slug. This is done here rather than in `load`,
+	// because `load` also runs when a link is preloaded on hover, and navigating from
+	// there would follow links the user only pointed at.
+	$effect(() => {
+		const show = details.value?.show;
+		if (show?.slug && uuidValidate(page.params.showId ?? '')) {
+			goto(resolve('/dashboard/tv/[showId]', { showId: show.slug }), { replaceState: true });
+		}
+	});
 
 	setShowContext({
 		show: () => details.value!.show,
