@@ -51,6 +51,8 @@ log = logging.getLogger(__name__)
 
 
 class MovieImportService(BaseMediaService[Movie, Movie]):
+    notification_media_field = "movie_id"
+
     def __init__(
         self,
         movie_repository: MovieRepository,
@@ -150,7 +152,8 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
                 torrent,
                 movie.name,
                 "movie",
-                "No video files found."
+                "No video files found.",
+                media_id=movie.id,
             )
             return
 
@@ -161,6 +164,7 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
                 "movie",
                 "Multiple video files found. Manual import required.",
                 import_error_kind=ImportErrorKind.multiple_video_files,
+                media_id=movie.id,
             )
             return
 
@@ -228,7 +232,11 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
         )
         if not downloads:
             await self.notify_import_failure(
-                torrent, movie.name, "movie", import_error_kind=kind_on_failure
+                torrent,
+                movie.name,
+                "movie",
+                import_error_kind=kind_on_failure,
+                media_id=movie.id,
             )
             return False
 
@@ -257,11 +265,17 @@ class MovieImportService(BaseMediaService[Movie, Movie]):
             torrent.import_error = None
             torrent.import_error_kind = None
             await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
-            await self.notify_import_success(movie.name, "movie")
+            await self.notify_import_success(
+                torrent, movie.name, "movie", media_id=movie.id
+            )
             return True
 
         await self.notify_import_failure(
-            torrent, movie.name, "movie", import_error_kind=kind_on_failure
+            torrent,
+            movie.name,
+            "movie",
+            import_error_kind=kind_on_failure,
+            media_id=movie.id,
         )
         return False
 

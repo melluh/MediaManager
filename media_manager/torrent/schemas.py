@@ -81,6 +81,17 @@ class DownloadProgress(BaseModel):
     leechers: int | None = None
 
 
+class _MediaLike(typing.Protocol):
+    """The fields `TorrentMedia` is built from, shared by every movie/show
+    schema and ORM row."""
+
+    id: uuid.UUID
+    name: str
+    slug: str | None
+    year: int | None
+    metadata_updated_at: datetime | None
+
+
 class TorrentMedia(BaseModel):
     """
     Minimal, client-neutral summary of the movie/show a torrent belongs to -
@@ -98,6 +109,24 @@ class TorrentMedia(BaseModel):
     is_show: bool
     metadata_updated_at: datetime | None = None
     images: dict[str, str] = Field(default_factory=dict)
+
+    @classmethod
+    def from_media(
+        cls, media: _MediaLike, *, is_show: bool, images: dict[str, str]
+    ) -> "TorrentMedia":
+        """
+        Builds the summary from any movie/show - schema or ORM row alike, as
+        both carry the same fields.
+        """
+        return cls(
+            id=media.id,
+            name=media.name,
+            slug=media.slug,
+            year=media.year,
+            is_show=is_show,
+            metadata_updated_at=media.metadata_updated_at,
+            images=images,
+        )
 
 
 class TorrentWithProgress(Torrent):

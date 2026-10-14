@@ -24,7 +24,7 @@ from media_manager.torrent.schemas import (
 )
 from media_manager.torrent.utils import get_torrent_filepath, list_torrent_media_files
 from media_manager.torrent.video_probe import probe_video_files
-from media_manager.tv.schemas import EpisodeDownload, Show, ShowSummary
+from media_manager.tv.schemas import EpisodeDownload, Show
 
 log = logging.getLogger(__name__)
 
@@ -216,9 +216,7 @@ class TorrentService:
         return [
             t
             for t in await self.get_all_torrents()
-            if t.status == TorrentStatus.finished
-            and not t.imported
-            and not t.cancelled
+            if t.status == TorrentStatus.finished and not t.imported and not t.cancelled
         ]
 
     async def flag_orphaned_completed_torrents(
@@ -267,9 +265,10 @@ class TorrentService:
             )
             await self.torrent_repository.save_torrent(torrent=t)
             if notification_service:
-                await notification_service.send_notification_to_all_providers(
+                await notification_service.send_notification(
                     title="Import Failed",
                     message=f"Torrent '{t.title}' isn't linked to any movie or show.",
+                    user_id=t.initiated_by_user_id,
                 )
 
     async def get_torrent_by_id(self, torrent_id: TorrentId) -> Torrent:
@@ -333,7 +332,9 @@ class TorrentService:
         )
         return await self.enrich_torrents(own)
 
-    async def enrich_torrents(self, torrents: list[Torrent]) -> list[TorrentWithProgress]:
+    async def enrich_torrents(
+        self, torrents: list[Torrent]
+    ) -> list[TorrentWithProgress]:
         """
         Attaches live download status/progress, owning media, and
         season/episode numbers to the given torrents, regardless of who
@@ -454,31 +455,18 @@ class TorrentService:
                 media_ids,
             )
             for torrent_id, movie in movies_by_torrent_id.items():
-                media_by_torrent_id[torrent_id] = self._build_torrent_media(
-                    movie, is_show=False, images_by_media_id=images_by_media_id
+                media_by_torrent_id[torrent_id] = TorrentMedia.from_media(
+                    movie,
+                    is_show=False,
+                    images=images_by_media_id.get(str(movie.id), {}),
                 )
             for torrent_id, show in shows_by_torrent_id.items():
-                media_by_torrent_id[torrent_id] = self._build_torrent_media(
-                    show, is_show=True, images_by_media_id=images_by_media_id
+                media_by_torrent_id[torrent_id] = TorrentMedia.from_media(
+                    show,
+                    is_show=True,
+                    images=images_by_media_id.get(str(show.id), {}),
                 )
         except Exception:
             log.exception("Error resolving media for own torrents")
 
         return media_by_torrent_id
-
-    @staticmethod
-    def _build_torrent_media(
-        media: Movie | ShowSummary,
-        *,
-        is_show: bool,
-        images_by_media_id: dict[str, dict[str, str]],
-    ) -> TorrentMedia:
-        return TorrentMedia(
-            id=media.id,
-            name=media.name,
-            slug=media.slug,
-            year=media.year,
-            is_show=is_show,
-            metadata_updated_at=media.metadata_updated_at,
-            images=images_by_media_id.get(str(media.id), {}),
-        )

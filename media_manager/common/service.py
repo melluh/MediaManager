@@ -185,11 +185,32 @@ class BaseMediaService[T, S]:
         """
         raise NotImplementedError
 
-    async def notify_import_success(self, media_name: str, media_type: str) -> None:
+    notification_media_field: str | None = None
+    """The notification field linking to this service's media - "movie_id" or
+    "show_id" - set by subclasses that send import notifications."""
+
+    def _notification_media_link(self, media_id: UUID | None) -> dict[str, UUID]:
+        if media_id is None or self.notification_media_field is None:
+            return {}
+        return {self.notification_media_field: media_id}
+
+    async def notify_import_success(
+        self,
+        torrent: Torrent,
+        media_name: str,
+        media_type: str,
+        media_id: UUID | None = None,
+    ) -> None:
+        """
+        Notifies the user who started the download (and the external
+        providers) that it was imported.
+        """
         if self.notification_service:
-            await self.notification_service.send_notification_to_all_providers(
+            await self.notification_service.send_notification(
                 title=f"{media_type.capitalize()} Downloaded",
                 message=f"{media_type.capitalize()} {media_name} has been successfully downloaded and imported.",
+                user_id=torrent.initiated_by_user_id,
+                **self._notification_media_link(media_id),
             )
 
     async def notify_import_failure(
@@ -199,23 +220,29 @@ class BaseMediaService[T, S]:
         media_type: str,
         error_msg: str = "",
         import_error_kind: ImportErrorKind | None = None,
+        media_id: UUID | None = None,
     ) -> None:
         """
-        Records the failure on the torrent and notifies, but only when the
-        stored error actually changes - repeated cron passes over the same
-        unresolved failure must not re-notify every run.
+        Records the failure on the torrent and notifies the user who started
+        the download (and the external providers), but only when the stored
+        error actually changes - repeated cron passes over the same unresolved
+        failure must not re-notify every run.
 
         :param import_error_kind: Set when the failure is one the API can offer
             a targeted resolution flow for; left unset otherwise.
+        :param media_id: The media the torrent belongs to, if known, so the
+            notification can link to it.
         """
         stored_error = error_msg or "Unknown error"
         if self.notification_service and torrent.import_error != stored_error:
             msg = f"Failed to import files for {media_type} {media_name}."
             if error_msg:
                 msg += f" Error: {error_msg}"
-            await self.notification_service.send_notification_to_all_providers(
+            await self.notification_service.send_notification(
                 title="Import Failed",
                 message=msg,
+                user_id=torrent.initiated_by_user_id,
+                **self._notification_media_link(media_id),
             )
         torrent.imported = False
         torrent.import_error = stored_error
@@ -541,6 +568,7 @@ class BaseMediaService[T, S]:
                         media_type_name,
                         f"Unexpected error ({type(e).__name__}). "
                         "Check the server logs for details.",
+                        media_id=getattr(media, "id", None),
                     )
                 except Exception:
                     log.exception(

@@ -1501,7 +1501,7 @@ export interface paths {
 		};
 		/**
 		 * Get All Notifications
-		 * @description Get all notifications.
+		 * @description Get all notifications of the current user.
 		 */
 		get: operations['get_all_notifications_api_v1_notification_get'];
 		put?: never;
@@ -1521,7 +1521,7 @@ export interface paths {
 		};
 		/**
 		 * Get Unread Notifications
-		 * @description Get all unread notifications.
+		 * @description Get all unread notifications of the current user.
 		 */
 		get: operations['get_unread_notifications_api_v1_notification_unread_get'];
 		put?: never;
@@ -1541,7 +1541,7 @@ export interface paths {
 		};
 		/**
 		 * Get Unread Notification Count
-		 * @description Get the count of unread notifications.
+		 * @description Get the count of unread notifications of the current user.
 		 */
 		get: operations['get_unread_notification_count_api_v1_notification_unread_count_get'];
 		put?: never;
@@ -1591,7 +1591,7 @@ export interface paths {
 		head?: never;
 		/**
 		 * Mark All Notifications As Read
-		 * @description Mark all notifications as read.
+		 * @description Mark all notifications of the current user as read.
 		 */
 		patch: operations['mark_all_notifications_as_read_api_v1_notification_read_patch'];
 		trace?: never;
@@ -2593,6 +2593,12 @@ export interface components {
 			 */
 			id?: string;
 			/**
+			 * User Id
+			 * Format: uuid
+			 * @description The user this notification is shown to
+			 */
+			user_id: string;
+			/**
 			 * Read
 			 * @description Whether the notification has been read
 			 * @default false
@@ -2609,6 +2615,18 @@ export interface components {
 			 * @description The timestamp of the notification
 			 */
 			timestamp?: string;
+			/**
+			 * Movie Id
+			 * @description The movie this notification is about, if any
+			 */
+			movie_id?: string | null;
+			/**
+			 * Show Id
+			 * @description The show this notification is about, if any
+			 */
+			show_id?: string | null;
+			/** @description Summary of the linked movie/show for rendering a poster and link; resolved when read, not stored */
+			media?: components['schemas']['TorrentMedia'] | null;
 		};
 		/** OAuth2AuthorizeResponse */
 		OAuth2AuthorizeResponse: {

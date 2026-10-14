@@ -62,6 +62,8 @@ SEASON_EPISODE_TOKEN = re.compile(r"S(\d+)E(\d+)", re.IGNORECASE)
 
 
 class TvImportService(BaseMediaService[Show, Show]):
+    notification_media_field = "show_id"
+
     def __init__(
         self,
         tv_repository: TvRepository,
@@ -222,10 +224,12 @@ class TvImportService(BaseMediaService[Show, Show]):
             torrent.imported = True
             torrent.import_error = None
             await self.torrent_service.torrent_repository.save_torrent(torrent=torrent)
-            await self.notify_import_success(show.name, "TV show")
+            await self.notify_import_success(
+                torrent, show.name, "TV show", media_id=show.id
+            )
         else:
             await self.notify_import_failure(
-                torrent, show.name, "TV show", error_msg or ""
+                torrent, show.name, "TV show", error_msg or "", media_id=show.id
             )
 
     async def get_import_suggestion(
