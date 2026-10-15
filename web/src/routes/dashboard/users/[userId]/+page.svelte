@@ -3,6 +3,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import EditUserDialog from '$lib/components/users/edit-user-dialog.svelte';
 	import UserRoleBadge from '$lib/components/users/user-role-badge.svelte';
+	import UserAvatar from '$lib/components/user-avatar.svelte';
 	import { shallowDialog } from '$lib/hooks/shallow-dialog.svelte';
 	import type { UserRead } from '$lib/api/api';
 	import History from '@lucide/svelte/icons/history';
@@ -61,6 +62,7 @@
 			{:else}
 				<div class="flex flex-wrap items-center justify-between gap-4">
 					<div class="flex flex-wrap items-center gap-3">
+						<UserAvatar userId={user.value.id} class="size-12" />
 						<h1 class="text-3xl font-bold tracking-tight">
 							{user.value.display_name || user.value.email}
 						</h1>

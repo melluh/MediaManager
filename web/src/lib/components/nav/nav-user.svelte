@@ -3,6 +3,8 @@
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Wrench from '@lucide/svelte/icons/wrench';
 	import * as Avatar from '$lib/components/ui/avatar';
+	import UserAvatar from '$lib/components/user-avatar.svelte';
+	import { getMaybeCurrentUser } from '$lib/context.svelte';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import { useSidebar } from '$lib/components/ui/sidebar';
@@ -12,6 +14,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	const sidebar = useSidebar();
+	const user = getMaybeCurrentUser();
 </script>
 
 <Sidebar.Menu>
@@ -24,11 +27,15 @@
 						size="lg"
 						class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
 					>
-						<Avatar.Root class="h-8 w-8 rounded-lg">
-							<Avatar.Fallback class="rounded-lg">
-								<UserRound />
-							</Avatar.Fallback>
-						</Avatar.Root>
+						{#if user()}
+							<UserAvatar userId={user()!.id} class="size-8! rounded-lg" />
+						{:else}
+							<Avatar.Root class="size-8 rounded-lg">
+								<Avatar.Fallback class="rounded-lg">
+									<UserRound />
+								</Avatar.Fallback>
+							</Avatar.Root>
+						{/if}
 						<div class="grid flex-1 text-left text-sm leading-tight">
 							<UserDetails />
 						</div>

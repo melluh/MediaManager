@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import UserRound from '@lucide/svelte/icons/user-round';
+	import UserAvatar from '$lib/components/user-avatar.svelte';
 	import ShieldUser from '@lucide/svelte/icons/shield-user';
 
 	let {
@@ -16,12 +16,11 @@
 
 <a
 	href={resolve('/dashboard/users/[userId]', { userId })}
-	class="inline-flex max-w-full items-center gap-1.5 rounded-full border bg-muted/40 px-2.5 py-1 text-sm font-medium transition-colors hover:bg-muted"
+	class="inline-flex max-w-full items-center gap-1.5 rounded-full border bg-muted/40 py-1 pr-2.5 pl-1 text-sm font-medium transition-colors hover:bg-muted"
 >
+	<UserAvatar {userId} class="size-5" />
+	<span class="truncate">{name}</span>
 	{#if isAdmin}
 		<ShieldUser class="size-3.5 shrink-0 text-muted-foreground" aria-label="Admin" />
-	{:else}
-		<UserRound class="size-3.5 shrink-0 text-muted-foreground" />
 	{/if}
-	<span class="truncate">{name}</span>
 </a>
