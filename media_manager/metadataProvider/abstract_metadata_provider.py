@@ -99,6 +99,19 @@ class AbstractMetadataProvider(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    async def get_recommendations(
+        self, external_id: int, media_type: MediaType
+    ) -> list[MetaDataProviderSearchResult]:
+        """
+        Titles of the same media type that people who liked this one also
+        liked, best match first. Empty for providers without such data.
+
+        :raises httpx.HTTPError: if the provider (or its relay) can't be
+            reached or doesn't offer recommendations.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     async def get_available_image_types(
         self, media: Movie | Show, media_type: MediaType
     ) -> set[MediaImageType]:

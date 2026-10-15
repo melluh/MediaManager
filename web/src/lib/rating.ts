@@ -15,6 +15,14 @@ export const RATING_OPTIONS = [
 	{ score: SUPER_DISLIKE, label: 'Hated it' }
 ] as const;
 
+/** Why a title is recommended, given the user's rating of the title it's credited to. */
+export function recommendationReason(becauseOf: string, becauseScore: number | null): string {
+	if (becauseScore === null) return `Because you watched ${becauseOf}`;
+	return becauseScore >= SUPER_LIKE
+		? `Because you loved ${becauseOf}`
+		: `Because you liked ${becauseOf}`;
+}
+
 export async function fetchRating(mediaId: string, isShow: boolean): Promise<number | null> {
 	const { data } = isShow
 		? await client.GET('/api/v1/ratings/shows/{show_id}', {

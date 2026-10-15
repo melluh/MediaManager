@@ -42,6 +42,9 @@ from media_manager.rating.models import (  # noqa: E402
     MediaRating,
     RatingPromptDismissal,
 )
+from media_manager.recommendation.models import (  # noqa: E402
+    TmdbRecommendationList,
+)
 from media_manager.torrent.models import Torrent  # noqa: E402
 from media_manager.tv.models import (  # noqa: E402
     Episode,
@@ -49,6 +52,7 @@ from media_manager.tv.models import (  # noqa: E402
     Season,
     Show,
 )
+from media_manager.watch_history.models import MediaWatch  # noqa: E402
 
 target_metadata = Base.metadata
 
@@ -62,6 +66,7 @@ __all__ = [
     "MediaImage",
     "MediaRating",
     "MediaServerAccount",
+    "MediaWatch",
     "Movie",
     "MovieFile",
     "Notification",
@@ -69,6 +74,7 @@ __all__ = [
     "RatingPromptDismissal",
     "Season",
     "Show",
+    "TmdbRecommendationList",
     "Torrent",
     "User",
 ]

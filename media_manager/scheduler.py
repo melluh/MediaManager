@@ -22,12 +22,16 @@ from media_manager.movies.importer import MovieImportService
 from media_manager.movies.service import MovieService
 from media_manager.notification.dependencies import get_notification_service
 from media_manager.notification.service import NotificationService
+from media_manager.recommendation.dependencies import get_recommendation_service
+from media_manager.recommendation.service import RecommendationService
 from media_manager.titleIndex.download import refresh_title_index
 from media_manager.torrent.dependencies import get_torrent_service
 from media_manager.torrent.service import TorrentService
 from media_manager.tv.dependencies import get_tv_import_service, get_tv_service
 from media_manager.tv.importer import TvImportService
 from media_manager.tv.service import TvService
+from media_manager.watch_history.dependencies import get_watch_history_service
+from media_manager.watch_history.service import WatchHistoryService
 
 INDEXER_QUERY_RESULT_EXPIRY = timedelta(hours=6)
 
@@ -163,6 +167,26 @@ async def refresh_tmdb_title_index_task() -> None:
 
 
 @broker.task
+async def sync_watch_history_task(
+    watch_history_service: WatchHistoryService = TaskiqDepends(
+        get_watch_history_service
+    ),
+) -> None:
+    await watch_history_service.sync_all_users()
+    # Newly watched titles are new recommendation seeds.
+    await refresh_recommendation_lists_task.kiq()
+
+
+@broker.task
+async def refresh_recommendation_lists_task(
+    recommendation_service: RecommendationService = TaskiqDepends(
+        get_recommendation_service
+    ),
+) -> None:
+    await recommendation_service.refresh_stale_lists()
+
+
+@broker.task
 async def delete_expired_indexer_query_results_task(
     db: AsyncSession = TaskiqDepends(get_async_session),
 ) -> None:
@@ -196,6 +220,12 @@ _STARTUP_SCHEDULES: dict[str, list[dict[str, str]]] = {
     scan_movie_library_files_task.task_name: [{"cron": "17 * * * *"}],
     scan_show_library_files_task.task_name: [{"cron": "47 * * * *"}],
     delete_expired_indexer_query_results_task.task_name: [{"cron": "*/30 * * * *"}],
+    # Recent watches are also saved whenever the dashboard asks the media
+    # server for them; this catches up on everything else.
+    sync_watch_history_task.task_name: [{"cron": "*/30 * * * *"}],
+    # Lists are also refreshed on demand, when a user's recommendations find
+    # one missing; this only keeps stored lists from going stale.
+    refresh_recommendation_lists_task.task_name: [{"cron": "23 * * * *"}],
     # After TMDB's ~08:00 UTC publish time, with margin.
     refresh_tmdb_title_index_task.task_name: [{"cron": "30 9 * * *"}],
 }

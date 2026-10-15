@@ -4,6 +4,7 @@ from datetime import datetime
 from media_manager.health.registry import get_health_registry
 from media_manager.health.schemas import ServiceStatus
 from media_manager.mediaServer.schemas import MediaServerUser, PlayedMediaItem
+from media_manager.metadataProvider.schemas import MediaType
 
 
 class AbstractMediaServerProvider(ABC):
@@ -57,12 +58,15 @@ class AbstractMediaServerProvider(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    async def get_recently_played_movies(
-        self, user_id: str, since: datetime
+    async def get_played_media(
+        self, user_id: str, media_type: MediaType, since: datetime | None = None
     ) -> list[PlayedMediaItem]:
         """
-        Movies the media server account `user_id` last played at or after
-        `since`, most recently played first.
+        Movies or shows the media server account `user_id` has watched, most
+        recently played first.
+
+        :param since: Only items last played at or after this time, which also
+            leaves out items without a play date. None for the whole history.
         """
         raise NotImplementedError()
 

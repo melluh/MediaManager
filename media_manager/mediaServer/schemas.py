@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from media_manager.metadataProvider.schemas import MediaType
+
 
 class MediaServerUser(BaseModel):
     """An account on the media server, as reported by the server itself."""
@@ -21,9 +23,18 @@ class MediaServerUserOption(MediaServerUser):
 
 
 class PlayedMediaItem(BaseModel):
-    """An item a media server user has watched, as reported by the server."""
+    """
+    A movie or show a media server user has watched, as reported by the
+    server. A show counts as watched once any of its episodes has been.
+    """
 
+    media_type: MediaType
+    server_item_id: str
+    """The item's id on the media server; for a show, the series' id."""
+    name: str
     provider_ids: dict[str, str]
     """External ids keyed by our metadata provider names ("imdb", "tmdb",
     "tvdb"), for matching the item to library media."""
-    last_played_at: datetime
+    last_played_at: datetime | None
+    """When it (for a show: any of its episodes) was last played. None for
+    items marked as played by hand, which have no play date."""

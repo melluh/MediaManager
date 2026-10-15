@@ -524,6 +524,13 @@ class TvdbMetadataProvider(AbstractMetadataProvider):
         return formatted_results
 
     @override
+    async def get_recommendations(
+        self, external_id: int, media_type: MediaType
+    ) -> list[MetaDataProviderSearchResult]:
+        # TVDB has no "people who liked this also liked" data.
+        return []
+
+    @override
     async def get_movie_metadata(
         self, movie_id: int, language: str | None = None
     ) -> Movie:

@@ -1,13 +1,11 @@
-import logging
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from media_manager.auth.db import User
-from media_manager.mediaServer.manager import get_media_server_provider
+from media_manager.metadataProvider.schemas import MediaType
 from media_manager.rating.repository import RatingRepository
 from media_manager.rating.schemas import RatingPrompt
-
-log = logging.getLogger(__name__)
+from media_manager.watch_history.service import WatchHistoryService
 
 RATING_PROMPT_LOOKBACK = timedelta(days=30)
 """How long after watching a movie the user is still asked whether they
@@ -17,8 +15,13 @@ MAX_RATING_PROMPTS = 10
 
 
 class RatingService:
-    def __init__(self, rating_repository: RatingRepository) -> None:
+    def __init__(
+        self,
+        rating_repository: RatingRepository,
+        watch_history_service: WatchHistoryService,
+    ) -> None:
         self.rating_repository = rating_repository
+        self.watch_history_service = watch_history_service
 
     async def get_score(
         self,
@@ -64,27 +67,9 @@ class RatingService:
         no media server is configured, the user has no account linked on it,
         or it can't be reached.
         """
-        provider = get_media_server_provider()
-        if provider is None:
-            return []
-        account = next(
-            (a for a in user.media_server_accounts if a.provider == provider.name),
-            None,
+        played = await self.watch_history_service.fetch_played(
+            user, MediaType.movie, since=datetime.now(UTC) - RATING_PROMPT_LOOKBACK
         )
-        if account is None:
-            return []
-
-        try:
-            played = await provider.get_recently_played_movies(
-                account.external_user_id,
-                since=datetime.now(UTC) - RATING_PROMPT_LOOKBACK,
-            )
-        except Exception:
-            log.warning(
-                f"Could not fetch recently played movies from {provider.display_name}",
-                exc_info=True,
-            )
-            return []
         if not played:
             return []
 
@@ -105,6 +90,9 @@ class RatingService:
         # `played` is most recent first, so the first match for a movie is its
         # latest watch.
         for item in played:
+            # Never None here: fetching with `since` leaves out undated items.
+            if item.last_played_at is None:
+                continue
             for movie, summary in movies:
                 if movie.id in seen or movie.id in answered:
                     continue

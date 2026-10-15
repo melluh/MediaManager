@@ -40,6 +40,12 @@ else:
     async def get_tmdb_show_external_ids(show_id: int) -> dict:
         return TV(show_id).external_ids()
 
+    @router.get("/tv/shows/{show_id}/recommendations")
+    async def get_tmdb_show_recommendations(
+        show_id: int, page: int = 1, language: str = "en"
+    ) -> dict:
+        return TV(show_id).recommendations(page=page, language=language)
+
     @router.get("/tv/shows/{show_id}/{season_number}")
     async def get_tmdb_season(
         season_number: int, show_id: int, language: str = "en"
@@ -61,6 +67,12 @@ else:
     @router.get("/movies/{movie_id}")
     async def get_tmdb_movie(movie_id: int, language: str = "en") -> dict:
         return Movies(movie_id).info(language=language, append_to_response=APPEND_TO_RESPONSE)
+
+    @router.get("/movies/{movie_id}/recommendations")
+    async def get_tmdb_movie_recommendations(
+        movie_id: int, page: int = 1, language: str = "en"
+    ) -> dict:
+        return Movies(movie_id).recommendations(page=page, language=language)
 
     # External IDs are already returned from the endpoint above, we only keep this for backwards compatibility
     @router.get("/movies/{movie_id}/external_ids")

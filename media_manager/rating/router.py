@@ -7,6 +7,7 @@ from media_manager.auth.users import current_active_user
 from media_manager.movies.dependencies import movie_dep
 from media_manager.rating.dependencies import rating_service_dep
 from media_manager.rating.schemas import RatingPrompt, SetRating, UserRating
+from media_manager.recommendation.service import enqueue_list_refresh
 from media_manager.tv.dependencies import show_dep
 
 router = APIRouter()
@@ -63,6 +64,8 @@ async def set_movie_rating(
 ) -> None:
     """Rate a movie as the current user, replacing any previous rating."""
     await rating_service.set_score(user.id, rating.score, movie_id=movie.id)
+    # The newly rated title may be a recommendation seed without a list yet.
+    await enqueue_list_refresh()
 
 
 @router.delete("/movies/{movie_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -95,6 +98,8 @@ async def set_show_rating(
 ) -> None:
     """Rate a show as the current user, replacing any previous rating."""
     await rating_service.set_score(user.id, rating.score, show_id=show.id)
+    # The newly rated title may be a recommendation seed without a list yet.
+    await enqueue_list_refresh()
 
 
 @router.delete("/shows/{show_id}", status_code=status.HTTP_204_NO_CONTENT)

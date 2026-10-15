@@ -1751,6 +1751,48 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/recommendations/movies': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Recommended Movies
+		 * @description Movies the current user will probably like, based on what they rated and
+		 *     watched, best first.
+		 */
+		get: operations['get_recommended_movies_api_v1_recommendations_movies_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/recommendations/shows': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Recommended Shows
+		 * @description Shows the current user will probably like, based on what they rated and
+		 *     watched, best first.
+		 */
+		get: operations['get_recommended_shows_api_v1_recommendations_shows_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/health/services': {
 		parameters: {
 			query?: never;
@@ -2868,6 +2910,17 @@ export interface components {
 			account_email: string;
 			/** Last Used At */
 			last_used_at?: string | null;
+		};
+		/**
+		 * PersonalRecommendation
+		 * @description A movie or show recommended to the current user.
+		 */
+		PersonalRecommendation: {
+			media: components['schemas']['MetaDataProviderSearchResult'];
+			/** Because Of */
+			because_of: string;
+			/** Because Score */
+			because_score: number | null;
 		};
 		/** PublicEpisode */
 		PublicEpisode: {
@@ -3987,6 +4040,7 @@ export type MovieTorrent = components['schemas']['MovieTorrent'];
 export type Notification = components['schemas']['Notification'];
 export type OAuth2AuthorizeResponse = components['schemas']['OAuth2AuthorizeResponse'];
 export type OAuthAccountRead = components['schemas']['OAuthAccountRead'];
+export type PersonalRecommendation = components['schemas']['PersonalRecommendation'];
 export type PublicEpisode = components['schemas']['PublicEpisode'];
 export type PublicEpisodeFile = components['schemas']['PublicEpisodeFile'];
 export type PublicMovie = components['schemas']['PublicMovie'];
@@ -7202,6 +7256,46 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	get_recommended_movies_api_v1_recommendations_movies_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PersonalRecommendation'][];
+				};
+			};
+		};
+	};
+	get_recommended_shows_api_v1_recommendations_shows_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PersonalRecommendation'][];
 				};
 			};
 		};

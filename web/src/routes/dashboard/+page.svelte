@@ -5,9 +5,11 @@
 	import { onMount } from 'svelte';
 	import { setCrumbs } from '$lib/context.svelte';
 	import { poll } from '$lib/hooks/poll.svelte';
+	import { recommendationReason } from '$lib/rating';
 	import client from '$lib/api';
 	import type {
 		MetaDataProviderSearchResult,
+		PersonalRecommendation,
 		RatingPrompt,
 		TorrentWithProgress
 	} from '$lib/api/api.d.ts';
@@ -38,7 +40,40 @@
 	// hidden) without a linked media server account, or if the request fails.
 	let ratingPrompts: RatingPrompt[] = $state([]);
 
+	// Based on what the user rated and watched. Empty (and the section hidden)
+	// until they've rated or watched something, or if the request fails.
+	let personalMovies: PersonalRecommendation[] = $state([]);
+	let personalShows: PersonalRecommendation[] = $state([]);
+
+	function reasonFor(recommendations: PersonalRecommendation[]) {
+		const reasons = new Map(
+			recommendations.map((r) => [
+				r.media.external_id,
+				recommendationReason(r.because_of, r.because_score)
+			])
+		);
+		return (item: MetaDataProviderSearchResult) => reasons.get(item.external_id);
+	}
+
 	onMount(() => {
+		client
+			.GET('/api/v1/recommendations/movies')
+			.then(({ data }) => {
+				if (data) personalMovies = data;
+			})
+			.catch(() => {
+				// nothing to recommend; the section stays hidden
+			});
+
+		client
+			.GET('/api/v1/recommendations/shows')
+			.then(({ data }) => {
+				if (data) personalShows = data;
+			})
+			.catch(() => {
+				// nothing to recommend; the section stays hidden
+			});
+
 		client
 			.GET('/api/v1/ratings/movies/prompts')
 			.then(({ data }) => {
@@ -107,6 +142,30 @@
 		{/if}
 
 		<RatingPromptCard prompts={ratingPrompts} />
+
+		{#if personalMovies.length > 0}
+			<div class="mx-auto mb-8">
+				<h3 class="my-4 text-2xl font-semibold md:ml-12">Movies for You</h3>
+				<RecommendedMediaCarousel
+					isLoading={false}
+					isShow={false}
+					media={personalMovies.map((r) => r.media)}
+					caption={reasonFor(personalMovies)}
+				/>
+			</div>
+		{/if}
+
+		{#if personalShows.length > 0}
+			<div class="mx-auto mb-8">
+				<h3 class="my-4 text-2xl font-semibold md:ml-12">Shows for You</h3>
+				<RecommendedMediaCarousel
+					isLoading={false}
+					isShow={true}
+					media={personalShows.map((r) => r.media)}
+					caption={reasonFor(personalShows)}
+				/>
+			</div>
+		{/if}
 
 		<div class="mx-auto">
 			<h3 class="my-4 text-2xl font-semibold md:ml-12">Trending Shows</h3>

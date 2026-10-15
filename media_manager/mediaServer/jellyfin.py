@@ -11,6 +11,7 @@ from media_manager.mediaServer.abstract_media_server_provider import (
     AbstractMediaServerProvider,
 )
 from media_manager.mediaServer.schemas import MediaServerUser, PlayedMediaItem
+from media_manager.metadataProvider.schemas import MediaType
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +38,13 @@ _NOT_FOUND_STATUSES = {400, 404}
 """Responses meaning "no such item" rather than a broken server - Jellyfin
 answers 400 instead of 404 for an id that isn't a valid GUID."""
 
-_PLAYED_ITEMS_LIMIT = 50
-"""Most recently played movies fetched when looking for ones to ask the user
-about - far more than anyone watches within the lookback window."""
+_PLAYED_PAGE_SIZE = 50
+"""Played items requested per page, most recent first. One page usually
+covers a recent window (e.g. the rating prompt's), so those lookups stay a
+single request; a whole-history sync pages through the rest."""
+
+_SERIES_LOOKUP_BATCH_SIZE = 100
+"""Series fetched per request by id, keeping the query string short."""
 
 _FULL_SCAN_PAGE_SIZE = 500
 """Page size for the fallback full-library scan, only hit when the filtered
@@ -209,43 +214,106 @@ class JellyfinProvider(AbstractMediaServerProvider):
             raise
         return MediaServerUser(id=user["Id"], name=user["Name"])
 
-    @override
-    async def get_recently_played_movies(
-        self, user_id: str, since: datetime
-    ) -> list[PlayedMediaItem]:
-        data = await self.__get_items(
-            {
-                "userId": user_id,
-                "IsPlayed": "true",
-                "IncludeItemTypes": "Movie",
-                "Recursive": "true",
-                "SortBy": "DatePlayed",
-                "SortOrder": "Descending",
-                "Fields": "ProviderIds",
-                "EnableUserData": "true",
-                "Limit": _PLAYED_ITEMS_LIMIT,
-            }
-        )
-        played = []
-        for item in data.get("Items", []):
-            # Items marked as played by hand may have no play date.
-            last_played = (item.get("UserData") or {}).get("LastPlayedDate")
-            if not last_played:
-                continue
-            last_played_at = datetime.fromisoformat(last_played)
-            if last_played_at < since:
-                break
-            provider_ids = {
+    async def __get_played_items(
+        self, user_id: str, item_type: str, since: datetime | None
+    ) -> list[tuple[dict, datetime | None]]:
+        """
+        Played items of one Jellyfin type, most recently played first, each
+        with its last play date. See `get_played_media` for `since`.
+        """
+        played: list[tuple[dict, datetime | None]] = []
+        start = 0
+        while True:
+            data = await self.__get_items(
+                {
+                    "userId": user_id,
+                    "IsPlayed": "true",
+                    "IncludeItemTypes": item_type,
+                    "Recursive": "true",
+                    "SortBy": "DatePlayed",
+                    "SortOrder": "Descending",
+                    "Fields": "ProviderIds",
+                    "EnableUserData": "true",
+                    "Limit": _PLAYED_PAGE_SIZE,
+                    "StartIndex": start,
+                }
+            )
+            items = data.get("Items", [])
+            for item in items:
+                # Items marked as played by hand may have no play date.
+                last_played = (item.get("UserData") or {}).get("LastPlayedDate")
+                last_played_at = (
+                    datetime.fromisoformat(last_played) if last_played else None
+                )
+                if since is not None:
+                    if last_played_at is None:
+                        continue
+                    if last_played_at < since:
+                        return played
+                played.append((item, last_played_at))
+            start += len(items)
+            if not items or start >= data.get("TotalRecordCount", 0):
+                return played
+
+    @staticmethod
+    def __to_played_media_item(
+        item: dict, media_type: MediaType, last_played_at: datetime | None
+    ) -> PlayedMediaItem:
+        return PlayedMediaItem(
+            media_type=media_type,
+            server_item_id=item["Id"],
+            name=item.get("Name") or "",
+            provider_ids={
                 key.lower(): str(value)
                 for key, value in (item.get("ProviderIds") or {}).items()
                 if value
-            }
-            played.append(
-                PlayedMediaItem(
-                    provider_ids=provider_ids, last_played_at=last_played_at
+            },
+            last_played_at=last_played_at,
+        )
+
+    @override
+    async def get_played_media(
+        self, user_id: str, media_type: MediaType, since: datetime | None = None
+    ) -> list[PlayedMediaItem]:
+        if media_type == MediaType.movie:
+            return [
+                self.__to_played_media_item(item, MediaType.movie, last_played_at)
+                for item, last_played_at in await self.__get_played_items(
+                    user_id, "Movie", since
                 )
+            ]
+
+        # A series only counts as played once every episode is, so go through
+        # the played episodes instead. They're newest first, so the first
+        # dated episode seen of a series carries its latest play date.
+        last_played_by_series: dict[str, datetime | None] = {}
+        for episode, last_played_at in await self.__get_played_items(
+            user_id, "Episode", since
+        ):
+            series_id = episode.get("SeriesId")
+            if series_id and last_played_by_series.get(series_id) is None:
+                last_played_by_series[series_id] = last_played_at
+        if not last_played_by_series:
+            return []
+
+        series_ids = list(last_played_by_series)
+        series_by_id: dict[str, dict] = {}
+        for i in range(0, len(series_ids), _SERIES_LOOKUP_BATCH_SIZE):
+            data = await self.__get_items(
+                {
+                    "userId": user_id,
+                    "Ids": ",".join(series_ids[i : i + _SERIES_LOOKUP_BATCH_SIZE]),
+                    "Fields": "ProviderIds",
+                }
             )
-        return played
+            series_by_id.update({item["Id"]: item for item in data.get("Items", [])})
+        return [
+            self.__to_played_media_item(
+                series_by_id[series_id], MediaType.tv, last_played_at
+            )
+            for series_id, last_played_at in last_played_by_series.items()
+            if series_id in series_by_id
+        ]
 
     @override
     async def ping(self) -> bool:

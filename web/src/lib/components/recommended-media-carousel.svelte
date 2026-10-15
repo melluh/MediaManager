@@ -11,12 +11,15 @@
 		media,
 		isShow,
 		isLoading,
-		isError = false
+		isError = false,
+		caption
 	}: {
 		media: MetaDataProviderSearchResult[];
 		isShow: boolean;
 		isLoading: boolean;
 		isError?: boolean;
+		/** A line shown under an item's card, e.g. why it's recommended. */
+		caption?: (item: MetaDataProviderSearchResult) => string | undefined;
 	} = $props();
 
 	const carouselOpts = new ResponsiveCarouselOpts();
@@ -34,6 +37,12 @@
 			{#each media as mediaItem (mediaItem.external_id)}
 				<Carousel.Item class="basis-2/5 lg:basis-1/6">
 					<AddMediaCard {isShow} result={mediaItem} />
+					{@const itemCaption = caption?.(mediaItem)}
+					{#if itemCaption}
+						<p class="mt-1.5 line-clamp-2 text-xs text-muted-foreground" title={itemCaption}>
+							{itemCaption}
+						</p>
+					{/if}
 				</Carousel.Item>
 			{/each}
 		{/if}

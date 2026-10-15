@@ -1,6 +1,8 @@
 """
 The dashboard asks users whether they enjoyed movies they recently watched on
-the media server, matched to library movies by their external ids.
+the media server, matched to library movies by their external ids. Fetching
+what they watched is `WatchHistoryService`'s job; see
+tests/watch_history/test_watch_history_service.py.
 """
 
 import asyncio
@@ -11,8 +13,12 @@ from types import SimpleNamespace
 import pytest
 
 from media_manager.mediaServer.schemas import PlayedMediaItem
-from media_manager.rating import service as rating_service_module
-from media_manager.rating.service import MAX_RATING_PROMPTS, RatingService
+from media_manager.metadataProvider.schemas import MediaType
+from media_manager.rating.service import (
+    MAX_RATING_PROMPTS,
+    RATING_PROMPT_LOOKBACK,
+    RatingService,
+)
 from media_manager.torrent.schemas import TorrentMedia
 
 NOW = datetime(2026, 10, 15, tzinfo=UTC)
@@ -35,7 +41,11 @@ def _movie(
 
 def _played(hours_ago: int, **provider_ids: str) -> PlayedMediaItem:
     return PlayedMediaItem(
-        provider_ids=provider_ids, last_played_at=NOW - timedelta(hours=hours_ago)
+        media_type=MediaType.movie,
+        server_item_id=str(uuid.uuid4()),
+        name="Played",
+        provider_ids=provider_ids,
+        last_played_at=NOW - timedelta(hours=hours_ago),
     )
 
 
@@ -60,78 +70,53 @@ class FakeRatingRepository:
         return self.answered
 
 
-class FakeProvider:
-    name = "jellyfin"
-    display_name = "Jellyfin"
-
-    def __init__(self, played: list[PlayedMediaItem] | Exception) -> None:
+class FakeWatchHistoryService:
+    def __init__(self, played: list[PlayedMediaItem]) -> None:
         self.played = played
-        self.calls: list[str] = []
+        self.calls: list[tuple[MediaType, datetime | None]] = []
 
-    async def get_recently_played_movies(
+    async def fetch_played(
         self,
-        user_id: str,
-        since: datetime,  # noqa: ARG002
+        user: SimpleNamespace,  # noqa: ARG002
+        media_type: MediaType,
+        since: datetime | None = None,
     ) -> list[PlayedMediaItem]:
-        self.calls.append(user_id)
-        if isinstance(self.played, Exception):
-            raise self.played
+        self.calls.append((media_type, since))
         return self.played
 
 
-def _user(linked: bool = True) -> SimpleNamespace:
-    accounts = (
-        [SimpleNamespace(provider="jellyfin", external_user_id="jf-user")]
-        if linked
-        else []
-    )
-    return SimpleNamespace(id=uuid.uuid4(), media_server_accounts=accounts)
-
-
 def _prompts(
-    monkeypatch: pytest.MonkeyPatch,
-    provider: FakeProvider | None,
-    repository: FakeRatingRepository,
-    user: SimpleNamespace | None = None,
+    watch_history: FakeWatchHistoryService, repository: FakeRatingRepository
 ) -> list:
-    monkeypatch.setattr(
-        rating_service_module, "get_media_server_provider", lambda: provider
-    )
-    service = RatingService(repository)  # type: ignore[arg-type]
-    return asyncio.run(service.get_rating_prompts(user or _user()))  # type: ignore[arg-type]
+    service = RatingService(repository, watch_history)  # type: ignore[arg-type]
+    user = SimpleNamespace(id=uuid.uuid4())
+    return asyncio.run(service.get_rating_prompts(user))  # type: ignore[arg-type]
 
 
-def test_no_prompts_without_media_server(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert _prompts(monkeypatch, None, FakeRatingRepository([_movie(1)])) == []
+def test_no_prompts_when_nothing_was_watched() -> None:
+    assert _prompts(FakeWatchHistoryService([]), FakeRatingRepository([_movie(1)])) == []
 
 
-def test_no_prompts_without_linked_account(monkeypatch: pytest.MonkeyPatch) -> None:
-    provider = FakeProvider([_played(1, tmdb="1")])
+def test_asks_for_recently_played_movies(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz: object = None) -> datetime:  # noqa: ARG003
+            return NOW
 
-    assert (
-        _prompts(
-            monkeypatch,
-            provider,
-            FakeRatingRepository([_movie(1)]),
-            _user(linked=False),
-        )
-        == []
-    )
-    assert provider.calls == []
+    monkeypatch.setattr("media_manager.rating.service.datetime", FixedDatetime)
+    watch_history = FakeWatchHistoryService([])
 
+    _prompts(watch_history, FakeRatingRepository([]))
 
-def test_no_prompts_when_media_server_fails(monkeypatch: pytest.MonkeyPatch) -> None:
-    provider = FakeProvider(RuntimeError("down"))
-
-    assert _prompts(monkeypatch, provider, FakeRatingRepository([_movie(1)])) == []
+    assert watch_history.calls == [(MediaType.movie, NOW - RATING_PROMPT_LOOKBACK)]
 
 
-def test_matches_by_imdb_and_by_provider_id(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_matches_by_imdb_and_by_provider_id() -> None:
     by_imdb = _movie(10, imdb_id="tt10")
     by_tmdb = _movie(20)
     by_tvdb = _movie(30, metadata_provider="tvdb")
     not_watched = _movie(40)
-    provider = FakeProvider(
+    watch_history = FakeWatchHistoryService(
         [
             _played(1, imdb="tt10", tmdb="999"),
             _played(2, tmdb="20"),
@@ -141,47 +126,41 @@ def test_matches_by_imdb_and_by_provider_id(monkeypatch: pytest.MonkeyPatch) -> 
     )
 
     prompts = _prompts(
-        monkeypatch,
-        provider,
-        FakeRatingRepository([by_imdb, by_tmdb, by_tvdb, not_watched]),
+        watch_history, FakeRatingRepository([by_imdb, by_tmdb, by_tvdb, not_watched])
     )
 
     assert [p.media.id for p in prompts] == [by_imdb.id, by_tmdb.id, by_tvdb.id]
     assert prompts[0].watched_at == NOW - timedelta(hours=1)
-    assert provider.calls == ["jf-user"]
 
 
-def test_skips_rated_or_dismissed_movies(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_skips_rated_or_dismissed_movies() -> None:
     answered = _movie(1)
     unanswered = _movie(2)
-    provider = FakeProvider([_played(1, tmdb="1"), _played(2, tmdb="2")])
+    watch_history = FakeWatchHistoryService([_played(1, tmdb="1"), _played(2, tmdb="2")])
 
     prompts = _prompts(
-        monkeypatch,
-        provider,
+        watch_history,
         FakeRatingRepository([answered, unanswered], answered={answered.id}),
     )
 
     assert [p.media.id for p in prompts] == [unanswered.id]
 
 
-def test_rewatched_movie_is_asked_about_once_with_latest_watch(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_rewatched_movie_is_asked_about_once_with_latest_watch() -> None:
     movie = _movie(1)
-    provider = FakeProvider([_played(1, tmdb="1"), _played(50, tmdb="1")])
+    watch_history = FakeWatchHistoryService([_played(1, tmdb="1"), _played(50, tmdb="1")])
 
-    prompts = _prompts(monkeypatch, provider, FakeRatingRepository([movie]))
+    prompts = _prompts(watch_history, FakeRatingRepository([movie]))
 
     assert len(prompts) == 1
     assert prompts[0].watched_at == NOW - timedelta(hours=1)
 
 
-def test_prompts_are_capped(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_prompts_are_capped() -> None:
     count = MAX_RATING_PROMPTS + 5
     movies = [_movie(i) for i in range(count)]
-    provider = FakeProvider([_played(i, tmdb=str(i)) for i in range(count)])
+    watch_history = FakeWatchHistoryService([_played(i, tmdb=str(i)) for i in range(count)])
 
-    prompts = _prompts(monkeypatch, provider, FakeRatingRepository(movies))
+    prompts = _prompts(watch_history, FakeRatingRepository(movies))
 
     assert [p.media.id for p in prompts] == [m.id for m in movies[:MAX_RATING_PROMPTS]]

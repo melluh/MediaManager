@@ -567,47 +567,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                 results.extend(result_page["results"])
 
         tv_genre_map = await self.__get_tv_genre_map()
-
-        formatted_results = []
-        for result in results:
-            try:
-                # Determine which name to use based on primary_languages
-                original_language = result.get("original_language")
-                original_name = result.get("original_name")
-                display_name = result["name"]
-
-                overview = result["overview"]
-                # Use original name if language is in primary_languages and skip overview
-                if original_language and original_language in self.primary_languages:
-                    display_name = original_name
-                    overview = None
-
-                formatted_results.append(
-                    MetaDataProviderSearchResult(
-                        poster_images=self.__get_poster_images(result.get("poster_path")),
-                        backdrop_images=self.__get_backdrop_images(
-                            result.get("backdrop_path")
-                        ),
-                        overview=overview,
-                        name=display_name,
-                        external_id=result["id"],
-                        year=media_manager.metadataProvider.utils.get_year_from_date(
-                            result["first_air_date"]
-                        ),
-                        metadata_provider=self.name,
-                        media_type=MediaType.tv,
-                        added=False,
-                        vote_average=result["vote_average"],
-                        original_language=original_language,
-                        genres=media_manager.metadataProvider.utils.get_genre_names_from_ids(
-                            result.get("genre_ids"), tv_genre_map
-                        ),
-                    )
-                )
-            except Exception:
-                log.warning("Error processing search result", exc_info=True)
-
-        return formatted_results
+        return self.__format_results(results, MediaType.tv, tv_genre_map)
 
     @override
     async def get_movie_metadata(
@@ -681,47 +641,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                 results.extend(result_page["results"])
 
         movie_genre_map = await self.__get_movie_genre_map()
-
-        formatted_results = []
-        for result in results:
-            try:
-                # Determine which name to use based on primary_languages
-                original_language = result.get("original_language")
-                original_title = result.get("original_title")
-                display_name = result["title"]
-
-                overview = result["overview"]
-                # Use original name if language is in primary_languages and skip overview
-                if original_language and original_language in self.primary_languages:
-                    display_name = original_title
-                    overview = None
-
-                formatted_results.append(
-                    MetaDataProviderSearchResult(
-                        poster_images=self.__get_poster_images(result.get("poster_path")),
-                        backdrop_images=self.__get_backdrop_images(
-                            result.get("backdrop_path")
-                        ),
-                        overview=overview,
-                        name=display_name,
-                        external_id=result["id"],
-                        year=media_manager.metadataProvider.utils.get_year_from_date(
-                            result["release_date"]
-                        ),
-                        metadata_provider=self.name,
-                        media_type=MediaType.movie,
-                        added=False,
-                        vote_average=result["vote_average"],
-                        original_language=original_language,
-                        genres=media_manager.metadataProvider.utils.get_genre_names_from_ids(
-                            result.get("genre_ids"), movie_genre_map
-                        ),
-                    )
-                )
-            except Exception:
-                log.warning("Error processing search result", exc_info=True)
-
-        return formatted_results
+        return self.__format_results(results, MediaType.movie, movie_genre_map)
 
     @override
     async def search_multi(
@@ -746,21 +666,36 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
         formatted_results = []
         for result in results:
             media_type = result.get("media_type")
-            if media_type not in ("movie", "tv"):
-                continue
+            if media_type == "movie":
+                formatted_results.extend(
+                    self.__format_results([result], MediaType.movie, movie_genre_map)
+                )
+            elif media_type == "tv":
+                formatted_results.extend(
+                    self.__format_results([result], MediaType.tv, tv_genre_map)
+                )
+        return formatted_results
+
+    def __format_results(
+        self, results: list[dict], media_type: MediaType, genre_map: dict[int, str]
+    ) -> list[MetaDataProviderSearchResult]:
+        """
+        Converts TMDB list results (search, trending, recommendations) of one
+        media type into search results, skipping any that are malformed.
+        """
+        formatted_results = []
+        for result in results:
             try:
-                if media_type == "movie":
+                if media_type == MediaType.movie:
                     original_name = result.get("original_title")
                     display_name = result["title"]
                     release_date = result.get("release_date")
-                    genre_map = movie_genre_map
                 else:
                     original_name = result.get("original_name")
                     display_name = result["name"]
                     release_date = result.get("first_air_date")
-                    genre_map = tv_genre_map
 
-                # Determine which name to use based on primary_languages
+                # Use original name if language is in primary_languages and skip overview
                 original_language = result.get("original_language")
                 overview = result.get("overview")
                 if original_language and original_language in self.primary_languages:
@@ -780,9 +715,7 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
                             release_date
                         ),
                         metadata_provider=self.name,
-                        media_type=MediaType.movie
-                        if media_type == "movie"
-                        else MediaType.tv,
+                        media_type=media_type,
                         added=False,
                         vote_average=result.get("vote_average"),
                         original_language=original_language,
@@ -794,6 +727,30 @@ class TmdbMetadataProvider(AbstractMetadataProvider):
             except Exception:
                 log.warning("Error processing search result", exc_info=True)
         return formatted_results
+
+    @override
+    async def get_recommendations(
+        self, external_id: int, media_type: MediaType
+    ) -> list[MetaDataProviderSearchResult]:
+        path = (
+            f"movies/{external_id}"
+            if media_type == MediaType.movie
+            else f"tv/shows/{external_id}"
+        )
+        response = await _client.get(
+            url=f"{self.url}/{path}/recommendations",
+            params={"language": self.default_language},
+            timeout=60,
+        )
+        response.raise_for_status()
+        genre_map = (
+            await self.__get_movie_genre_map()
+            if media_type == MediaType.movie
+            else await self.__get_tv_genre_map()
+        )
+        return self.__format_results(
+            response.json().get("results", []), media_type, genre_map
+        )
 
     def __get_first_trailer(self, videos: list[dict]) -> str | None:
         for video in videos:
