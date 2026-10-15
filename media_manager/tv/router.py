@@ -3,6 +3,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from media_manager.audit_log.dependencies import audit_log_service_dep
+from media_manager.audit_log.schemas import AuditAction
+from media_manager.audit_log.service import torrent_details
 from media_manager.auth.db import User
 from media_manager.auth.users import current_active_user, current_superuser
 from media_manager.common.import_scan_cache import (
@@ -150,13 +153,18 @@ async def get_importable_show_candidates(
     dependencies=[Depends(current_superuser)],
 )
 async def scan_show_library_files(
-    tv_service: tv_service_dep,
+    tv_service: tv_service_dep, audit: audit_log_service_dep
 ) -> LibraryScanCounts:
     """
     Immediately reconcile every show's episode file records with the files on disk, and
     adopt video files that have no record yet. Also runs on a schedule.
     """
-    return await tv_service.scan_library_files()
+    counts = await tv_service.scan_library_files()
+    await audit.record(
+        AuditAction.media_library_scanned,
+        details={"media_type": "show", "counts": counts.model_dump()},
+    )
+    return counts
 
 
 @router.post(
@@ -180,7 +188,10 @@ async def rescan_importable_shows(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def import_detected_show(
-    tv_import_service: tv_import_service_dep, tv_show: show_dep, directory: str
+    tv_import_service: tv_import_service_dep,
+    tv_show: show_dep,
+    directory: str,
+    audit: audit_log_service_dep,
 ) -> None:
     """
     Import a detected show from the specified directory into the library.
@@ -210,6 +221,9 @@ async def import_detected_show(
             "No episode files matching this show were found in that directory.",
         )
     remove_cached_importable_media_entry(ImportScanMediaType.tv, directory)
+    await audit.record_media(
+        AuditAction.media_imported, tv_show, "show", details={"directory": directory}
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -243,6 +257,7 @@ async def add_a_show(
     tv_metadata_service: tv_metadata_service_dep,
     metadata_provider: metadata_provider_dep,
     user: Annotated[User, Depends(current_active_user)],
+    audit: audit_log_service_dep,
     show_id: int,
     language: str | None = None,
 ) -> Show:
@@ -255,6 +270,16 @@ async def add_a_show(
             metadata_provider=metadata_provider,
             language=language,
             added_by_user_id=user.id,
+        )
+        await audit.record_media(
+            AuditAction.media_added,
+            show,
+            "show",
+            details={
+                "external_id": show_id,
+                "metadata_provider": metadata_provider.name,
+                "language": language,
+            },
         )
     except MediaAlreadyExistsError:
         show = await tv_metadata_service.tv_repository.get_show_by_external_id(
@@ -324,6 +349,7 @@ async def get_a_show(show: show_dep, tv_service: tv_service_dep) -> PublicShow:
 async def delete_a_show(
     tv_service: tv_service_dep,
     show: show_dep,
+    audit: audit_log_service_dep,
     delete_files_on_disk: bool = False,
     delete_torrents: bool = False,
 ) -> None:
@@ -334,6 +360,15 @@ async def delete_a_show(
         show=show,
         delete_files_on_disk=delete_files_on_disk,
         delete_torrents=delete_torrents,
+    )
+    await audit.record_media(
+        AuditAction.media_deleted,
+        show,
+        "show",
+        details={
+            "delete_files_on_disk": delete_files_on_disk,
+            "delete_torrents": delete_torrents,
+        },
     )
 
 
@@ -346,6 +381,7 @@ async def update_shows_metadata(
     tv_metadata_service: tv_metadata_service_dep,
     tv_service: tv_service_dep,
     metadata_provider: metadata_provider_dep,
+    audit: audit_log_service_dep,
 ) -> PublicShow:
     """
     Update a show's metadata from the provider.
@@ -353,6 +389,7 @@ async def update_shows_metadata(
     await tv_metadata_service.update_show_metadata(
         db_show=show, metadata_provider=metadata_provider
     )
+    await audit.record_media(AuditAction.media_metadata_refreshed, show, "show")
     return await tv_service.get_public_show_by_id(show=show)
 
 
@@ -361,13 +398,22 @@ async def update_shows_metadata(
     dependencies=[Depends(current_superuser)],
 )
 async def set_continuous_download(
-    show: show_dep, tv_service: tv_service_dep, continuous_download: bool
+    show: show_dep,
+    tv_service: tv_service_dep,
+    audit: audit_log_service_dep,
+    continuous_download: bool,
 ) -> PublicShow:
     """
     Toggle whether future seasons of a show will be automatically downloaded.
     """
     updated_show = await tv_service.set_show_continuous_download(
         show=show, continuous_download=continuous_download
+    )
+    await audit.record_media(
+        AuditAction.media_continuous_download_changed,
+        show,
+        "show",
+        details={"enabled": continuous_download},
     )
     return await tv_service.get_public_show_by_id(show=updated_show)
 
@@ -380,12 +426,20 @@ async def set_continuous_download(
 async def set_library(
     show: show_dep,
     tv_service: tv_service_dep,
+    audit: audit_log_service_dep,
     library: str,
 ) -> None:
     """
     Set the library path for a Show.
     """
+    previous_library = show.library
     await tv_service.set_show_library(show=show, library=library)
+    await audit.record_media(
+        AuditAction.media_library_changed,
+        show,
+        "show",
+        details={"from": previous_library, "to": library},
+    )
 
 
 @router.get(
@@ -437,12 +491,14 @@ async def rescan_show_files(
     tv_import_service: tv_import_service_dep,
     tv_service: tv_service_dep,
     show: show_dep,
+    audit: audit_log_service_dep,
 ) -> PublicShow:
     """
     Immediately reconcile this show's file records with the files on disk,
     and adopt video files that have no record yet.
     """
     await tv_import_service.scan_show_files(show=show)
+    await audit.record_media(AuditAction.media_files_rescanned, show, "show")
     updated_show = await tv_service.get_show_by_id(show.id)
     return await tv_service.get_public_show_by_id(show=updated_show)
 
@@ -482,14 +538,31 @@ async def get_episode_files(
     dependencies=[Depends(current_superuser)],
 )
 async def delete_episode_file(
-    tv_service: tv_service_dep, episode_id: EpisodeId, file_path_suffix: str = ""
+    tv_service: tv_service_dep,
+    audit: audit_log_service_dep,
+    episode_id: EpisodeId,
+    file_path_suffix: str = "",
 ) -> None:
     """
     Delete one of an episode's files from disk, identified by its file path
     suffix (version), and remove its record.
     """
-    await tv_service.delete_episode_file(
+    show, season = await tv_service.delete_episode_file(
         episode_id=episode_id, file_path_suffix=file_path_suffix
+    )
+    episode_number = next(
+        (episode.number for episode in season.episodes if episode.id == episode_id),
+        None,
+    )
+    await audit.record_media(
+        AuditAction.media_file_deleted,
+        show,
+        "show",
+        details={
+            "file_path_suffix": file_path_suffix,
+            "season_number": season.number,
+            "episode_number": episode_number,
+        },
     )
 
 
@@ -525,6 +598,7 @@ async def get_season_download_plan(
 async def download_a_torrent(
     tv_service: tv_service_dep,
     user: Annotated[User, Depends(current_active_user)],
+    audit: audit_log_service_dep,
     public_indexer_result_id: IndexerQueryResultId,
     show_id: ShowId,
     override_file_path_suffix: str = "",
@@ -532,12 +606,23 @@ async def download_a_torrent(
     """
     Trigger a download for a specific torrent.
     """
-    return await tv_service.download_torrent(
+    torrent = await tv_service.download_torrent(
         public_indexer_result_id=public_indexer_result_id,
         show_id=show_id,
         override_show_file_path_suffix=override_file_path_suffix,
         user_id=user.id,
     )
+    show = await tv_service.get_show_by_id(show_id)
+    await audit.record_media(
+        AuditAction.download_started,
+        show,
+        "show",
+        details={
+            **torrent_details(torrent),
+            "file_path_suffix": override_file_path_suffix,
+        },
+    )
+    return torrent
 
 
 # -----------------------------------------------------------------------------

@@ -7,6 +7,7 @@ from typing import Any, override
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin, exceptions, models
 from fastapi_users.authentication import (
     AuthenticationBackend,
@@ -21,6 +22,15 @@ from sqlalchemy.exc import IntegrityError
 from starlette import status
 
 import media_manager.notification.utils
+from media_manager.audit_log.context import get_audit_context, set_audit_actor
+from media_manager.audit_log.repository import AuditLogRepository
+from media_manager.audit_log.schemas import AuditAction
+from media_manager.audit_log.service import (
+    AuditLogService,
+    record_detached,
+    user_snapshot,
+    user_update_audit_events,
+)
 from media_manager.auth.db import User, get_async_session, get_user_db
 from media_manager.auth.schemas import UserCreate, UserUpdate
 from media_manager.config import MediaManagerConfig
@@ -47,6 +57,12 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     reset_password_token_secret = SECRET
     verification_token_secret = SECRET
 
+    @property
+    def audit(self) -> AuditLogService:
+        # The user database shares the request's session, so entries are
+        # committed (or rolled back) together with the change they describe.
+        return AuditLogService(AuditLogRepository(self.user_db.session))
+
     @override
     async def update(
         self,
@@ -72,12 +88,77 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Editing your own account details is disabled. Contact a superuser for assistance.",
                 )
+        before = user_snapshot(user)
         try:
-            return await super().update(
+            updated_user = await super().update(
                 user_update, user, safe=safe, request=request
             )
         except IntegrityError as e:
             raise exceptions.UserAlreadyExists() from e
+        # Updates without a request are internal follow-ups (e.g. re-verifying
+        # after an email change), not something a user did.
+        if request is not None:
+            update_dict = (
+                user_update.create_update_dict()
+                if safe
+                else user_update.create_update_dict_superuser()
+            )
+            context = get_audit_context()
+            is_self = (
+                context is None
+                or context.actor is None
+                or (context.actor.id == updated_user.id)
+            )
+            for action, details in user_update_audit_events(
+                before, update_dict, is_self=is_self
+            ):
+                await self.audit.record_for_user(action, updated_user, details)
+        return updated_user
+
+    @override
+    async def authenticate(self, credentials: OAuth2PasswordRequestForm) -> User | None:
+        user = await super().authenticate(credentials)
+        if user is None:
+            try:
+                existing_user = await self.get_by_email(credentials.username)
+            except exceptions.UserNotExists:
+                pass
+            else:
+                # The login request's session is rolled back when it fails.
+                await record_detached(
+                    AuditAction.login_failed,
+                    target_user=existing_user,
+                    details={"email": credentials.username},
+                )
+        return user
+
+    @override
+    async def on_after_login(
+        self,
+        user: User,
+        request: Request | None = None,
+        response: Response | None = None,
+    ) -> None:
+        method = (
+            "oidc"
+            if request is not None and "/auth/oauth/" in request.url.path
+            else "password"
+        )
+        await self.audit.record(
+            AuditAction.login, actor=user, details={"method": method}
+        )
+
+    @override
+    async def on_after_delete(self, user: User, request: Request | None = None) -> None:
+        await self.audit.record_for_user(
+            AuditAction.user_deleted,
+            user,
+            details={
+                "email": user.email,
+                "display_name": user.display_name,
+                "was_pending": not user.is_verified,
+            },
+        )
 
     @override
     async def on_before_delete(
@@ -119,13 +200,17 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         associate_by_email: bool = False,
         is_verified_by_default: bool = False,
     ) -> User:
-        if not config.registration_enabled:
+        # Whether this login links the OAuth account to an existing user by
+        # email; logging in with an already linked one or signing up isn't.
+        links_existing_user = False
+        try:
+            await self.get_by_oauth_account(oauth_name, account_id)
+        except exceptions.UserNotExists:
             try:
-                await self.get_by_oauth_account(oauth_name, account_id)
+                await self.get_by_email(account_email)
+                links_existing_user = associate_by_email
             except exceptions.UserNotExists:
-                try:
-                    await self.get_by_email(account_email)
-                except exceptions.UserNotExists:
+                if not config.registration_enabled:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail="User registration is disabled.",
@@ -150,6 +235,16 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                     user, oauth_account, {"last_used_at": datetime.now(UTC)}
                 )
                 break
+        if links_existing_user:
+            await self.audit.record(
+                AuditAction.account_oauth_linked,
+                actor=user,
+                subject_type="user",
+                subject_id=user.id,
+                subject_label=user.display_name or user.email,
+                target_user_id=user.id,
+                details={"provider": oauth_name, "account_email": account_email},
+            )
         return await self._sync_oidc_display_name(user, access_token)
 
     async def _sync_oidc_display_name(self, user: User, access_token: str) -> User:
@@ -177,6 +272,25 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         self, user: User, request: Request | None = None
     ) -> None:
         log.info(f"User {user.id} has registered.")
+        context = get_audit_context()
+        # Users created by an admin are recorded by that route instead; ones
+        # created outside a request (the default admin) aren't user actions.
+        if context is not None and context.actor is None:
+            await self.audit.record(
+                AuditAction.account_registered,
+                actor=user,
+                subject_type="user",
+                subject_id=user.id,
+                subject_label=user.display_name or user.email,
+                target_user_id=user.id,
+                details={
+                    "email": user.email,
+                    "display_name": user.display_name,
+                    "method": "oidc"
+                    if request is not None and "/auth/oauth/" in request.url.path
+                    else "password",
+                },
+            )
         if user.email in config.admin_emails:
             updated_user = UserUpdate(is_superuser=True, is_verified=True)
             await self.update(user=user, user_update=updated_user)
@@ -187,6 +301,11 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     ) -> None:
         link = f"{MediaManagerConfig().misc.frontend_url}web/login/reset-password?token={token}"
         log.info(f"User {user.id} has forgot their password. Reset Link: {link}")
+        await self.audit.record(
+            AuditAction.password_reset_requested,
+            actor=user,
+            details={"email": user.email},
+        )
 
         if not config.email_password_resets:
             log.info("Email password resets are disabled, not sending email.")
@@ -217,6 +336,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         self, user: User, request: Request | None = None
     ) -> None:
         log.info(f"User {user.id} has reset their password.")
+        await self.audit.record(AuditAction.password_reset, actor=user)
 
     @override
     async def on_after_request_verify(
@@ -229,6 +349,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     @override
     async def on_after_verify(self, user: User, request: Request | None = None) -> None:
         log.info(f"User {user.id} has been verified")
+        await self.audit.record(AuditAction.email_verified, actor=user)
 
 
 async def get_user_manager(
@@ -370,10 +491,33 @@ fastapi_users = FastAPIUsers[User, uuid.UUID](
     get_user_manager, [bearer_auth_backend, cookie_auth_backend]
 )
 
-current_active_user = fastapi_users.current_user(active=True, verified=True)
-# Only for endpoints an unverified user needs in order to learn that they are
-# unverified, like GET /users/me. Everything else should use current_active_user.
-current_active_user_allow_unverified = fastapi_users.current_user(active=True)
-current_superuser = fastapi_users.current_user(
+_current_active_user = fastapi_users.current_user(active=True, verified=True)
+_current_active_user_allow_unverified = fastapi_users.current_user(active=True)
+_current_superuser = fastapi_users.current_user(
     active=True, verified=True, superuser=True
 )
+
+# These wrap fastapi_users' dependencies to also remember the authenticated
+# user as the actor of anything the request records in the audit log.
+
+
+async def current_active_user(user: User = Depends(_current_active_user)) -> User:
+    set_audit_actor(user)
+    return user
+
+
+async def current_active_user_allow_unverified(
+    user: User = Depends(_current_active_user_allow_unverified),
+) -> User:
+    """
+    Only for endpoints an unverified user needs in order to learn that they
+    are unverified, like GET /users/me. Everything else should use
+    current_active_user.
+    """
+    set_audit_actor(user)
+    return user
+
+
+async def current_superuser(user: User = Depends(_current_superuser)) -> User:
+    set_audit_actor(user)
+    return user

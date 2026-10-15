@@ -9,6 +9,8 @@ from fastapi_users.router import get_oauth_router
 from httpx_oauth.oauth2 import OAuth2
 from sqlalchemy import delete, select
 
+from media_manager.audit_log.dependencies import audit_log_service_dep
+from media_manager.audit_log.schemas import AuditAction
 from media_manager.auth.db import MediaServerAccount, OAuthAccount, User
 from media_manager.auth.schemas import (
     AdminUserCreate,
@@ -17,12 +19,14 @@ from media_manager.auth.schemas import (
     MediaServerAccountRead,
     UserCreate,
     UserPermissions,
+    UserProfile,
     UserRead,
     UserReadWithPermissions,
 )
 from media_manager.auth.users import (
     SECRET,
     create_default_admin_user,
+    current_active_user,
     current_active_user_allow_unverified,
     current_superuser,
     fastapi_users,
@@ -89,6 +93,21 @@ async def get_all_users(db: DbSessionDependency) -> list[UserRead]:
     return [UserRead.model_validate(user) for user in result]
 
 
+@users_router.get(
+    "/users/{user_id}/profile",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(current_active_user)],
+    responses={status.HTTP_404_NOT_FOUND: {"description": "User not found."}},
+)
+async def get_user_profile(user_id: uuid.UUID, db: DbSessionDependency) -> UserProfile:
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    return UserProfile.model_validate(user)
+
+
 @users_router.post(
     "/users/",
     status_code=status.HTTP_201_CREATED,
@@ -99,6 +118,7 @@ async def admin_create_user(
     user_manager: Annotated[
         BaseUserManager[User, uuid.UUID], Depends(get_user_manager)
     ],
+    audit: audit_log_service_dep,
 ) -> UserRead:
     password = payload.password or user_manager.password_helper.generate()
     try:
@@ -122,6 +142,17 @@ async def admin_create_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid password: {exc.reason}",
         ) from exc
+    await audit.record_for_user(
+        AuditAction.user_created,
+        user,
+        details={
+            "email": user.email,
+            "display_name": user.display_name,
+            "is_superuser": user.is_superuser,
+            "is_verified": user.is_verified,
+            "password_generated": payload.password is None,
+        },
+    )
     return UserRead.model_validate(user)
 
 
@@ -131,16 +162,31 @@ async def admin_create_user(
     dependencies=[Depends(current_superuser)],
 )
 async def unlink_oauth_account(
-    user_id: uuid.UUID, oauth_account_id: uuid.UUID, db: DbSessionDependency
+    user_id: uuid.UUID,
+    oauth_account_id: uuid.UUID,
+    db: DbSessionDependency,
+    audit: audit_log_service_dep,
 ) -> None:
-    stmt = delete(OAuthAccount).where(
-        OAuthAccount.id == oauth_account_id, OAuthAccount.user_id == user_id
+    stmt = (
+        delete(OAuthAccount)
+        .where(OAuthAccount.id == oauth_account_id, OAuthAccount.user_id == user_id)
+        .returning(OAuthAccount.oauth_name, OAuthAccount.account_email)
     )
-    result = await db.execute(stmt)
-    if result.rowcount == 0:
+    unlinked = (await db.execute(stmt)).one_or_none()
+    if unlinked is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Linked account not found.",
+        )
+    user = await db.get(User, user_id)
+    if user is not None:
+        await audit.record_for_user(
+            AuditAction.user_oauth_unlinked,
+            user,
+            details={
+                "provider": unlinked.oauth_name,
+                "account_email": unlinked.account_email,
+            },
         )
 
 
@@ -154,13 +200,15 @@ async def link_media_server_account(
     payload: MediaServerAccountLink,
     db: DbSessionDependency,
     provider: media_server_provider_dep,
+    audit: audit_log_service_dep,
 ) -> MediaServerAccountRead:
     """
     Link a user to an account on the configured media server, replacing any
     account they were linked to before. Only superusers can do this, since
     there's no way to verify which account actually belongs to a user.
     """
-    if await db.get(User, user_id) is None:
+    user = await db.get(User, user_id)
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
         )
@@ -201,6 +249,11 @@ async def link_media_server_account(
     account.external_user_id = server_user.id
     account.username = server_user.name
     await db.flush()
+    await audit.record_for_user(
+        AuditAction.user_media_server_linked,
+        user,
+        details={"provider": provider.display_name, "username": server_user.name},
+    )
     return MediaServerAccountRead.model_validate(account)
 
 
@@ -210,17 +263,31 @@ async def link_media_server_account(
     dependencies=[Depends(current_superuser)],
 )
 async def unlink_media_server_account(
-    user_id: uuid.UUID, db: DbSessionDependency, provider: media_server_provider_dep
+    user_id: uuid.UUID,
+    db: DbSessionDependency,
+    provider: media_server_provider_dep,
+    audit: audit_log_service_dep,
 ) -> None:
-    stmt = delete(MediaServerAccount).where(
-        MediaServerAccount.user_id == user_id,
-        MediaServerAccount.provider == provider.name,
+    stmt = (
+        delete(MediaServerAccount)
+        .where(
+            MediaServerAccount.user_id == user_id,
+            MediaServerAccount.provider == provider.name,
+        )
+        .returning(MediaServerAccount.username)
     )
-    result = await db.execute(stmt)
-    if result.rowcount == 0:
+    unlinked = (await db.execute(stmt)).one_or_none()
+    if unlinked is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Linked account not found.",
+        )
+    user = await db.get(User, user_id)
+    if user is not None:
+        await audit.record_for_user(
+            AuditAction.user_media_server_unlinked,
+            user,
+            details={"provider": provider.display_name, "username": unlinked.username},
         )
 
 

@@ -61,3 +61,15 @@ class UserPermissions(BaseModel):
 
 class UserReadWithPermissions(UserRead):
     permissions: UserPermissions
+
+
+class UserProfile(BaseModel):
+    """What any signed-in user may see of another user, the same fields as a
+    media item's `added_by`."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    display_name: str | None = None
+    is_superuser: bool = False

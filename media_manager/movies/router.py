@@ -3,6 +3,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from media_manager.audit_log.dependencies import audit_log_service_dep
+from media_manager.audit_log.schemas import AuditAction
+from media_manager.audit_log.service import torrent_details
 from media_manager.auth.db import User
 from media_manager.auth.users import current_active_user, current_superuser
 from media_manager.common.import_scan_cache import (
@@ -175,13 +178,18 @@ async def get_importable_movie_candidates(
     dependencies=[Depends(current_superuser)],
 )
 async def scan_movie_library_files(
-    movie_service: movie_service_dep,
+    movie_service: movie_service_dep, audit: audit_log_service_dep
 ) -> LibraryScanCounts:
     """
     Immediately reconcile every movie's file records with the files on disk, and
     adopt video files that have no record yet. Also runs on a schedule.
     """
-    return await movie_service.scan_library_files()
+    counts = await movie_service.scan_library_files()
+    await audit.record(
+        AuditAction.media_library_scanned,
+        details={"media_type": "movie", "counts": counts.model_dump()},
+    )
+    return counts
 
 
 @router.post(
@@ -205,7 +213,10 @@ async def rescan_importable_movies(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def import_detected_movie(
-    movie_import_service: movie_import_service_dep, movie: movie_dep, directory: str
+    movie_import_service: movie_import_service_dep,
+    movie: movie_dep,
+    directory: str,
+    audit: audit_log_service_dep,
 ) -> None:
     """
     Import a detected movie from the specified directory into the library.
@@ -235,6 +246,9 @@ async def import_detected_movie(
             "No video files were found in that directory.",
         )
     remove_cached_importable_media_entry(ImportScanMediaType.movie, directory)
+    await audit.record_media(
+        AuditAction.media_imported, movie, "movie", details={"directory": directory}
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -268,6 +282,7 @@ async def add_a_movie(
     movie_metadata_service: movie_metadata_service_dep,
     metadata_provider: metadata_provider_dep,
     user: Annotated[User, Depends(current_active_user)],
+    audit: audit_log_service_dep,
     movie_id: int,
     language: str | None = None,
 ) -> Movie:
@@ -280,6 +295,16 @@ async def add_a_movie(
             metadata_provider=metadata_provider,
             language=language,
             added_by_user_id=user.id,
+        )
+        await audit.record_media(
+            AuditAction.media_added,
+            movie,
+            "movie",
+            details={
+                "external_id": movie_id,
+                "metadata_provider": metadata_provider.name,
+                "language": language,
+            },
         )
     except ConflictError:
         movie = await movie_metadata_service.movie_repository.get_movie_by_external_id(
@@ -353,6 +378,7 @@ async def get_movie_by_id(
 async def delete_a_movie(
     movie_service: movie_service_dep,
     movie: movie_dep,
+    audit: audit_log_service_dep,
     delete_files_on_disk: bool = False,
     delete_torrents: bool = False,
 ) -> None:
@@ -364,6 +390,15 @@ async def delete_a_movie(
         delete_files_on_disk=delete_files_on_disk,
         delete_torrents=delete_torrents,
     )
+    await audit.record_media(
+        AuditAction.media_deleted,
+        movie,
+        "movie",
+        details={
+            "delete_files_on_disk": delete_files_on_disk,
+            "delete_torrents": delete_torrents,
+        },
+    )
 
 
 @router.post(
@@ -374,12 +409,20 @@ async def delete_a_movie(
 async def set_library(
     movie: movie_dep,
     movie_service: movie_service_dep,
+    audit: audit_log_service_dep,
     library: str,
 ) -> None:
     """
     Set the library path for a Movie.
     """
+    previous_library = movie.library
     await movie_service.set_movie_library(movie=movie, library=library)
+    await audit.record_media(
+        AuditAction.media_library_changed,
+        movie,
+        "movie",
+        details={"from": previous_library, "to": library},
+    )
 
 
 @router.get(
@@ -416,7 +459,10 @@ async def get_movie_files_by_movie_id(
     dependencies=[Depends(current_superuser)],
 )
 async def delete_movie_file(
-    movie_service: movie_service_dep, movie: movie_dep, file_path_suffix: str = ""
+    movie_service: movie_service_dep,
+    movie: movie_dep,
+    audit: audit_log_service_dep,
+    file_path_suffix: str = "",
 ) -> None:
     """
     Delete one of a movie's files from disk, identified by its file path
@@ -424,6 +470,12 @@ async def delete_movie_file(
     """
     await movie_service.delete_movie_file(
         movie=movie, file_path_suffix=file_path_suffix
+    )
+    await audit.record_media(
+        AuditAction.media_file_deleted,
+        movie,
+        "movie",
+        details={"file_path_suffix": file_path_suffix},
     )
 
 
@@ -435,12 +487,14 @@ async def rescan_movie_files(
     movie_import_service: movie_import_service_dep,
     movie_service: movie_service_dep,
     movie: movie_dep,
+    audit: audit_log_service_dep,
 ) -> list[PublicMovieFile]:
     """
     Immediately reconcile this movie's file records with the files on disk,
     and adopt video files that have no record yet.
     """
     await movie_import_service.scan_movie_files(movie=movie)
+    await audit.record_media(AuditAction.media_files_rescanned, movie, "movie")
     return await movie_service.get_public_movie_files(movie=movie)
 
 
@@ -476,9 +530,7 @@ async def get_downloads_for_movie(
     status - with live download status/progress, for the movie's torrent
     table.
     """
-    return await movie_service.get_torrents_with_progress_for_movie(
-        movie_id=movie.id
-    )
+    return await movie_service.get_torrents_with_progress_for_movie(movie_id=movie.id)
 
 
 @router.post(
@@ -490,18 +542,29 @@ async def download_torrent_for_movie(
     movie_service: movie_service_dep,
     movie: movie_dep,
     user: Annotated[User, Depends(current_active_user)],
+    audit: audit_log_service_dep,
     public_indexer_result_id: IndexerQueryResultId,
     override_file_path_suffix: str = "",
 ) -> Torrent:
     """
     Trigger a download for a specific torrent for a movie.
     """
-    return await movie_service.download_torrent(
+    torrent = await movie_service.download_torrent(
         public_indexer_result_id=public_indexer_result_id,
         movie=movie,
         override_movie_file_path_suffix=override_file_path_suffix,
         user_id=user.id,
     )
+    await audit.record_media(
+        AuditAction.download_started,
+        movie,
+        "movie",
+        details={
+            **torrent_details(torrent),
+            "file_path_suffix": override_file_path_suffix,
+        },
+    )
+    return torrent
 
 
 async def _get_movie_torrent_or_404(
@@ -545,6 +608,7 @@ async def resolve_movie_torrent_import(
     movie: movie_dep,
     torrent: torrent_dep,
     relative_path: str,
+    audit: audit_log_service_dep,
 ) -> Torrent:
     """
     Manually resolves a torrent that failed automatic import (currently:
@@ -561,6 +625,16 @@ async def resolve_movie_torrent_import(
             status.HTTP_400_BAD_REQUEST,
             "No video files were found in that directory.",
         )
+    await audit.record_media(
+        AuditAction.media_torrent_import_resolved,
+        movie,
+        "movie",
+        details={
+            "torrent_id": str(torrent.id),
+            "torrent_title": torrent.title,
+            "relative_path": relative_path,
+        },
+    )
     # `torrent` was mutated in place by the successful import - return it
     # directly rather than re-fetching, which would round-trip the download
     # client and could fail even though the import itself already succeeded.

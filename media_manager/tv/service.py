@@ -168,12 +168,13 @@ class TvService(BaseMediaService[Show, Show]):
 
     async def delete_episode_file(
         self, episode_id: EpisodeId, file_path_suffix: str
-    ) -> None:
+    ) -> tuple[ShowSummary, Season]:
         """
         Delete one of an episode's files from disk, along with its record.
 
         :param episode_id: The episode the file belongs to.
         :param file_path_suffix: The suffix (version) identifying the file.
+        :return: The show and season the episode belongs to.
         """
         episode_files = await self.tv_repository.get_episode_files_by_episode_id(
             episode_id=episode_id
@@ -194,6 +195,7 @@ class TvService(BaseMediaService[Show, Show]):
         )
         log.info(f"Deleted episode file: {episode_file.relative_path}")
         await self.tv_repository.delete_episode_files([(episode_id, file_path_suffix)])
+        return show, season
 
     async def refresh_all_episode_file_details(self) -> None:
         """

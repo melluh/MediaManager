@@ -26,6 +26,7 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 
+from media_manager.audit_log.models import AuditLog  # noqa: E402
 from media_manager.auth.db import (  # noqa: E402
     MediaServerAccount,
     OAuthAccount,
@@ -50,6 +51,7 @@ target_metadata = Base.metadata
 # this is to keep pycharm from complaining about/optimizing unused imports
 # noinspection PyStatementEffect
 __all__ = [
+    "AuditLog",
     "Episode",
     "EpisodeFile",
     "IndexerQueryResult",

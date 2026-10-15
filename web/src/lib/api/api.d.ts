@@ -211,6 +211,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/users/{user_id}/profile': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get User Profile */
+		get: operations['get_user_profile_api_v1_users__user_id__profile_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/users/': {
 		parameters: {
 			query?: never;
@@ -1761,6 +1778,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/admin/audit-log': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Audit Log
+		 * @description The actions users took, newest first. With `user_id`, only the actions
+		 *     taken by that user or done to them (e.g. by an admin).
+		 */
+		get: operations['get_audit_log_api_v1_admin_audit_log_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/media-server/users': {
 		parameters: {
 			query?: never;
@@ -1880,6 +1918,92 @@ export interface components {
 			 * @default true
 			 */
 			is_verified: boolean;
+		};
+		/**
+		 * AuditAction
+		 * @enum {string}
+		 */
+		AuditAction:
+			| 'auth.login'
+			| 'auth.login_failed'
+			| 'auth.password_reset_requested'
+			| 'auth.password_reset'
+			| 'auth.email_verified'
+			| 'account.registered'
+			| 'account.updated'
+			| 'account.password_changed'
+			| 'account.oauth_linked'
+			| 'user.created'
+			| 'user.updated'
+			| 'user.promoted'
+			| 'user.demoted'
+			| 'user.deactivated'
+			| 'user.reactivated'
+			| 'user.approved'
+			| 'user.password_set'
+			| 'user.deleted'
+			| 'user.oauth_unlinked'
+			| 'user.media_server_linked'
+			| 'user.media_server_unlinked'
+			| 'media.added'
+			| 'media.deleted'
+			| 'media.file_deleted'
+			| 'media.library_changed'
+			| 'media.continuous_download_changed'
+			| 'media.metadata_refreshed'
+			| 'media.imported'
+			| 'media.files_rescanned'
+			| 'media.library_scanned'
+			| 'media.torrent_import_resolved'
+			| 'download.started'
+			| 'download.cancelled'
+			| 'download.deleted'
+			| 'download.retried'
+			| 'download.status_changed';
+		/** AuditLogEntry */
+		AuditLogEntry: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			/**
+			 * Timestamp
+			 * Format: date-time
+			 */
+			timestamp: string;
+			action: components['schemas']['AuditAction'];
+			/** Actor User Id */
+			actor_user_id: string | null;
+			/** Actor Label */
+			actor_label: string | null;
+			/** Actor Is Admin */
+			actor_is_admin: boolean | null;
+			/** Target User Id */
+			target_user_id: string | null;
+			/** Subject Type */
+			subject_type: ('movie' | 'show' | 'torrent' | 'user') | null;
+			/** Subject Id */
+			subject_id: string | null;
+			/** Subject Label */
+			subject_label: string | null;
+			/** Media Slug */
+			media_slug: string | null;
+			/** Details */
+			details: {
+				[key: string]: unknown;
+			};
+			/** Ip Address */
+			ip_address: string | null;
+			/** User Agent */
+			user_agent: string | null;
+		};
+		/** AuditLogPage */
+		AuditLogPage: {
+			/** Items */
+			items: components['schemas']['AuditLogEntry'][];
+			/** Total */
+			total: number;
 		};
 		/** AuthMetadata */
 		AuthMetadata: {
@@ -3552,6 +3676,27 @@ export interface components {
 			/** Can Change Password */
 			can_change_password: boolean;
 		};
+		/**
+		 * UserProfile
+		 * @description What any signed-in user may see of another user, the same fields as a
+		 *     media item's `added_by`.
+		 */
+		UserProfile: {
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			/** Email */
+			email: string;
+			/** Display Name */
+			display_name?: string | null;
+			/**
+			 * Is Superuser
+			 * @default false
+			 */
+			is_superuser: boolean;
+		};
 		/** UserRead */
 		UserRead: {
 			/**
@@ -3667,6 +3812,9 @@ export interface components {
 	pathItems: never;
 }
 export type AdminUserCreate = components['schemas']['AdminUserCreate'];
+export type AuditAction = components['schemas']['AuditAction'];
+export type AuditLogEntry = components['schemas']['AuditLogEntry'];
+export type AuditLogPage = components['schemas']['AuditLogPage'];
 export type AuthMetadata = components['schemas']['AuthMetadata'];
 export type BearerResponse = components['schemas']['BearerResponse'];
 export type BodyAuthCookieLoginApiV1AuthCookieLoginPost =
@@ -3748,6 +3896,7 @@ export type TorrentStatus = components['schemas']['TorrentStatus'];
 export type TorrentWithProgress = components['schemas']['TorrentWithProgress'];
 export type UserCreate = components['schemas']['UserCreate'];
 export type UserPermissions = components['schemas']['UserPermissions'];
+export type UserProfile = components['schemas']['UserProfile'];
 export type UserRead = components['schemas']['UserRead'];
 export type UserReadWithPermissions = components['schemas']['UserReadWithPermissions'];
 export type UserUpdate = components['schemas']['UserUpdate'];
@@ -4163,6 +4312,44 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['UserRead'][];
+				};
+			};
+		};
+	};
+	get_user_profile_api_v1_users__user_id__profile_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['UserProfile'];
+				};
+			};
+			/** @description User not found. */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
 				};
 			};
 		};
@@ -6801,6 +6988,41 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['DiskUsageStats'];
+				};
+			};
+		};
+	};
+	get_audit_log_api_v1_admin_audit_log_get: {
+		parameters: {
+			query?: {
+				user_id?: string | null;
+				category?: ('auth' | 'account' | 'user' | 'media' | 'download') | null;
+				action?: components['schemas']['AuditAction'] | null;
+				limit?: number;
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AuditLogPage'];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
 				};
 			};
 		};

@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { setCrumbs } from '$lib/context.svelte';
 	import HardDrive from '@lucide/svelte/icons/hard-drive';
+	import History from '@lucide/svelte/icons/history';
 	import Users from '@lucide/svelte/icons/users';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import type { PageProps } from './$types';
@@ -25,6 +26,12 @@
 			description: 'Edit, delete or change the permissions of other users',
 			path: '/dashboard/admin/users',
 			icon: Users
+		},
+		{
+			title: 'Activity',
+			description: 'What users have done, and when',
+			path: '/dashboard/admin/activity',
+			icon: History
 		}
 	] as const;
 </script>

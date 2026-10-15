@@ -27,10 +27,12 @@ from taskiq_fastapi import populate_dependency_context
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import media_manager.admin.router as admin_router
+import media_manager.audit_log.router as audit_log_router
 import media_manager.movies.router as movies_router
 import media_manager.search.router as search_router
 import media_manager.torrent.router as torrent_router
 import media_manager.tv.router as tv_router
+from media_manager.audit_log.context import AuditContextMiddleware
 from media_manager.auth.db import User
 from media_manager.auth.router import (
     auth_metadata_router,
@@ -264,6 +266,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 
 
 app = FastAPI(root_path=BASE_PATH, lifespan=lifespan)
+# Added first so it runs inside ProxyHeadersMiddleware and sees the forwarded
+# client address.
+app.add_middleware(AuditContextMiddleware)
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 origins = config.misc.cors_urls
 log.info(f"CORS URLs activated for following origins: {origins}")
@@ -414,6 +419,9 @@ api_app.include_router(
 api_app.include_router(health_router, prefix="/health", tags=["health"])
 api_app.include_router(search_router.router, prefix="/search", tags=["search"])
 api_app.include_router(admin_router.router, prefix="/admin", tags=["admin"])
+api_app.include_router(
+    audit_log_router.router, prefix="/admin/audit-log", tags=["admin"]
+)
 api_app.include_router(
     media_server_router, prefix="/media-server", tags=["media server"]
 )
