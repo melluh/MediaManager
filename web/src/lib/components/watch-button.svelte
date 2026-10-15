@@ -59,7 +59,11 @@
 {#if enabled && watchUrlLoading}
 	<Button disabled variant="brand">
 		<LoaderCircle class="animate-spin" />
-		Watch
+		{#if meta.current?.media_server}
+			Watch on {meta.current.media_server.display_name}
+		{:else}
+			Watch
+		{/if}
 	</Button>
 {:else if watchUrl && meta.current?.media_server}
 	<Button href={watchUrl} target="_blank" rel="noopener noreferrer" variant="brand">
