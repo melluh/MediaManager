@@ -1,4 +1,4 @@
-import { IsMobile } from '$lib/hooks/is-mobile.svelte.js';
+import { IsMobile, IsTablet } from '$lib/hooks/is-mobile.svelte.js';
 import { getContext, setContext } from 'svelte';
 import { SIDEBAR_KEYBOARD_SHORTCUT } from './constants.js';
 
@@ -26,18 +26,21 @@ class SidebarState {
 	openMobile = $state(false);
 	setOpen: SidebarStateProps['setOpen'];
 	#isMobile: IsMobile;
+	#isTablet: IsTablet;
 	state = $derived.by(() => (this.open ? 'expanded' : 'collapsed'));
 
 	constructor(props: SidebarStateProps) {
 		this.setOpen = props.setOpen;
 		this.#isMobile = new IsMobile();
+		this.#isTablet = new IsTablet();
 		this.props = props;
 	}
 
-	// Convenience getter for checking if the sidebar is mobile
-	// without this, we would need to use `sidebar.isMobile.current` everywhere
+	// Whether the sidebar uses the mobile layout: an off-canvas sheet over the
+	// content instead of docked beside it. Tablets get it too, since they don't
+	// have the width to dock it.
 	get isMobile() {
-		return this.#isMobile.current;
+		return this.#isMobile.current || this.#isTablet.current;
 	}
 
 	// Event handler to apply to the `<svelte:window>`
@@ -53,7 +56,7 @@ class SidebarState {
 	};
 
 	toggle = () => {
-		return this.#isMobile.current ? (this.openMobile = !this.openMobile) : this.setOpen(!this.open);
+		return this.isMobile ? (this.openMobile = !this.openMobile) : this.setOpen(!this.open);
 	};
 }
 

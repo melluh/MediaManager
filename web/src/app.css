@@ -3,6 +3,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Matches IsTablet in src/lib/hooks/is-mobile.svelte.ts: portrait tablets
+   (md up to lg), plus touch screens up to 90rem for landscape iPads. */
+@custom-variant tablet {
+	@media (width >= 48rem) and (width < 64rem),
+		(width >= 48rem) and (width < 90rem) and (pointer: coarse) {
+		@slot;
+	}
+}
+
 :root {
 	--radius: 0.625rem;
 	--background: oklch(1 0 0);

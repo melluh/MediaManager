@@ -132,8 +132,8 @@
 <div class="flex flex-1 flex-col gap-4 pt-0 md:p-4 md:pt-0">
 	<main class="min-h-screen flex-1 items-center justify-center rounded-xl p-4 md:min-h-min">
 		{#if ownTorrents.length > 0}
-			<div class="mx-auto my-8">
-				<h3 class="my-4 text-2xl font-semibold md:ml-12">Your Downloads</h3>
+			<div class="mx-auto mb-8">
+				<h3 class="my-4 text-2xl font-semibold lg:pointer-fine:ml-12">Your Downloads</h3>
 				<DownloadsCarousel
 					torrents={ownTorrents}
 					onChange={() => refreshOwnTorrents().catch(() => {})}
@@ -145,7 +145,7 @@
 
 		{#if personalMovies.length > 0}
 			<div class="mx-auto mb-8">
-				<h3 class="my-4 text-2xl font-semibold md:ml-12">Movies for You</h3>
+				<h3 class="my-4 text-2xl font-semibold lg:pointer-fine:ml-12">Movies for You</h3>
 				<RecommendedMediaCarousel
 					isLoading={false}
 					isShow={false}
@@ -157,7 +157,7 @@
 
 		{#if personalShows.length > 0}
 			<div class="mx-auto mb-8">
-				<h3 class="my-4 text-2xl font-semibold md:ml-12">Shows for You</h3>
+				<h3 class="my-4 text-2xl font-semibold lg:pointer-fine:ml-12">Shows for You</h3>
 				<RecommendedMediaCarousel
 					isLoading={false}
 					isShow={true}
@@ -168,7 +168,7 @@
 		{/if}
 
 		<div class="mx-auto">
-			<h3 class="my-4 text-2xl font-semibold md:ml-12">Trending Shows</h3>
+			<h3 class="my-4 text-2xl font-semibold lg:pointer-fine:ml-12">Trending Shows</h3>
 			<RecommendedMediaCarousel
 				isLoading={showsLoading}
 				isError={showsError}
@@ -176,7 +176,7 @@
 				media={recommendedShows}
 			/>
 
-			<h3 class="my-4 mt-8 text-2xl font-semibold md:ml-12">Trending Movies</h3>
+			<h3 class="my-4 mt-8 text-2xl font-semibold lg:pointer-fine:ml-12">Trending Movies</h3>
 			<RecommendedMediaCarousel
 				isLoading={moviesLoading}
 				isError={moviesError}

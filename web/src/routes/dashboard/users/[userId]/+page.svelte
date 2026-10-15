@@ -25,15 +25,11 @@
 	let editedUser: UserRead | null = $state(null);
 	const editDialog = shallowDialog('editUser');
 
-	setCrumbs(() =>
-		isAdmin.value
-			? [
-					{ label: 'Administration', href: resolve('/dashboard/admin', {}) },
-					{ label: 'Users', href: resolve('/dashboard/admin/users', {}) },
-					{ label: user.value?.display_name || user.value?.email || 'User' }
-				]
-			: [{ label: user.value?.display_name || user.value?.email || 'User' }]
-	);
+	// Only admins can open the users list, so the crumb only links for them.
+	setCrumbs(() => [
+		{ label: 'Users', href: isAdmin.value ? resolve('/dashboard/admin/users', {}) : undefined },
+		{ label: user.value?.display_name || user.value?.email || 'User' }
+	]);
 </script>
 
 <svelte:head>
@@ -43,7 +39,7 @@
 {#if isAdmin.value === undefined}
 	<PageLoading />
 {:else}
-	<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
+	<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em] tablet:px-8">
 		<section class="my-6 flex flex-col gap-2">
 			{#if user.value === undefined}
 				<PageLoading message="Loading user…" />

@@ -41,7 +41,7 @@
 	<meta content="Server statistics and management tools" name="description" />
 </svelte:head>
 
-<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
+<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em] tablet:px-8">
 	<PageHeading class="my-6">Administration</PageHeading>
 
 	<section id="stats" class="mt-4 flex flex-col gap-3">

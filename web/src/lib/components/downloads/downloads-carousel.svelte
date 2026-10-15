@@ -9,15 +9,17 @@
 	const carouselOpts = new ResponsiveCarouselOpts();
 </script>
 
-<Carousel.Root class="w-full md:px-12" opts={carouselOpts.opts}>
+<Carousel.Root class="w-full lg:pointer-fine:px-12" opts={carouselOpts.opts}>
 	<Carousel.Content>
 		{#each torrents as torrent (torrent.id)}
-			<Carousel.Item class="basis-4/5 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+			<Carousel.Item
+				class="basis-4/5 sm:basis-2/5 lg:basis-2/7 lg:pointer-fine:basis-1/3 xl:pointer-fine:basis-1/4"
+			>
 				<DownloadCard {torrent} {onChange} />
 			</Carousel.Item>
 		{/each}
 	</Carousel.Content>
 
-	<Carousel.Previous class="left-0 hidden size-10 md:inline-flex [&_svg]:size-5" />
-	<Carousel.Next class="right-0 hidden size-10 md:inline-flex [&_svg]:size-5" />
+	<Carousel.Previous class="left-0 hidden size-10 lg:pointer-fine:inline-flex [&_svg]:size-5" />
+	<Carousel.Next class="right-0 hidden size-10 lg:pointer-fine:inline-flex [&_svg]:size-5" />
 </Carousel.Root>

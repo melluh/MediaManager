@@ -25,17 +25,17 @@
 	const carouselOpts = new ResponsiveCarouselOpts();
 </script>
 
-<Carousel.Root class="w-full md:px-12" opts={carouselOpts.opts}>
+<Carousel.Root class="w-full lg:pointer-fine:px-12" opts={carouselOpts.opts}>
 	<Carousel.Content class={isError ? 'pointer-events-none blur-xs' : ''}>
 		{#if isLoading || isError}
 			{#each { length: 6 }}
-				<Carousel.Item class="basis-2/5 lg:basis-1/6">
+				<Carousel.Item class="basis-2/5 md:basis-2/7 lg:basis-2/11 lg:pointer-fine:basis-1/6">
 					<MediaCardSkeleton pulsating={!isError} />
 				</Carousel.Item>
 			{/each}
 		{:else}
 			{#each media as mediaItem (mediaItem.external_id)}
-				<Carousel.Item class="basis-2/5 lg:basis-1/6">
+				<Carousel.Item class="basis-2/5 md:basis-2/7 lg:basis-2/11 lg:pointer-fine:basis-1/6">
 					<AddMediaCard {isShow} result={mediaItem} />
 					{@const itemCaption = caption?.(mediaItem)}
 					{#if itemCaption}
@@ -59,7 +59,7 @@
 			</Alert.Root>
 		</div>
 	{:else}
-		<Carousel.Previous class="left-0 hidden size-10 md:inline-flex [&_svg]:size-5" />
-		<Carousel.Next class="right-0 hidden size-10 md:inline-flex [&_svg]:size-5" />
+		<Carousel.Previous class="left-0 hidden size-10 lg:pointer-fine:inline-flex [&_svg]:size-5" />
+		<Carousel.Next class="right-0 hidden size-10 lg:pointer-fine:inline-flex [&_svg]:size-5" />
 	{/if}
 </Carousel.Root>

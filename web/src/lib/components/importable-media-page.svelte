@@ -134,7 +134,7 @@
 	<meta content={description} name="description" />
 </svelte:head>
 
-<main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0">
+<main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0 tablet:px-8">
 	<PageHeading>{title}</PageHeading>
 	{#await importable}
 		<PageLoading message="Loading importable media…" />

@@ -39,11 +39,13 @@
 		<Sheet.Content
 			data-sidebar="sidebar"
 			data-mobile="true"
-			class="w-[var(--sidebar-width)] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+			class="w-[var(--sidebar-width)] bg-sidebar p-0 text-sidebar-foreground tablet:w-[calc(var(--sidebar-width)+2rem)] [&>button]:hidden"
 			style="--sidebar-width: {SIDEBAR_WIDTH_MOBILE};"
 			{side}
 		>
-			<div class="flex h-full w-full flex-col">
+			<!-- Tablets inset the contents by the same extra 1rem as the page and
+			     header gutters, widening the sheet so the items keep their width. -->
+			<div class="flex h-full w-full flex-col tablet:px-4">
 				{@render children?.()}
 			</div>
 		</Sheet.Content>

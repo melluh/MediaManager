@@ -6,6 +6,7 @@
 	import { resolve } from '$app/paths';
 	import { setCrumbs } from '$lib/context.svelte';
 	import PageLoading from '$lib/components/page-loading.svelte';
+	import PageHeading from '$lib/components/page-heading.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -18,10 +19,8 @@
 	<meta content="View and manage TV show torrent downloads in MediaManager" name="description" />
 </svelte:head>
 
-<div class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
-	<h1 class="scroll-m-20 text-center text-4xl font-extrabold tracking-tight lg:text-5xl">
-		TV Torrents
-	</h1>
+<div class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em] tablet:px-8">
+	<PageHeading>TV Torrents</PageHeading>
 	<Accordion.Root type="single" class="w-full">
 		{#await data.torrents}
 			<PageLoading message="Loading torrents…" />

@@ -32,7 +32,7 @@
 	<meta content="Edit, delete or change the permissions of other users" name="description" />
 </svelte:head>
 
-<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
+<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em] tablet:px-8">
 	<PageHeading class="my-6">Users</PageHeading>
 
 	{#if users.value === undefined || passwordLoginEnabled.value === undefined}

@@ -32,7 +32,6 @@
 	});
 
 	setCrumbs(() => [
-		{ label: 'Administration', href: resolve('/dashboard/admin', {}) },
 		{ label: 'Users', href: resolve('/dashboard/admin/users', {}) },
 		{ label: name, href: userHref },
 		{ label: 'Audit Log' }
@@ -43,7 +42,7 @@
 	<title>Audit Log: {name} - MediaManager</title>
 </svelte:head>
 
-<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
+<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em] tablet:px-8">
 	<PageHeading class="my-6">Audit Log: {name}</PageHeading>
 	<AuditLogPanel log={data.log} filters={data.filters} />
 </main>

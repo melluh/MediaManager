@@ -77,7 +77,7 @@
 		></div>
 	</div>
 {/if}
-<div class="mx-auto w-full px-4 md:max-w-[80em]">
+<div class="mx-auto w-full px-4 md:max-w-[80em] tablet:px-8">
 	<div class="relative z-10 mt-4 mb-4 flex flex-col gap-6 sm:flex-row sm:items-end">
 		<!-- On mobile the actions sit full-width below the title and status; from
 		     md up they sit next to them, right-aligned. -->

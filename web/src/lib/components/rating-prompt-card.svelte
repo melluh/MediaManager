@@ -84,7 +84,11 @@
 </script>
 
 {#if current && movieHref && !leaving}
-	<div class="mx-auto my-8 md:px-12" transition:slideFade={{ duration: 300 }} onoutroend={showNext}>
+	<div
+		class="mx-auto mt-4 mb-8 lg:pointer-fine:px-12"
+		transition:slideFade={{ duration: 300 }}
+		onoutroend={showNext}
+	>
 		<!-- Sized to its content from md up, so the scale sits right under the
 		     question rather than across the page from it. -->
 		<div class="flex items-center gap-4 rounded-xl border bg-card p-4 shadow-sm md:w-fit">

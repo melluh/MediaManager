@@ -49,7 +49,7 @@
 </script>
 
 {#if showExpanded}
-	<div class="flex w-full items-center gap-2 px-4 md:hidden">
+	<div class="flex w-full items-center gap-2 px-4 lg:hidden tablet:px-8">
 		<Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" onclick={close}>
 			<ArrowLeft />
 			<span class="sr-only">Close search</span>
@@ -61,9 +61,18 @@
 			onResultSelect={() => (open = false)}
 		/>
 	</div>
-{:else if !hideLogo}
+{/if}
+{#if !hideLogo}
+	<!-- Landscape tablets get the desktop header, but keep the logo centered in
+	     it like on mobile; there it's absolutely positioned so the breadcrumbs
+	     and search box on either side don't push it off-center. -->
 	<a
-		class={cn('flex flex-1 items-center justify-center gap-2 md:hidden', textClass)}
+		class={cn(
+			'flex flex-1 items-center justify-center gap-2 lg:hidden',
+			showExpanded && 'hidden',
+			'lg:pointer-coarse:absolute lg:pointer-coarse:left-1/2 lg:pointer-coarse:flex lg:pointer-coarse:-translate-x-1/2',
+			textClass
+		)}
 		href={resolve('/dashboard', {})}
 	>
 		<AppBrand size="sm" />
@@ -73,7 +82,7 @@
 <Button
 	variant="ghost"
 	size="icon"
-	class={cn('mr-4 ml-auto h-7 w-7 md:hidden', showExpanded && 'hidden', iconClass)}
+	class={cn('mr-4 ml-auto h-7 w-7 lg:hidden tablet:mr-8', showExpanded && 'hidden', iconClass)}
 	onclick={() => (open = true)}
 >
 	<Search />

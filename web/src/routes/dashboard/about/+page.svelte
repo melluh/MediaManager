@@ -14,7 +14,9 @@
 	/>
 </svelte:head>
 
-<main class="mx-auto flex w-full flex-1 flex-col items-center gap-4 p-4 md:max-w-[80em]">
+<main
+	class="mx-auto flex w-full flex-1 flex-col items-center gap-4 p-4 md:max-w-[80em] tablet:px-8"
+>
 	<img alt="MediaManager Logo" class="mb-4 h-24 w-24" src={logo} />
 	<h1 class="mb-2 text-4xl font-bold">About MediaManager</h1>
 	<p class="mt-10 mb-6 max-w-2xl text-center text-lg">

@@ -109,8 +109,8 @@
 	<meta content="Search your MediaManager library and metadata providers" name="description" />
 </svelte:head>
 
-<main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0">
-	<PageHeading class="hidden md:block">
+<main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0 tablet:px-8">
+	<PageHeading class="hidden lg:pointer-fine:block">
 		{#if query}
 			Search results for &quot;{query}&quot;
 		{:else}

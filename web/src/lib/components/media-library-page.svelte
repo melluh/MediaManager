@@ -102,7 +102,7 @@
 	<meta content={description} name="description" />
 </svelte:head>
 
-<main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0">
+<main class="flex w-full flex-1 flex-col gap-4 p-4 pt-0 tablet:px-8">
 	<PageHeading>{title}</PageHeading>
 	{#if (resolvedItems && resolvedItems.length > 0) || user()?.is_superuser}
 		{#snippet noImportableDropdown()}

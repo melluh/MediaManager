@@ -153,10 +153,12 @@
 	{#if show.seasons.length > 0}
 		<section class="mt-4 flex flex-col gap-3">
 			<h2 class="text-lg font-semibold">Seasons</h2>
-			<Carousel.Root class="w-full md:max-[102rem]:px-10" opts={carouselOpts.opts}>
+			<Carousel.Root class="w-full lg:pointer-fine:max-[102rem]:px-10" opts={carouselOpts.opts}>
 				<Carousel.Content>
 					{#each show.seasons as season (season.id)}
-						<Carousel.Item class="basis-2/5 sm:basis-1/4 md:basis-1/5 lg:basis-1/7">
+						<Carousel.Item
+							class="basis-2/5 sm:basis-2/9 md:basis-2/11 lg:basis-2/15 lg:pointer-fine:basis-1/7"
+						>
 							<SeasonFilesDialog
 								{show}
 								{season}
@@ -166,8 +168,12 @@
 						</Carousel.Item>
 					{/each}
 				</Carousel.Content>
-				<Carousel.Previous class="left-0 hidden size-9 md:inline-flex min-[102rem]:-left-12" />
-				<Carousel.Next class="right-0 hidden size-9 md:inline-flex min-[102rem]:-right-12" />
+				<Carousel.Previous
+					class="left-0 hidden size-9 min-[102rem]:-left-12 lg:pointer-fine:inline-flex"
+				/>
+				<Carousel.Next
+					class="right-0 hidden size-9 min-[102rem]:-right-12 lg:pointer-fine:inline-flex"
+				/>
 			</Carousel.Root>
 		</section>
 	{/if}

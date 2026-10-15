@@ -40,7 +40,7 @@
 	</div>
 {/snippet}
 
-<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em]">
+<main class="mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:max-w-[80em] tablet:px-8">
 	<PageHeading class="my-6">Activity</PageHeading>
 
 	<AuditLogPanel log={data.log} filters={data.filters}>

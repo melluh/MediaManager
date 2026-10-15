@@ -104,7 +104,7 @@
 	<title>Notifications - MediaManager</title>
 </svelte:head>
 
-<main class="container mx-auto px-4 py-8">
+<main class="container mx-auto px-4 py-8 tablet:px-8">
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="text-3xl font-bold">Notifications</h1>
 		{#if unreadNotifications.length > 0}

@@ -4,7 +4,6 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import MediaSearchBox from '$lib/components/media-search-box.svelte';
 	import MobileHeaderSearch from './mobile-header-search.svelte';
-	import { resolve } from '$app/paths';
 	import { cn, isSearchPage } from '$lib/utils.js';
 	import { page } from '$app/state';
 	import type { Crumb } from '$lib/context.svelte';
@@ -36,21 +35,23 @@
 </script>
 
 <header class="relative z-20 flex h-16 shrink-0 items-center gap-2 bg-transparent">
-	<div class={cn('flex items-center gap-2 px-4', showMobileSearchExpanded && 'hidden md:flex')}>
+	<div
+		class={cn(
+			'flex items-center gap-2 px-4 tablet:px-8',
+			showMobileSearchExpanded && 'hidden lg:flex'
+		)}
+	>
 		<Sidebar.Trigger class={cn('-ml-1', overlayIconClass)} />
 		<!-- The header background is always transparent, so this separator is
 		     hardcoded to the light-theme border color rather than following
 		     the app's light/dark mode. -->
-		<Separator class="mr-2 hidden h-4 bg-[oklch(0.922_0_0)] md:block" orientation="vertical" />
-		<Breadcrumb.Root class="hidden md:block">
+		<Separator class="mr-2 hidden h-4 bg-[oklch(0.922_0_0)] lg:block" orientation="vertical" />
+		<Breadcrumb.Root class="hidden lg:block">
 			<Breadcrumb.List class={overlayStaticTextClass}>
-				<Breadcrumb.Item>
-					<Breadcrumb.Link class={overlayTextClass} href={resolve('/dashboard', {})}>
-						MediaManager
-					</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				{#each crumbs as crumb (crumb.label)}
-					<Breadcrumb.Separator />
+				{#each crumbs as crumb, i (crumb.label)}
+					{#if i > 0}
+						<Breadcrumb.Separator />
+					{/if}
 					<Breadcrumb.Item>
 						{#if crumb.href}
 							<Breadcrumb.Link class={overlayTextClass} href={crumb.href}>
@@ -74,5 +75,8 @@
 		hideLogo={heroHeader}
 	/>
 
-	<MediaSearchBox class="mr-4 ml-auto hidden w-full max-w-md md:block" initialValue={searchQuery} />
+	<MediaSearchBox
+		class="mr-4 ml-auto hidden w-full max-w-md transition-[max-width] duration-200 lg:block lg:pointer-coarse:max-w-[16.8rem] lg:pointer-coarse:focus-within:max-w-[20rem] tablet:mr-8"
+		initialValue={searchQuery}
+	/>
 </header>
