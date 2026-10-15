@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Any, override
 from urllib.parse import quote
 
@@ -9,7 +10,7 @@ from media_manager.config import get_config
 from media_manager.mediaServer.abstract_media_server_provider import (
     AbstractMediaServerProvider,
 )
-from media_manager.mediaServer.schemas import MediaServerUser
+from media_manager.mediaServer.schemas import MediaServerUser, PlayedMediaItem
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +36,10 @@ works."""
 _NOT_FOUND_STATUSES = {400, 404}
 """Responses meaning "no such item" rather than a broken server - Jellyfin
 answers 400 instead of 404 for an id that isn't a valid GUID."""
+
+_PLAYED_ITEMS_LIMIT = 50
+"""Most recently played movies fetched when looking for ones to ask the user
+about - far more than anyone watches within the lookback window."""
 
 _FULL_SCAN_PAGE_SIZE = 500
 """Page size for the fallback full-library scan, only hit when the filtered
@@ -203,6 +208,44 @@ class JellyfinProvider(AbstractMediaServerProvider):
                 return None
             raise
         return MediaServerUser(id=user["Id"], name=user["Name"])
+
+    @override
+    async def get_recently_played_movies(
+        self, user_id: str, since: datetime
+    ) -> list[PlayedMediaItem]:
+        data = await self.__get_items(
+            {
+                "userId": user_id,
+                "IsPlayed": "true",
+                "IncludeItemTypes": "Movie",
+                "Recursive": "true",
+                "SortBy": "DatePlayed",
+                "SortOrder": "Descending",
+                "Fields": "ProviderIds",
+                "EnableUserData": "true",
+                "Limit": _PLAYED_ITEMS_LIMIT,
+            }
+        )
+        played = []
+        for item in data.get("Items", []):
+            # Items marked as played by hand may have no play date.
+            last_played = (item.get("UserData") or {}).get("LastPlayedDate")
+            if not last_played:
+                continue
+            last_played_at = datetime.fromisoformat(last_played)
+            if last_played_at < since:
+                break
+            provider_ids = {
+                key.lower(): str(value)
+                for key, value in (item.get("ProviderIds") or {}).items()
+                if value
+            }
+            played.append(
+                PlayedMediaItem(
+                    provider_ids=provider_ids, last_played_at=last_played_at
+                )
+            )
+        return played
 
     @override
     async def ping(self) -> bool:

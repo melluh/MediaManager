@@ -1,11 +1,16 @@
 <script lang="ts">
 	import DownloadsCarousel from '$lib/components/downloads/downloads-carousel.svelte';
 	import RecommendedMediaCarousel from '$lib/components/recommended-media-carousel.svelte';
+	import RatingPromptCard from '$lib/components/rating-prompt-card.svelte';
 	import { onMount } from 'svelte';
 	import { setCrumbs } from '$lib/context.svelte';
 	import { poll } from '$lib/hooks/poll.svelte';
 	import client from '$lib/api';
-	import type { MetaDataProviderSearchResult, TorrentWithProgress } from '$lib/api/api.d.ts';
+	import type {
+		MetaDataProviderSearchResult,
+		RatingPrompt,
+		TorrentWithProgress
+	} from '$lib/api/api.d.ts';
 
 	setCrumbs([{ label: 'Dashboard' }]);
 
@@ -29,7 +34,20 @@
 	let hasOwnTorrents = $derived(ownTorrents.length > 0);
 	poll(refreshOwnTorrents, 7000, { enabled: () => hasOwnTorrents, immediate: false });
 
+	// Recently watched movies the user hasn't rated yet. Empty (and the card
+	// hidden) without a linked media server account, or if the request fails.
+	let ratingPrompts: RatingPrompt[] = $state([]);
+
 	onMount(() => {
+		client
+			.GET('/api/v1/ratings/movies/prompts')
+			.then(({ data }) => {
+				if (data) ratingPrompts = data;
+			})
+			.catch(() => {
+				// nothing to ask about; the card stays hidden
+			});
+
 		refreshOwnTorrents().catch(() => {
 			// nothing to show; the user simply sees no downloads section
 		});
@@ -87,6 +105,8 @@
 				/>
 			</div>
 		{/if}
+
+		<RatingPromptCard prompts={ratingPrompts} />
 
 		<div class="mx-auto">
 			<h3 class="my-4 text-2xl font-semibold md:ml-12">Trending Shows</h3>

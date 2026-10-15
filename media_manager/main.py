@@ -74,6 +74,7 @@ from media_manager.mediaServer.router import router as media_server_router
 from media_manager.meta.router import router as meta_router
 from media_manager.metadataProvider.utils import migrate_legacy_poster_images
 from media_manager.notification.router import router as notification_router
+from media_manager.rating.router import router as rating_router
 from media_manager.scheduler import (
     broker,
     build_scheduler_loop,
@@ -416,6 +417,7 @@ api_app.include_router(movies_router.router, prefix="/movies", tags=["movie"])
 api_app.include_router(
     notification_router, prefix="/notification", tags=["notification"]
 )
+api_app.include_router(rating_router, prefix="/ratings", tags=["rating"])
 api_app.include_router(health_router, prefix="/health", tags=["health"])
 api_app.include_router(search_router.router, prefix="/search", tags=["search"])
 api_app.include_router(admin_router.router, prefix="/admin", tags=["admin"])

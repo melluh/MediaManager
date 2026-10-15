@@ -46,7 +46,7 @@
 </script>
 
 <dl
-	class="grid min-w-0 grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm md:ml-auto [&_dd]:min-w-0 [&_dd]:text-right [&_dt]:text-muted-foreground"
+	class="grid min-w-0 grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm [&_dd]:min-w-0 [&_dd]:text-right [&_dt]:text-muted-foreground"
 >
 	{#if releaseDateLabel || releaseYear != null}
 		<dt>{isShow ? 'First aired' : 'Released'}</dt>

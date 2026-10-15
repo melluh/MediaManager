@@ -1653,6 +1653,104 @@ export interface paths {
 		patch: operations['mark_notification_as_unread_api_v1_notification__notification_id__unread_patch'];
 		trace?: never;
 	};
+	'/api/v1/ratings/movies/prompts': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Rating Prompts
+		 * @description Movies the current user recently watched on the media server but hasn't
+		 *     rated or dismissed yet, most recently watched first.
+		 */
+		get: operations['get_rating_prompts_api_v1_ratings_movies_prompts_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/ratings/movies/{movie_id}/dismiss': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Dismiss Rating Prompt
+		 * @description Stop asking the current user whether they enjoyed this movie, without
+		 *     rating it.
+		 */
+		post: operations['dismiss_rating_prompt_api_v1_ratings_movies__movie_id__dismiss_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/ratings/movies/{movie_id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Movie Rating
+		 * @description Get the current user's rating of a movie.
+		 */
+		get: operations['get_movie_rating_api_v1_ratings_movies__movie_id__get'];
+		/**
+		 * Set Movie Rating
+		 * @description Rate a movie as the current user, replacing any previous rating.
+		 */
+		put: operations['set_movie_rating_api_v1_ratings_movies__movie_id__put'];
+		post?: never;
+		/**
+		 * Clear Movie Rating
+		 * @description Remove the current user's rating of a movie.
+		 */
+		delete: operations['clear_movie_rating_api_v1_ratings_movies__movie_id__delete'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/ratings/shows/{show_id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Show Rating
+		 * @description Get the current user's rating of a show.
+		 */
+		get: operations['get_show_rating_api_v1_ratings_shows__show_id__get'];
+		/**
+		 * Set Show Rating
+		 * @description Rate a show as the current user, replacing any previous rating.
+		 */
+		put: operations['set_show_rating_api_v1_ratings_shows__show_id__put'];
+		post?: never;
+		/**
+		 * Clear Show Rating
+		 * @description Remove the current user's rating of a show.
+		 */
+		delete: operations['clear_show_rating_api_v1_ratings_shows__show_id__delete'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/health/services': {
 		parameters: {
 			query?: never;
@@ -3023,6 +3121,18 @@ export interface components {
 		 * @enum {integer}
 		 */
 		Quality: 1 | 2 | 3 | 4 | 5;
+		/**
+		 * RatingPrompt
+		 * @description A movie the user recently watched but hasn't rated yet.
+		 */
+		RatingPrompt: {
+			media: components['schemas']['TorrentMedia'];
+			/**
+			 * Watched At
+			 * Format: date-time
+			 */
+			watched_at: string;
+		};
 		/** RichMovieTorrent */
 		RichMovieTorrent: {
 			/**
@@ -3213,6 +3323,11 @@ export interface components {
 		 * @enum {string}
 		 */
 		ServiceStatus: 'healthy' | 'unavailable' | 'unknown';
+		/** SetRating */
+		SetRating: {
+			/** Score */
+			score: number;
+		};
 		/** Show */
 		Show: {
 			/**
@@ -3697,6 +3812,14 @@ export interface components {
 			 */
 			is_superuser: boolean;
 		};
+		/**
+		 * UserRating
+		 * @description The current user's rating of a movie or show.
+		 */
+		UserRating: {
+			/** Score */
+			score?: number | null;
+		};
 		/** UserRead */
 		UserRead: {
 			/**
@@ -3871,6 +3994,7 @@ export type PublicMovieFile = components['schemas']['PublicMovieFile'];
 export type PublicSeason = components['schemas']['PublicSeason'];
 export type PublicShow = components['schemas']['PublicShow'];
 export type Quality = components['schemas']['Quality'];
+export type RatingPrompt = components['schemas']['RatingPrompt'];
 export type RichMovieTorrent = components['schemas']['RichMovieTorrent'];
 export type RichSeasonTorrent = components['schemas']['RichSeasonTorrent'];
 export type RichShowTorrent = components['schemas']['RichShowTorrent'];
@@ -3880,6 +4004,7 @@ export type Season = components['schemas']['Season'];
 export type SeasonDownloadPlan = components['schemas']['SeasonDownloadPlan'];
 export type ServiceHealth = components['schemas']['ServiceHealth'];
 export type ServiceStatus = components['schemas']['ServiceStatus'];
+export type SetRating = components['schemas']['SetRating'];
 export type Show = components['schemas']['Show'];
 export type ShowSummary = components['schemas']['ShowSummary'];
 export type SlotDownloadPlan = components['schemas']['SlotDownloadPlan'];
@@ -3897,6 +4022,7 @@ export type TorrentWithProgress = components['schemas']['TorrentWithProgress'];
 export type UserCreate = components['schemas']['UserCreate'];
 export type UserPermissions = components['schemas']['UserPermissions'];
 export type UserProfile = components['schemas']['UserProfile'];
+export type UserRating = components['schemas']['UserRating'];
 export type UserRead = components['schemas']['UserRead'];
 export type UserReadWithPermissions = components['schemas']['UserReadWithPermissions'];
 export type UserUpdate = components['schemas']['UserUpdate'];
@@ -6822,6 +6948,248 @@ export interface operations {
 			};
 			/** @description Notification not found */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	get_rating_prompts_api_v1_ratings_movies_prompts_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['RatingPrompt'][];
+				};
+			};
+		};
+	};
+	dismiss_rating_prompt_api_v1_ratings_movies__movie_id__dismiss_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	get_movie_rating_api_v1_ratings_movies__movie_id__get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['UserRating'];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	set_movie_rating_api_v1_ratings_movies__movie_id__put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['SetRating'];
+			};
+		};
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	clear_movie_rating_api_v1_ratings_movies__movie_id__delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the movie */
+				movie_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	get_show_rating_api_v1_ratings_shows__show_id__get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the show */
+				show_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['UserRating'];
+				};
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	set_show_rating_api_v1_ratings_shows__show_id__put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the show */
+				show_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['SetRating'];
+			};
+		};
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Validation Error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['HTTPValidationError'];
+				};
+			};
+		};
+	};
+	clear_show_rating_api_v1_ratings_shows__show_id__delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The ID of the show */
+				show_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
 				headers: {
 					[name: string]: unknown;
 				};

@@ -30,6 +30,7 @@
 		isShow,
 		actions,
 		availability,
+		aboveFacts,
 		children
 	}: {
 		media: HeroMedia;
@@ -39,6 +40,8 @@
 		actions?: Snippet;
 		/** Availability status, rendered under the title. Visible to every viewer, not just admins. */
 		availability?: Snippet;
+		/** Rendered above the facts table, at its width, e.g. the viewer's rating. */
+		aboveFacts?: Snippet;
 		/** Additional cards, rendered below the Overview card inside the same layout. */
 		children?: Snippet;
 	} = $props();
@@ -107,7 +110,10 @@
 				{media.overview}
 			</p>
 		</div>
-		<MediaFactsList {media} {isShow} />
+		<div class="flex min-w-0 flex-col gap-4 md:ml-auto">
+			{@render aboveFacts?.()}
+			<MediaFactsList {media} {isShow} />
+		</div>
 	</section>
 	{@render children?.()}
 </main>

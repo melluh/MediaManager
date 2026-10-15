@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from media_manager.health.registry import get_health_registry
 from media_manager.health.schemas import ServiceStatus
-from media_manager.mediaServer.schemas import MediaServerUser
+from media_manager.mediaServer.schemas import MediaServerUser, PlayedMediaItem
 
 
 class AbstractMediaServerProvider(ABC):
@@ -52,6 +53,16 @@ class AbstractMediaServerProvider(ABC):
     async def get_user(self, user_id: str) -> MediaServerUser | None:
         """
         The media server account with this id, or None if it doesn't exist.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def get_recently_played_movies(
+        self, user_id: str, since: datetime
+    ) -> list[PlayedMediaItem]:
+        """
+        Movies the media server account `user_id` last played at or after
+        `since`, most recently played first.
         """
         raise NotImplementedError()
 

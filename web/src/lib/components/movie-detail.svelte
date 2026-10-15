@@ -13,6 +13,7 @@
 	import { withDownloadProgress } from '$lib/components/media-availability.js';
 	import DownloadMovieDialog from '$lib/components/download-dialogs/download-movie-dialog.svelte';
 	import WatchButton from '$lib/components/watch-button.svelte';
+	import MediaRatingButtons from '$lib/components/media-rating-buttons.svelte';
 	import MediaFileTable from '$lib/components/media-file-table.svelte';
 	import { isSameMediaFile } from '$lib/components/media-file-details-dialog.svelte';
 	import { poll } from '$lib/hooks/poll.svelte';
@@ -87,6 +88,9 @@
 <MediaHeroHeader media={movie} isShow={false}>
 	{#snippet availability()}
 		<MediaAvailabilityStatus availability={movieAvailabilityInfo} />
+	{/snippet}
+	{#snippet aboveFacts()}
+		<MediaRatingButtons mediaId={movie.id!} isShow={false} />
 	{/snippet}
 	{#snippet actions()}
 		{#if user().is_superuser}

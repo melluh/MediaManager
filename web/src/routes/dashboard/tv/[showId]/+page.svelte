@@ -14,6 +14,7 @@
 	import { toast } from 'svelte-sonner';
 	import { Label } from '$lib/components/ui/label';
 	import WatchButton from '$lib/components/watch-button.svelte';
+	import MediaRatingButtons from '$lib/components/media-rating-buttons.svelte';
 	import SeasonFilesDialog from '$lib/components/season-files-dialog.svelte';
 	import { poll } from '$lib/hooks/poll.svelte';
 	import { downloadsSignature } from '$lib/components/downloads/download-status.js';
@@ -112,6 +113,9 @@
 <MediaHeroHeader media={show} isShow={true}>
 	{#snippet availability()}
 		<MediaAvailabilityStatus availability={showAvailabilityInfo} />
+	{/snippet}
+	{#snippet aboveFacts()}
+		<MediaRatingButtons mediaId={show.id!} isShow={true} />
 	{/snippet}
 	{#snippet actions()}
 		{#if user().is_superuser}

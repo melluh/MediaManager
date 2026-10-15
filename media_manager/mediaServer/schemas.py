@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -17,3 +18,12 @@ class MediaServerUserOption(MediaServerUser):
     """The MediaManager user this account is already linked to, if any."""
     linked_user_name: str | None = None
     """That user's display name, falling back to their email."""
+
+
+class PlayedMediaItem(BaseModel):
+    """An item a media server user has watched, as reported by the server."""
+
+    provider_ids: dict[str, str]
+    """External ids keyed by our metadata provider names ("imdb", "tmdb",
+    "tvdb"), for matching the item to library media."""
+    last_played_at: datetime

@@ -38,6 +38,10 @@ from media_manager.database import Base  # noqa: E402
 from media_manager.indexer.models import IndexerQueryResult  # noqa: E402
 from media_manager.movies.models import Movie, MovieFile  # noqa: E402
 from media_manager.notification.models import Notification  # noqa: E402
+from media_manager.rating.models import (  # noqa: E402
+    MediaRating,
+    RatingPromptDismissal,
+)
 from media_manager.torrent.models import Torrent  # noqa: E402
 from media_manager.tv.models import (  # noqa: E402
     Episode,
@@ -56,11 +60,13 @@ __all__ = [
     "EpisodeFile",
     "IndexerQueryResult",
     "MediaImage",
+    "MediaRating",
     "MediaServerAccount",
     "Movie",
     "MovieFile",
     "Notification",
     "OAuthAccount",
+    "RatingPromptDismissal",
     "Season",
     "Show",
     "Torrent",
